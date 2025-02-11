@@ -6,7 +6,7 @@ A romantic and interactive way to ask your special someone to be your Valentine!
 
 ## Demo 🎮
 
-You can see the live demo of the game [here](https://placeholder.com).
+You can see the live demo of the game [here](https://valentines-proposal-visibait.vercel.app).
 
 ## Features ✨
 
