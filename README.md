@@ -21,8 +21,6 @@ You can see the live demo of the game [here](https://valentines-proposal-visibai
 - Fully responsive layout
 - Built with Next.js and Tailwind CSS
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/visibait)
-
 ## Prerequisites 📋
 
 - Node.js (v18.18.0 or higher)
@@ -106,6 +104,9 @@ This project is licensed under the MIT License.
 ## Author ✍️
 
 visibait - [https://visibait.com]
+
+## Donate
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/visibait)
 
 ---
 
