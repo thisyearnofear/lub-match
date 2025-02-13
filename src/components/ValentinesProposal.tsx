@@ -91,7 +91,7 @@ export default function ValentinesProposal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            Congratulations! You have completed the game.
+            Darling! Your are my heart!
           </motion.h2>
         )}
         {step === 1 && (
@@ -103,7 +103,7 @@ export default function ValentinesProposal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            I have a surprise for you!
+            I have a question to ask you!
           </motion.h2>
         )}
         {step === 2 && (
@@ -174,8 +174,12 @@ export default function ValentinesProposal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            Thank you for accepting, I love you! 💕
-            <p className="text-sm mt-4">For more information, write me!!! 💌</p>
+            You are as brave as you are beautiful <br />
+            Asante sana for being my Valentine! 💕
+            <p className="text-sm mt-4">
+              Lets not take so long to get to the right answer next year please
+              💌
+            </p>
             <Image
               src="/hamster_jumping.gif"
               alt="Hamster Feliz"

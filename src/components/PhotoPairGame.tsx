@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 
-// 18 images
+// 8 images for 16 positions (8 pairs)
 const images = [
   "/game-photos/1.avif",
   "/game-photos/2.avif",
@@ -14,19 +14,9 @@ const images = [
   "/game-photos/6.avif",
   "/game-photos/7.avif",
   "/game-photos/8.avif",
-  "/game-photos/9.avif",
-  "/game-photos/10.avif",
-  "/game-photos/11.avif",
-  "/game-photos/12.avif",
-  "/game-photos/13.avif",
-  "/game-photos/14.avif",
-  "/game-photos/15.avif",
-  "/game-photos/16.avif",
-  "/game-photos/17.avif",
-  "/game-photos/18.avif",
 ];
 
-// Create 18 pairs of images (36 images in total)
+// Create 8 pairs of images (16 images in total)
 const imagePairs = images.flatMap((image) => [image, image]);
 
 const shuffleArray = (array: string[]) => {
@@ -37,14 +27,15 @@ const shuffleArray = (array: string[]) => {
   return array;
 };
 
-const heartLayout = [
-  [null, null, 0, 1, null, 2, 3, null, null],
-  [null, 4, 5, 6, 7, 8, 9, 10, null],
-  [11, 12, 13, 14, 15, 16, 17, 18, 19],
-  [null, 20, 21, 22, 23, 24, 25, 26, null],
-  [null, null, 27, 28, 29, 30, 31, null, null],
-  [null, null, null, 32, 33, 34, null, null, null],
-  [null, null, null, null, 35, null, null, null, null],
+type CellType = number | "deco" | null;
+
+const heartLayout: CellType[][] = [
+  [null, 0, 1, null, 2, 3, null],
+  [4, 5, 6, 7, 8, 9, 10],
+  [null, 11, 12, 13, 14, 15, null],
+  [null, null, "deco", "deco", "deco", null, null],
+  [null, null, null, "deco", null, null, null],
+  [null, null, null, null, null, null, null],
 ];
 
 type ValentinesProposalProps = {
@@ -58,32 +49,39 @@ export default function PhotoPairGame({
   const [selected, setSelected] = useState<number[]>([]);
   const [matched, setMatched] = useState<number[]>([]);
   const [incorrect, setIncorrect] = useState<number[]>([]);
+  const [justMatched, setJustMatched] = useState<number[]>([]);
 
   useEffect(() => {
-    // Shuffle the images when the component mounts
     setImages(shuffleArray([...imagePairs]));
   }, []);
 
   const handleClick = async (index: number) => {
-    if (selected.length === 2 || matched.includes(index)) return;
+    if (
+      selected.length === 2 ||
+      matched.includes(index) ||
+      selected.includes(index)
+    )
+      return;
 
     setSelected((prev) => [...prev, index]);
 
     if (selected.length === 1) {
       const firstIndex = selected[0];
       if (images[firstIndex] === images[index]) {
-        setMatched((prev) => [...prev, firstIndex, index]);
+        setJustMatched([firstIndex, index]);
+        setTimeout(() => {
+          setMatched((prev) => [...prev, firstIndex, index]);
+          setJustMatched([]);
+        }, 500);
       } else {
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
-
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         setIncorrect([firstIndex, index]);
-        setTimeout(() => setIncorrect([]), 1000); // Clear incorrect after 1 second
+        setTimeout(() => setIncorrect([]), 1000);
       }
       setTimeout(() => setSelected([]), 1000);
     }
   };
 
-  // Check if game is won
   useEffect(() => {
     if (matched.length === imagePairs.length) {
       handleShowProposal();
@@ -91,80 +89,107 @@ export default function PhotoPairGame({
   }, [matched, handleShowProposal]);
 
   return (
-    <div className="grid grid-cols-9 gap-2">
-      {/* Image preload */}
-      <div className="hidden">
-        {images.map((image, i) => (
-          <Image
-            key={i}
-            src={image}
-            alt={`Image ${i + 1}`}
-            layout="fill"
-            objectFit="cover"
-            priority
-          />
-        ))}
-      </div>
+    <div className="flex justify-center items-center min-h-screen w-full px-4 py-8">
+      <div
+        className="grid grid-cols-7 gap-2 sm:gap-3 w-full"
+        style={{ maxWidth: "90vh" }}
+      >
+        {/* Image preload - improved with proper sizes */}
+        <div className="hidden">
+          {images.map((image, i) => (
+            <Image
+              key={i}
+              src={image}
+              alt={`Image ${i + 1}`}
+              width={400}
+              height={400}
+              priority
+            />
+          ))}
+        </div>
 
-      {heartLayout.flat().map((index, i) =>
-        index !== null ? (
-          <motion.div
-            key={i}
-            className="w-20 h-20 relative cursor-pointer"
-            whileHover={{ scale: 1.1 }}
-            onClick={() => handleClick(index)}
-            style={{ perspective: "1000px" }} // Add perspective for 3D effect
-          >
-            {/* Back of the card */}
-            {!selected.includes(index) && !matched.includes(index) && (
-              <motion.div
-                className="w-full h-full bg-gray-300 rounded-md absolute"
-                initial={{ rotateY: 0 }}
-                animate={{
-                  rotateY:
-                    selected.includes(index) || matched.includes(index)
-                      ? 180
-                      : 0,
-                }}
-                transition={{ duration: 0.5 }}
-                style={{ backfaceVisibility: "hidden" }}
+        {heartLayout.flat().map((cell, i) => {
+          const cellSize = "min(13vw, 13vh)";
+
+          if (cell === "deco") {
+            return (
+              <div
+                key={i}
+                className="rounded-2xl bg-red-400 border-4 border-red-500 shadow-xl"
+                style={{ width: cellSize, height: cellSize }}
               />
-            )}
+            );
+          }
 
-            {/* Front of the card (image) */}
-            {(selected.includes(index) || matched.includes(index)) && (
-              <motion.div
-                className="w-full h-full absolute"
-                initial={{ rotateY: -180 }}
-                animate={{ rotateY: 0 }}
-                transition={{ duration: 0.5 }}
-                style={{ backfaceVisibility: "hidden" }}
-              >
-                <Image
-                  src={images[index]}
-                  alt={`Imagen ${index + 1}`}
-                  layout="fill"
-                  objectFit="cover"
-                  className="rounded-md"
+          return cell !== null ? (
+            <motion.div
+              key={i}
+              className="relative cursor-pointer"
+              style={{ width: cellSize, height: cellSize }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => handleClick(cell)}
+            >
+              {!selected.includes(cell) && !matched.includes(cell) && (
+                <motion.div
+                  className="absolute inset-0 bg-gray-300 rounded-2xl border-4 border-gray-400 shadow-xl"
+                  initial={{ rotateY: 0 }}
+                  animate={{
+                    rotateY:
+                      selected.includes(cell) || matched.includes(cell)
+                        ? 180
+                        : 0,
+                  }}
+                  transition={{ duration: 0.5 }}
+                  style={{ backfaceVisibility: "hidden" }}
                 />
-              </motion.div>
-            )}
+              )}
 
-            {/* Incorrect animation */}
-            {incorrect.includes(index) && (
-              <motion.div
-                className="absolute inset-0"
-                animate={{ scale: [1, 1.1, 1], opacity: [1, 0, 1] }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="w-full h-full bg-red-500 rounded-md"></div>
-              </motion.div>
-            )}
-          </motion.div>
-        ) : (
-          <div key={i} className="w-20 h-20"></div>
-        )
-      )}
+              {(selected.includes(cell) || matched.includes(cell)) && (
+                <motion.div
+                  className="absolute inset-0"
+                  initial={{ rotateY: -180 }}
+                  animate={{ rotateY: 0 }}
+                  transition={{ duration: 0.5 }}
+                  style={{ backfaceVisibility: "hidden" }}
+                >
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={images[cell]}
+                      alt={`Image ${cell + 1}`}
+                      fill
+                      sizes="(max-width: 768px) 13vw, 13vh"
+                      priority={true}
+                      className="rounded-2xl border-4 border-gray-400 shadow-xl object-cover"
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {incorrect.includes(cell) && (
+                <motion.div
+                  className="absolute inset-0 z-10"
+                  animate={{ scale: [1, 1.05, 1], opacity: [1, 0.8, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="w-full h-full bg-red-500 rounded-2xl"></div>
+                </motion.div>
+              )}
+
+              {justMatched.includes(cell) && (
+                <motion.div
+                  className="absolute inset-0 z-10"
+                  animate={{ scale: [1, 1.05, 1], opacity: [1, 0.8, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="w-full h-full bg-green-500 rounded-2xl"></div>
+                </motion.div>
+              )}
+            </motion.div>
+          ) : (
+            <div key={i} style={{ width: cellSize, height: cellSize }} />
+          );
+        })}
+      </div>
     </div>
   );
 }
