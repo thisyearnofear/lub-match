@@ -1,5 +1,4 @@
 import { Playfair_Display } from "next/font/google";
-import Link from "next/link";
 
 const playfairDisplay = Playfair_Display({
   display: "swap",
