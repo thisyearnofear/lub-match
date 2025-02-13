@@ -89,10 +89,10 @@ export default function PhotoPairGame({
   }, [matched, handleShowProposal]);
 
   return (
-    <div className="flex justify-center items-center min-h-screen w-full px-4 py-8">
+    <div className="flex justify-center items-center min-h-screen w-full px-2 sm:px-4 py-8">
       <div
         className="grid grid-cols-7 gap-2 sm:gap-3 w-full"
-        style={{ maxWidth: "90vh" }}
+        style={{ maxWidth: "min(90vh, 100vw)" }}
       >
         {/* Image preload - improved with proper sizes */}
         <div className="hidden">
@@ -109,42 +109,54 @@ export default function PhotoPairGame({
         </div>
 
         {heartLayout.flat().map((cell, i) => {
-          const cellSize = "min(13vw, 13vh)";
+          // Larger on mobile, smaller on desktop
+          const cellSize = "min(max(16vw, 70px), 13vh)";
 
           if (cell === "deco") {
             return (
               <div
                 key={i}
-                className="rounded-2xl bg-red-400 border-4 border-red-500 shadow-xl"
+                className="rounded-xl sm:rounded-2xl bg-red-400 border-2 sm:border-4 border-red-500 shadow-lg sm:shadow-xl"
                 style={{ width: cellSize, height: cellSize }}
               />
             );
           }
 
-          return cell !== null ? (
+          if (cell === null) {
+            return (
+              <div key={i} style={{ width: cellSize, height: cellSize }} />
+            );
+          }
+
+          const isSelected = selected.includes(cell);
+          const isMatched = matched.includes(cell);
+
+          return (
             <motion.div
               key={i}
               className="relative cursor-pointer"
               style={{ width: cellSize, height: cellSize }}
               whileHover={{ scale: 1.05 }}
+              animate={{
+                scale: isSelected ? 1.15 : 1,
+                zIndex: isSelected ? 10 : 0,
+              }}
+              transition={{ duration: 0.3 }}
               onClick={() => handleClick(cell)}
             >
-              {!selected.includes(cell) && !matched.includes(cell) && (
+              {!isSelected && !isMatched && (
                 <motion.div
-                  className="absolute inset-0 bg-gray-300 rounded-2xl border-4 border-gray-400 shadow-xl"
+                  className="absolute inset-0 bg-gray-300 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-gray-400 shadow-lg sm:shadow-xl"
                   initial={{ rotateY: 0 }}
                   animate={{
-                    rotateY:
-                      selected.includes(cell) || matched.includes(cell)
-                        ? 180
-                        : 0,
+                    rotateY: isSelected || isMatched ? 180 : 0,
                   }}
                   transition={{ duration: 0.5 }}
                   style={{ backfaceVisibility: "hidden" }}
                 />
               )}
 
-              {(selected.includes(cell) || matched.includes(cell)) && (
+              {(isSelected || isMatched) && (
                 <motion.div
                   className="absolute inset-0"
                   initial={{ rotateY: -180 }}
@@ -157,9 +169,9 @@ export default function PhotoPairGame({
                       src={images[cell]}
                       alt={`Image ${cell + 1}`}
                       fill
-                      sizes="(max-width: 768px) 13vw, 13vh"
+                      sizes="(max-width: 768px) 16vw, 13vh"
                       priority={true}
-                      className="rounded-2xl border-4 border-gray-400 shadow-xl object-cover"
+                      className="rounded-xl sm:rounded-2xl border-2 sm:border-4 border-gray-400 shadow-lg sm:shadow-xl object-cover"
                     />
                   </div>
                 </motion.div>
@@ -167,26 +179,24 @@ export default function PhotoPairGame({
 
               {incorrect.includes(cell) && (
                 <motion.div
-                  className="absolute inset-0 z-10"
+                  className="absolute inset-0 z-20"
                   animate={{ scale: [1, 1.05, 1], opacity: [1, 0.8, 0] }}
                   transition={{ duration: 0.5 }}
                 >
-                  <div className="w-full h-full bg-red-500 rounded-2xl"></div>
+                  <div className="w-full h-full bg-red-500 rounded-xl sm:rounded-2xl"></div>
                 </motion.div>
               )}
 
               {justMatched.includes(cell) && (
                 <motion.div
-                  className="absolute inset-0 z-10"
+                  className="absolute inset-0 z-20"
                   animate={{ scale: [1, 1.05, 1], opacity: [1, 0.8, 0] }}
                   transition={{ duration: 0.5 }}
                 >
-                  <div className="w-full h-full bg-green-500 rounded-2xl"></div>
+                  <div className="w-full h-full bg-green-500 rounded-xl sm:rounded-2xl"></div>
                 </motion.div>
               )}
             </motion.div>
-          ) : (
-            <div key={i} style={{ width: cellSize, height: cellSize }} />
           );
         })}
       </div>
