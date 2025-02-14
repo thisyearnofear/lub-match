@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Muthoni's Valentine",
-  description: "Pumzika Couple",
+  title: "Mi Morenita",
+  description: "San Valentín",
   keywords: [
     "Valentine's card game",
     "romantic proposal game",
