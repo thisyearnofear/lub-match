@@ -4,12 +4,20 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 
 import TextFooter from "@/components/TextFooter";
-import PhotoPairGame from "../components/PhotoPairGame";
+import PhotoPairGame from "@/components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
+import {
+  defaultPairs,
+  defaultRevealImages,
+  defaultMessage,
+} from "@/data/defaultGame";
 
 const ANIM_DURATION = 2;
 
+import { useMiniAppReady } from "@/hooks/useMiniAppReady";
+
 export default function Home() {
+  useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -28,7 +36,7 @@ export default function Home() {
           animate={{ opacity: isTransitioning ? 0 : 1 }}
           transition={{ duration: ANIM_DURATION }}
         >
-          <PhotoPairGame handleShowProposal={handleShowProposal} />
+          <PhotoPairGame images={defaultPairs} handleShowProposal={handleShowProposal} />
           <TextFooter />
         </motion.div>
       ) : (
@@ -37,7 +45,7 @@ export default function Home() {
           animate={{ opacity: 1 }}
           transition={{ duration: ANIM_DURATION }}
         >
-          <ValentinesProposal />
+          <ValentinesProposal revealImages={defaultRevealImages} message={defaultMessage} />
         </motion.div>
       )}
     </div>

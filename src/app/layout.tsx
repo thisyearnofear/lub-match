@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Muthoni's Valentine",
-  description: "Pumzika Couple",
+  title: "Valentine Memory Game",
+  description: "Create & share a heart-shaped memory card game!",
   keywords: [
     "Valentine's card game",
     "romantic proposal game",
@@ -13,7 +13,27 @@ export const metadata: Metadata = {
     "valentine's day game",
     "proposal game",
   ],
+  other: {
+    "fc:miniapp": JSON.stringify({
+      version: "1",
+      imageUrl: "https://YOUR_DOMAIN/og-default.png",
+      button: {
+        title: "Play the Game",
+        action: {
+          type: "launch_frame",
+          name: "Valentine Game",
+          splashImageUrl: "https://YOUR_DOMAIN/icon-200.png",
+          splashBackgroundColor: "#ffffff",
+        },
+      },
+    }),
+  },
 };
+
+import { WagmiConfig } from "wagmi";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { wagmiConfig } from "@/wallet/wagmiConfig";
+import "@rainbow-me/rainbowkit/styles.css";
 
 export default function RootLayout({
   children,
@@ -22,7 +42,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <WagmiConfig config={wagmiConfig}>
+          <RainbowKitProvider>{children}</RainbowKitProvider>
+        </WagmiConfig>
+      </body>
     </html>
   );
 }
