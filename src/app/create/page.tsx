@@ -9,6 +9,7 @@ import { usePublishGame } from "@/hooks/usePublishGame";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import Web3Provider from "@/components/Web3Provider";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 
 // Debug info component
 function DebugInfo() {
@@ -253,6 +254,7 @@ function CreateGameContent() {
         window.open(`https://basescan.org/tx/${hash}`, "_blank");
         router.push(`/game/${cid}?created=1`);
       }
+
     } catch (err: any) {
       setOnchainError(err?.message ?? "Error publishing on-chain");
     }
@@ -572,10 +574,8 @@ function CreateGameContent() {
   );
 }
 
-export default function CreateGamePage() {
-  return (
-    <Web3Provider>
-      <CreateGameContent />
-    </Web3Provider>
-  );
-}
+const CreateGamePage = dynamic(() => Promise.resolve(CreateGameContent), {
+  ssr: false,
+});
+
+export default CreateGamePage;

@@ -12,7 +12,7 @@ const config = getDefaultConfig({
   projectId:
     process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "valentine-memory-game",
   chains: [base, baseSepolia],
-  ssr: true,
+  ssr: false,
 });
 
 const queryClient = new QueryClient();
