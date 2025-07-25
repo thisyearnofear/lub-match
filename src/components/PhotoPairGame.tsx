@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState, useEffect, useMemo } from "react";
 import { defaultPairs } from "@/data/defaultGame";
+import { useGameZoom, useAutoZoom } from "@/hooks/useGameZoom";
+import { SimpleMobileZoomControls } from "./MobileZoomControls";
 
 const shuffleArray = (array: string[]) => {
   for (let i = array.length - 1; i > 0; i--) {
@@ -45,6 +47,16 @@ export default function PhotoPairGame({
   const [matched, setMatched] = useState<number[]>([]);
   const [incorrect, setIncorrect] = useState<number[]>([]);
   const [justMatched, setJustMatched] = useState<number[]>([]);
+
+  // Initialize zoom system
+  const zoomControls = useGameZoom({
+    zoomedScale: 1.3,
+    baseScale: 0.9,
+    transitionDuration: 500,
+  });
+
+  // Auto-zoom behavior
+  useAutoZoom(selected, matched, zoomControls);
 
   useEffect(() => {
     setShuffledPairs(shuffleArray([...imagePairs]));
@@ -90,10 +102,14 @@ export default function PhotoPairGame({
   }, [matched]);
 
   return (
-    <div className="flex justify-center items-center min-h-screen w-full px-2 sm:px-4 py-8">
+    <div className="relative flex justify-center items-center min-h-screen w-full px-4 sm:px-6 py-8">
       <div
-        className="grid grid-cols-7 gap-2 sm:gap-3 w-full"
-        style={{ maxWidth: "min(90vh, 100vw)" }}
+        className="grid grid-cols-7 gap-2 sm:gap-3"
+        style={{
+          maxWidth: "min(85vh, 90vw)",
+          width: "100%",
+          ...zoomControls.getTransformStyle(),
+        }}
       >
         {/* Image preload - improved with proper sizes */}
         <div className="hidden">
@@ -200,6 +216,12 @@ export default function PhotoPairGame({
           );
         })}
       </div>
+
+      {/* Mobile Zoom Controls */}
+      <SimpleMobileZoomControls
+        zoomControls={zoomControls}
+        disabled={matched.length === imagePairs.length}
+      />
     </div>
   );
 }

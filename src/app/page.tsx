@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
 import TextFooter from "@/components/TextFooter";
 import PhotoPairGame from "../components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
+import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import {
   defaultPairs,
   defaultRevealImages,
@@ -21,6 +22,23 @@ export default function Home() {
   useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Dynamic Farcaster users for social experience
+  const { users, loading, error, getRandomPairs } = useFarcasterUsers({
+    count: 16,
+    minFollowers: 50,
+    enableAutoRefresh: true,
+  });
+
+  // Game images - either from Farcaster users or fallback
+  const [gameImages, setGameImages] = useState(defaultPairs);
+
+  useEffect(() => {
+    if (!loading && users.length >= 8) {
+      const farcasterPairs = getRandomPairs();
+      setGameImages(farcasterPairs);
+    }
+  }, [users, loading, getRandomPairs]);
 
   const handleShowProposal = () => {
     setIsTransitioning(true);
@@ -52,7 +70,7 @@ export default function Home() {
             className="w-full max-w-lg"
           >
             <PhotoPairGame
-              images={defaultPairs}
+              images={gameImages}
               handleShowProposal={handleShowProposal}
             />
             <TextFooter />
@@ -74,9 +92,11 @@ export default function Home() {
 
       {/* Mobile-friendly bottom info */}
       <div className="fixed bottom-4 left-4 right-4 text-center">
-        <p className="text-pink-300 text-xs">
-          💕 A romantic memory game perfect for sharing on Farcaster
-        </p>
+        {error && (
+          <p className="text-orange-300 text-xs">
+            ⚠️ Demo mode - add Neynar API key for social features
+          </p>
+        )}
       </div>
     </div>
   );
