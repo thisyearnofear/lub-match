@@ -2,7 +2,14 @@
   "frame": {
     "version": "1",
     "name": "Valentine Memory Game",
-    "iconUrl": "https://YOUR_DOMAIN/icon-200.png",
-    "homeUrl": "https://YOUR_DOMAIN"
+    "iconUrl": "/hamster_jumping.gif",
+    "homeUrl": "/",
+    "imageUrl": "/github-demo.gif",
+    "button": {
+      "title": "💝 Play Valentine Game",
+      "action": {
+        "type": "launch_frame"
+      }
+    }
   }
 }
