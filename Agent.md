@@ -9,7 +9,7 @@ This is a **Valentine's Memory Game** - a romantic, interactive web application 
 - 💝 Custom photo upload and game creation
 - 🎆 Romantic proposal screen with fireworks animation
 - 📱 Fully responsive design with mobile-first approach
-- 🔗 Shareable game links via IPFS decentralized storage
+- 🔗 Dual-mode storage: Quick Share (app-controlled) or Private Control (user-owned)
 - ⛓️ Optional on-chain proof minting on Base network
 - 🎨 Beautiful animations with Framer Motion
 - 💫 Playful "No" button that moves away when hovered
@@ -26,7 +26,7 @@ This is a **Valentine's Memory Game** - a romantic, interactive web application 
 
 ### Backend & Storage
 - **Next.js API Routes** - Backend endpoints
-- **Web3.Storage** - IPFS decentralized file storage
+- **Pinata** - IPFS storage with dual-mode architecture
 - **Vercel** - Deployment platform
 
 ### Blockchain Integration
@@ -62,7 +62,7 @@ valentines-game/
 │   │   ├── useMiniAppReady.ts  # Farcaster Frame integration
 │   │   └── usePublishGame.ts   # Blockchain publishing hook
 │   ├── utils/
-│   │   └── ipfs.ts            # IPFS upload utilities
+│   │   └── ipfs.ts            # Dual-mode Pinata storage utilities
 │   └── wallet/
 │       └── wagmiConfig.ts      # Web3 configuration
 ├── public/
@@ -93,40 +93,48 @@ valentines-game/
   - Custom message support
 
 ### 3. Game Creation Flow (/create)
-- **Purpose**: Allow users to create custom games
+- **Purpose**: Allow users to create custom games with dual storage modes
 - **Features**:
   - Drag & drop photo upload (8 pairs + 36 optional reveal images)
   - Custom proposal message input
-  - IPFS upload via Web3.Storage
+  - **Quick Share Mode**: App-controlled Pinata storage (permanent)
+  - **Private Control Mode**: User's own Pinata API key (deletable)
   - Optional on-chain proof minting
-  - Shareable link generation
+  - Shareable link generation with storage mode indication
 
 ## Data Flow
 
 ### Game Creation
-1. User uploads 8 photos (pairs) + optional 36 reveal photos
-2. Files uploaded to IPFS via Web3.Storage
-3. Metadata JSON created with file references
-4. CID (Content Identifier) returned as game ID
-5. Optional: Publish proof on Base blockchain
-6. Shareable URL: `/game/[cid]`
+1. User selects storage mode (Quick Share or Private Control)
+2. User uploads 8 photos (pairs) + optional 36 reveal photos
+3. Files uploaded to Pinata IPFS based on selected mode:
+   - **Quick Share**: Uses app's Pinata account (permanent storage)
+   - **Private Control**: Uses user's Pinata API key (user can delete)
+4. Metadata JSON created with file references and storage mode
+5. CID (Content Identifier) returned as game ID
+6. Optional: Publish proof on Base blockchain
+7. Shareable URL: `/game/[cid]` with storage mode indication
 
 ### Game Playing
 1. Load metadata from IPFS using CID
-2. Fetch images from IPFS gateway
+2. Fetch images from Pinata gateway (with IPFS fallback)
 3. Shuffle and display memory game
 4. Track matches and completion
 5. Show proposal screen on completion
+6. Display storage mode info (deletable vs permanent)
 
 ## Environment Variables
 
 ```bash
-# Required for game creation
-WEB3_STORAGE_TOKEN=your_web3_storage_token
+# Required for Quick Share mode
+PINATA_JWT=your_pinata_jwt_token
 
 # Optional for on-chain features
 NEXT_PUBLIC_REGISTRY_ADDRESS=0x...
 NEXT_PUBLIC_ENABLE_ONCHAIN=true
+
+# Auto-configured by deployment platform
+VERCEL_URL=your-app.vercel.app
 ```
 
 ## Key Algorithms
@@ -193,12 +201,13 @@ pnpm start
 - Strategic use of `will-change` properties
 - Minimal DOM manipulations during gameplay
 
-## Security Considerations
+### Security Considerations
 
-### IPFS Content
-- All uploaded content is public on IPFS
-- No sensitive data should be uploaded
-- Content addressing prevents tampering
+### Storage Modes
+- **Quick Share**: Content is permanent and publicly accessible
+- **Private Control**: Users maintain deletion rights via their Pinata account
+- All IPFS content is publicly accessible with the CID
+- No sensitive data should be uploaded without understanding permanence
 
 ### Blockchain Integration
 - Uses established patterns (Wagmi + RainbowKit)
@@ -220,10 +229,11 @@ pnpm start
 ## Troubleshooting
 
 ### Common Issues
-1. **Images not loading**: Check IPFS gateway availability
+1. **Images not loading**: Check Pinata gateway availability and IPFS fallback
 2. **Wallet connection fails**: Verify network configuration
-3. **Game creation fails**: Check Web3.Storage token
+3. **Game creation fails**: Check Pinata JWT token or user API key
 4. **Animations choppy**: Reduce motion preferences or hardware limitations
+5. **Private mode fails**: Verify user's Pinata API key permissions
 
 ### Debug Tools
 - Browser DevTools for performance profiling
@@ -240,9 +250,11 @@ pnpm start
 
 ### Technical
 - Progressive Web App (PWA) support
-- Offline gameplay capability
-- Advanced image processing
+- Offline gameplay capability for cached games
+- Advanced image processing and optimization
 - NFT integration for game results
+- Batch upload for multiple games
+- Advanced Pinata management dashboard
 
 ### Social
 - Leaderboards
