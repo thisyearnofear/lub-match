@@ -29,33 +29,15 @@ type PhotoPairGameProps = {
   handleShowProposal: () => void;
 };
 
-const shuffleArray = (array: string[]) => {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-};
-
-type CellType = number | "deco" | null;
-
-const heartLayout: CellType[][] = [
-  [null, 0, 1, null, 2, 3, null],
-  [4, 5, 6, 7, 8, 9, 10],
-  [null, 11, 12, 13, 14, 15, null],
-  [null, null, "deco", "deco", "deco", null, null],
-  [null, null, null, "deco", null, null, null],
-  [null, null, null, null, null, null, null],
-];
-
 export default function PhotoPairGame({
   images: imagesProp,
   handleShowProposal,
 }: PhotoPairGameProps) {
-  const imagesFinal = imagesProp && imagesProp.length === 8 ? imagesProp : defaultPairs;
+  const imagesFinal =
+    imagesProp && imagesProp.length === 8 ? imagesProp : defaultPairs;
   const imagePairs = useMemo(
     () => imagesFinal.flatMap((img) => [img, img]),
-    [imagesFinal]
+    [imagesFinal],
   );
 
   const [shuffledPairs, setShuffledPairs] = useState<string[]>([]);

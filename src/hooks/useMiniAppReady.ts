@@ -7,7 +7,7 @@ export function useMiniAppReady() {
     (async () => {
       try {
         await sdk.actions.ready();
-      } catch (_) {
+      } catch {
         /* Running outside Farcaster – ignore */
       }
     })();

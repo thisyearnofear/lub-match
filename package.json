@@ -9,14 +9,18 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@farcaster/miniapp-sdk": "^0.1.7",
     "@fireworks-js/react": "^2.10.8",
+    "@rainbow-me/rainbowkit": "^2.2.8",
     "framer-motion": "^12.2.0",
+    "nanoid": "^4.0.2",
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "web3.storage": "^7.1.0",
     "react-dropzone": "^14.2.3",
-    "nanoid": "^4.0.2"
+    "viem": "^2.33.1",
+    "wagmi": "^2.16.0",
+    "web3.storage": "^4.5.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
