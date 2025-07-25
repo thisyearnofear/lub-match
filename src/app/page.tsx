@@ -22,23 +22,30 @@ export default function Home() {
   useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  // Dynamic Farcaster users for social experience
+  // Dynamic Farcaster users for social experience - only on client
   const { users, loading, error, getRandomPairs } = useFarcasterUsers({
     count: 16,
     minFollowers: 50,
-    enableAutoRefresh: true,
+    enableAutoRefresh: false, // Disable auto-refresh to prevent hydration issues
   });
 
-  // Game images - either from Farcaster users or fallback
+  // Game images - stable on server, dynamic on client
   const [gameImages, setGameImages] = useState(defaultPairs);
 
+  // Set client flag
   useEffect(() => {
-    if (!loading && users.length >= 8) {
+    setIsClient(true);
+  }, []);
+
+  // Update game images only on client side
+  useEffect(() => {
+    if (isClient && !loading && users.length >= 8) {
       const farcasterPairs = getRandomPairs();
       setGameImages(farcasterPairs);
     }
-  }, [users, loading, getRandomPairs]);
+  }, [isClient, users, loading, getRandomPairs]);
 
   const handleShowProposal = () => {
     setIsTransitioning(true);
@@ -92,7 +99,7 @@ export default function Home() {
 
       {/* Mobile-friendly bottom info */}
       <div className="fixed bottom-4 left-4 right-4 text-center">
-        {error && (
+        {isClient && error && (
           <p className="text-orange-300 text-xs">
             ⚠️ Demo mode - add Neynar API key for social features
           </p>

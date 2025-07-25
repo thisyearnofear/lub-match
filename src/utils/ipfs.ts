@@ -37,6 +37,14 @@ async function uploadToAppPinata(
   }
 
   try {
+    console.log(
+      "Starting Quick Share upload with",
+      pairs.length,
+      "pairs and",
+      reveal?.length || 0,
+      "reveal images",
+    );
+
     // Check file sizes for mobile optimization (max 5MB per file)
     const maxSize = (options.maxFileSize || 5) * 1024 * 1024;
     const oversizedFiles = [...pairs, ...(reveal || [])].filter(
@@ -44,6 +52,10 @@ async function uploadToAppPinata(
     );
 
     if (oversizedFiles.length > 0) {
+      console.error(
+        "Oversized files detected:",
+        oversizedFiles.map((f) => ({ name: f.name, size: f.size })),
+      );
       throw new Error(
         `Some files are too large. Please use images under ${options.maxFileSize || 5}MB for best mobile performance.`,
       );
@@ -110,10 +122,20 @@ async function uploadToAppPinata(
     options.onProgress?.(95);
 
     if (!response.ok) {
-      throw new Error(`Pinata upload failed: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(
+        "Pinata API error:",
+        response.status,
+        response.statusText,
+        errorText,
+      );
+      throw new Error(
+        `Pinata upload failed: ${response.status} ${response.statusText} - ${errorText}`,
+      );
     }
 
     const result = await response.json();
+    console.log("Pinata upload successful:", result.IpfsHash);
     options.onProgress?.(100);
 
     return {
@@ -123,11 +145,10 @@ async function uploadToAppPinata(
     };
   } catch (error) {
     console.error("App Pinata upload failed:", error);
-    return {
-      cid: "error-quick-" + Date.now(),
-      deletable: false,
-      storageMode: "quick",
-    };
+    // Don't return error CID in production, throw the error instead
+    throw new Error(
+      `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -140,6 +161,14 @@ async function uploadToUserPinata(
   options: UploadOptions = {},
 ): Promise<UploadResult> {
   try {
+    console.log(
+      "Starting Private Pinata upload with",
+      pairs.length,
+      "pairs and",
+      reveal?.length || 0,
+      "reveal images",
+    );
+
     // Check file sizes for mobile optimization
     const maxSize = (options.maxFileSize || 5) * 1024 * 1024;
     const oversizedFiles = [...pairs, ...(reveal || [])].filter(
@@ -147,6 +176,10 @@ async function uploadToUserPinata(
     );
 
     if (oversizedFiles.length > 0) {
+      console.error(
+        "Oversized files detected:",
+        oversizedFiles.map((f) => ({ name: f.name, size: f.size })),
+      );
       throw new Error(
         `Some files are too large. Please use images under ${options.maxFileSize || 5}MB for best mobile performance.`,
       );
@@ -203,10 +236,20 @@ async function uploadToUserPinata(
     );
 
     if (!response.ok) {
-      throw new Error(`Private Pinata upload failed: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(
+        "Private Pinata API error:",
+        response.status,
+        response.statusText,
+        errorText,
+      );
+      throw new Error(
+        `Private Pinata upload failed: ${response.status} ${response.statusText} - ${errorText}`,
+      );
     }
 
     const result = await response.json();
+    console.log("Private Pinata upload successful:", result.IpfsHash);
     return {
       cid: result.IpfsHash,
       deletable: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Dropzone, { FileRejection } from "react-dropzone";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -9,6 +9,30 @@ import { usePublishGame } from "@/hooks/usePublishGame";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import Web3Provider from "@/components/Web3Provider";
 import Image from "next/image";
+
+// Debug info component
+function DebugInfo() {
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+
+  useEffect(() => {
+    setDebugInfo({
+      pinataJWT: !!process.env.PINATA_JWT,
+      hasFormData: typeof FormData !== "undefined",
+      hasFetch: typeof fetch !== "undefined",
+      userAgent:
+        typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+    });
+  }, []);
+
+  if (!debugInfo) return null;
+
+  return (
+    <details className="mt-4 p-3 bg-gray-100 rounded text-xs">
+      <summary className="cursor-pointer font-medium">Debug Info</summary>
+      <pre className="mt-2 text-xs">{JSON.stringify(debugInfo, null, 2)}</pre>
+    </details>
+  );
+}
 
 const PAIRS_LIMIT = 8;
 const REVEAL_LIMIT = 36;
@@ -156,25 +180,59 @@ function CreateGameContent() {
       pairs.forEach((f) => formData.append("pairs", f, f.name));
       reveal.forEach((f) => formData.append("reveal", f, f.name));
 
+      // Debug logging
+      console.log("Starting upload with formData:", {
+        storageMode,
+        userApiKeyProvided: !!userApiKey,
+        pairsCount: pairs.length,
+        revealCount: reveal.length,
+        messageLength: message.length,
+      });
+
+      // Simulate upload progress
+      setUploadProgress(20);
+
       const res = await fetch("/api/createGame", {
         method: "POST",
         body: formData,
       });
 
+      setUploadProgress(80);
+
+      console.log("Upload response:", {
+        status: res.status,
+        statusText: res.statusText,
+        ok: res.ok,
+      });
+
       if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error);
+        let errorMessage = "Failed to create game";
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = `Server error: ${res.status} ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const { cid, deletable: isDeletable } = await res.json();
-      setCid(cid);
-      setDeletable(isDeletable);
+      const result = await res.json();
+      setUploadProgress(100);
+
+      if (!result.cid) {
+        throw new Error("No game ID returned from server");
+      }
+
+      setCid(result.cid);
+      setDeletable(result.deletable || false);
       setShowOnchain(true);
-      const url = `${window.location.origin}/game/${cid}?created=1`;
+      const url = `${window.location.origin}/game/${result.cid}?created=1`;
       await navigator.clipboard.writeText(url);
       // Do not redirect yet
     } catch (err: any) {
+      console.error("Upload error:", err);
       setError(err.message ?? "Could not create game.");
+      setUploadProgress(0);
     } finally {
       setLoading(false);
     }
@@ -496,12 +554,17 @@ function CreateGameContent() {
                 ? "🌍 Files stored forever on IPFS - perfect for sharing!"
                 : "🔒 Private mode: You control your content"}
             </p>
-            <a
-              href="/"
-              className="text-pink-500 hover:text-pink-600 text-sm font-medium"
-            >
-              ← Try the demo game first
-            </a>
+            <div className="mt-4 text-center">
+              <a
+                href="/"
+                className="text-pink-500 hover:text-pink-600 text-sm font-medium"
+              >
+                ← Try the demo game first
+              </a>
+            </div>
+
+            {/* Debug information for troubleshooting */}
+            <DebugInfo />
           </div>
         </div>
       </div>
