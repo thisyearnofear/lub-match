@@ -30,6 +30,11 @@ export const metadata: Metadata = {
   },
 };
 
+import { WagmiConfig } from "wagmi";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { wagmiConfig } from "@/wallet/wagmiConfig";
+import "@rainbow-me/rainbowkit/styles.css";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,7 +42,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <WagmiConfig config={wagmiConfig}>
+          <RainbowKitProvider>{children}</RainbowKitProvider>
+        </WagmiConfig>
+      </body>
     </html>
   );
 }
