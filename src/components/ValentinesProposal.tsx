@@ -3,53 +3,25 @@ import { Playfair_Display } from "next/font/google";
 import { motion, AnimatePresence } from "framer-motion";
 import Fireworks from "@fireworks-js/react";
 import Image from "next/image";
+import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
+
+type ValentinesProposalProps = {
+  revealImages?: string[]; // falls back to defaultRevealImages
+  message?: string; // falls back to defaultMessage
+};
 
 const playfairDisplay = Playfair_Display({
   display: "swap",
   subsets: ["latin"],
 });
 
-// 36 images
-const images = [
-  "/game-photos/1.avif",
-  "/game-photos/2.avif",
-  "/game-photos/3.avif",
-  "/game-photos/4.avif",
-  "/game-photos/5.avif",
-  "/game-photos/6.avif",
-  "/game-photos/7.avif",
-  "/game-photos/8.avif",
-  "/game-photos/9.avif",
-  "/game-photos/10.avif",
-  "/game-photos/11.avif",
-  "/game-photos/12.avif",
-  "/game-photos/13.avif",
-  "/game-photos/14.avif",
-  "/game-photos/15.avif",
-  "/game-photos/16.avif",
-  "/game-photos/17.avif",
-  "/game-photos/18.avif",
-  "/game-photos/19.avif",
-  "/game-photos/20.avif",
-  "/game-photos/21.avif",
-  "/game-photos/22.avif",
-  "/game-photos/23.avif",
-  "/game-photos/24.avif",
-  "/game-photos/25.avif",
-  "/game-photos/26.avif",
-  "/game-photos/27.avif",
-  "/game-photos/28.avif",
-  "/game-photos/29.avif",
-  "/game-photos/30.avif",
-  "/game-photos/31.avif",
-  "/game-photos/32.avif",
-  "/game-photos/33.avif",
-  "/game-photos/34.avif",
-  "/game-photos/35.avif",
-  "/game-photos/36.avif",
-];
+export default function ValentinesProposal({
+  revealImages,
+  message,
+}: ValentinesProposalProps) {
+  const images = revealImages && revealImages.length >= 36 ? revealImages : defaultRevealImages;
+  const heading = message || defaultMessage;
 
-export default function ValentinesProposal() {
   const [step, setStep] = useState(0);
   const [position, setPosition] = useState<{
     top: string;
@@ -132,7 +104,7 @@ export default function ValentinesProposal() {
             <h2
               className={`text-5xl font-semibold mb-8 ${playfairDisplay.className}`}
             >
-              Will you be my Valentine?
+              {heading}
             </h2>
             <Image
               src="/sad_hamster.png"
