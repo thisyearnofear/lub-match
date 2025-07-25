@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 import TextFooter from "@/components/TextFooter";
-import PhotoPairGame from "@/components/PhotoPairGame";
+import PhotoPairGame from "../components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
 import {
   defaultPairs,
@@ -29,25 +30,54 @@ export default function Home() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-black relative px-10">
-      {!showValentinesProposal ? (
-        <motion.div
-          initial={{ opacity: 1 }}
-          animate={{ opacity: isTransitioning ? 0 : 1 }}
-          transition={{ duration: ANIM_DURATION }}
+    <div className="flex flex-col min-h-screen bg-black relative">
+      {/* Mobile-friendly header */}
+      <div className="fixed top-4 left-4 right-4 z-50 flex justify-between items-center">
+        <div className="text-white text-lg font-bold">💝 Valentine's Game</div>
+        <Link
+          href="/create"
+          className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full text-sm font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"
         >
-          <PhotoPairGame images={defaultPairs} handleShowProposal={handleShowProposal} />
-          <TextFooter />
-        </motion.div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: ANIM_DURATION }}
-        >
-          <ValentinesProposal revealImages={defaultRevealImages} message={defaultMessage} />
-        </motion.div>
-      )}
+          Create Your Own
+        </Link>
+      </div>
+
+      {/* Main game area */}
+      <div className="flex-1 flex items-center justify-center px-4 pt-16 pb-4">
+        {!showValentinesProposal ? (
+          <motion.div
+            initial={{ opacity: 1 }}
+            animate={{ opacity: isTransitioning ? 0 : 1 }}
+            transition={{ duration: ANIM_DURATION }}
+            className="w-full max-w-lg"
+          >
+            <PhotoPairGame
+              images={defaultPairs}
+              handleShowProposal={handleShowProposal}
+            />
+            <TextFooter />
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: ANIM_DURATION }}
+            className="w-full max-w-lg"
+          >
+            <ValentinesProposal
+              revealImages={defaultRevealImages}
+              message={defaultMessage}
+            />
+          </motion.div>
+        )}
+      </div>
+
+      {/* Mobile-friendly bottom info */}
+      <div className="fixed bottom-4 left-4 right-4 text-center">
+        <p className="text-pink-300 text-xs">
+          💕 A romantic memory game perfect for sharing on Farcaster
+        </p>
+      </div>
     </div>
   );
 }

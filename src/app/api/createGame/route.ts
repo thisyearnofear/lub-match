@@ -31,13 +31,35 @@ export async function POST(req: Request) {
       );
     }
 
+    // Mobile optimization: Check file sizes
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allFiles = [...pairs, ...(reveal || [])];
+    const oversizedFiles = allFiles.filter((file) => file.size > maxSize);
+
+    if (oversizedFiles.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Files too large for mobile. Please use images under 5MB. Found ${oversizedFiles.length} oversized file(s).`,
+        },
+        { status: 400 },
+      );
+    }
+
     // Only send reveal if at least 1 image is provided
     const revealList = reveal && reveal.length > 0 ? reveal : undefined;
 
-    const result = await uploadGame(pairs, revealList, message, {
-      mode: storageMode as "quick" | "private",
-      apiKey: userApiKey || undefined,
-    });
+    const result = await uploadGame(
+      pairs,
+      revealList,
+      message,
+      {
+        mode: storageMode as "quick" | "private",
+        apiKey: userApiKey || undefined,
+      },
+      {
+        maxFileSize: 5, // 5MB limit for mobile
+      },
+    );
 
     return NextResponse.json({
       cid: result.cid,

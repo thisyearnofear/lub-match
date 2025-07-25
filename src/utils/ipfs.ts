@@ -13,11 +13,17 @@ interface UploadResult {
   storageMode: "quick" | "private";
 }
 
+interface UploadOptions {
+  onProgress?: (progress: number) => void;
+  maxFileSize?: number; // in MB
+}
+
 // Quick Share Mode - App-controlled Pinata
 async function uploadToAppPinata(
   pairs: File[],
   reveal: File[] | undefined,
   message: string,
+  options: UploadOptions = {},
 ): Promise<UploadResult> {
   const appPinataKey = process.env.PINATA_JWT;
 
@@ -31,16 +37,36 @@ async function uploadToAppPinata(
   }
 
   try {
+    // Check file sizes for mobile optimization (max 5MB per file)
+    const maxSize = (options.maxFileSize || 5) * 1024 * 1024;
+    const oversizedFiles = [...pairs, ...(reveal || [])].filter(
+      (file) => file.size > maxSize,
+    );
+
+    if (oversizedFiles.length > 0) {
+      throw new Error(
+        `Some files are too large. Please use images under ${options.maxFileSize || 5}MB for best mobile performance.`,
+      );
+    }
+
+    options.onProgress?.(10);
+
     const formData = new FormData();
 
-    // Add all files to form data
+    // Add all files to form data with progress tracking
+    options.onProgress?.(20);
+
     pairs.forEach((file, index) => {
       formData.append("file", file, `pair-${index}-${file.name}`);
     });
 
+    options.onProgress?.(40);
+
     reveal?.forEach((file, index) => {
       formData.append("file", file, `reveal-${index}-${file.name}`);
     });
+
+    options.onProgress?.(60);
 
     // Add metadata
     const metadata = new Blob(
@@ -68,6 +94,8 @@ async function uploadToAppPinata(
     });
     formData.append("pinataMetadata", pinataMetadata);
 
+    options.onProgress?.(80);
+
     const response = await fetch(
       "https://api.pinata.cloud/pinning/pinFileToIPFS",
       {
@@ -79,11 +107,15 @@ async function uploadToAppPinata(
       },
     );
 
+    options.onProgress?.(95);
+
     if (!response.ok) {
       throw new Error(`Pinata upload failed: ${response.statusText}`);
     }
 
     const result = await response.json();
+    options.onProgress?.(100);
+
     return {
       cid: result.IpfsHash,
       deletable: false,
@@ -105,8 +137,23 @@ async function uploadToUserPinata(
   reveal: File[] | undefined,
   message: string,
   userApiKey: string,
+  options: UploadOptions = {},
 ): Promise<UploadResult> {
   try {
+    // Check file sizes for mobile optimization
+    const maxSize = (options.maxFileSize || 5) * 1024 * 1024;
+    const oversizedFiles = [...pairs, ...(reveal || [])].filter(
+      (file) => file.size > maxSize,
+    );
+
+    if (oversizedFiles.length > 0) {
+      throw new Error(
+        `Some files are too large. Please use images under ${options.maxFileSize || 5}MB for best mobile performance.`,
+      );
+    }
+
+    options.onProgress?.(10);
+
     const formData = new FormData();
 
     // Add all files to form data
@@ -177,11 +224,12 @@ export async function uploadGame(
   reveal: File[] | undefined,
   message: string,
   config: StorageConfig = { mode: "quick" },
+  options: UploadOptions = {},
 ): Promise<UploadResult> {
   if (config.mode === "private" && config.apiKey) {
-    return uploadToUserPinata(pairs, reveal, message, config.apiKey);
+    return uploadToUserPinata(pairs, reveal, message, config.apiKey, options);
   } else {
-    return uploadToAppPinata(pairs, reveal, message);
+    return uploadToAppPinata(pairs, reveal, message, options);
   }
 }
 
