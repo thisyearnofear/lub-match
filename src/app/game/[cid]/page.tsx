@@ -63,6 +63,8 @@ export default async function PlayGamePage({
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
+import { useMiniAppReady } from "@/hooks/useMiniAppReady";
+
 function GameContent({
   pairUrls,
   revealUrls,
@@ -74,6 +76,7 @@ function GameContent({
   message: string;
   justCreated: boolean;
 }) {
+  useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -91,8 +94,23 @@ function GameContent({
     }, 2000);
   };
 
+  const share = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(url)}`);
+  };
+
   return (
     <>
+      <div className="w-full flex justify-end mb-2">
+        <button
+          onClick={share}
+          className="px-3 py-1 text-xs rounded bg-pink-500 hover:bg-pink-600 text-white shadow transition"
+          style={{ display: typeof window !== "undefined" && window?.fc ? "none" : undefined }}
+        >
+          Cast This
+        </button>
+      </div>
       {!showValentinesProposal ? (
         <motion.div
           initial={{ opacity: 1 }}

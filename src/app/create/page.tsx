@@ -84,7 +84,10 @@ function DropzoneField({
   );
 }
 
+import { useMiniAppReady } from "@/hooks/useMiniAppReady";
+
 export default function CreateGamePage() {
+  useMiniAppReady();
   const [pairs, setPairs] = useState<File[]>([]);
   const [reveal, setReveal] = useState<File[]>([]);
   const [message, setMessage] = useState(DEFAULT_MESSAGE);

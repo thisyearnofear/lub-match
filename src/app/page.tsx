@@ -14,7 +14,10 @@ import {
 
 const ANIM_DURATION = 2;
 
+import { useMiniAppReady } from "@/hooks/useMiniAppReady";
+
 export default function Home() {
+  useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
