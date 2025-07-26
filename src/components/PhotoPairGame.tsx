@@ -28,12 +28,12 @@ const heartLayout: CellType[][] = [
 
 type PhotoPairGameProps = {
   images?: string[]; // expects 8 images; falls back to defaultPairs
-  handleShowProposal: () => void;
+  handleShowProposalAction: () => void;
 };
 
 export default function PhotoPairGame({
   images: imagesProp,
-  handleShowProposal,
+  handleShowProposalAction,
 }: PhotoPairGameProps) {
   const imagesFinal =
     imagesProp && imagesProp.length === 8 ? imagesProp : defaultPairs;
@@ -96,7 +96,7 @@ export default function PhotoPairGame({
 
   useEffect(() => {
     if (matched.length === imagePairs.length) {
-      handleShowProposal();
+      handleShowProposalAction();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matched]);

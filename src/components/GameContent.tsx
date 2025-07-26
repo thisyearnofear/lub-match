@@ -98,7 +98,7 @@ export default function GameContent({
         >
           <PhotoPairGame
             images={pairUrls}
-            handleShowProposal={handleShowProposal}
+            handleShowProposalAction={handleShowProposal}
           />
         </motion.div>
       ) : (

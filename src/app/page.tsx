@@ -78,7 +78,7 @@ export default function Home() {
           >
             <PhotoPairGame
               images={gameImages}
-              handleShowProposal={handleShowProposal}
+              handleShowProposalAction={handleShowProposal}
             />
             <TextFooter />
           </motion.div>

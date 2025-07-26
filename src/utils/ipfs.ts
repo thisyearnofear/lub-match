@@ -1,3 +1,5 @@
+import { PINATA_JWT } from "../config";
+
 // Dual-mode storage architecture for Valentine's Memory Game
 // Mode 1: Quick Share (App-controlled Pinata)
 // Mode 2: Private Control (User's own API key)
@@ -25,7 +27,8 @@ async function uploadToAppPinata(
   message: string,
   options: UploadOptions = {},
 ): Promise<UploadResult> {
-  const appPinataKey = process.env.PINATA_JWT;
+
+const appPinataKey = PINATA_JWT;
 
   if (!appPinataKey) {
     console.log("No PINATA_JWT provided, using mock CID");
