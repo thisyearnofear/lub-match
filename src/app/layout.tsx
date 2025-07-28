@@ -7,21 +7,21 @@ export const metadata: Metadata = {
       ? `https://${process.env.VERCEL_URL}`
       : "http://localhost:3000",
   ),
-  title: "Valentine Memory Game",
-  description: "Create & share a heart-shaped memory card game!",
+  title: "Lubber's Memory Game",
+  description: "Send lub & share a heart-shaped memory card game!",
   keywords: [
-    "Valentine's card game",
+    "Lubber's card game",
     "romantic proposal game",
     "photo card challenge",
-    "Valentine's Day surprise",
+    "send lub game",
     "couples game",
-    "valentine's day game",
+    "lub game",
     "proposal game",
   ],
   openGraph: {
-    title: "Valentine Memory Game 💝",
+    title: "Lubber's Memory Game 💝",
     description:
-      "A romantic heart-shaped memory game to ask your special someone to be your Valentine!",
+      "A romantic heart-shaped memory game to send lub to your special someone!",
     images: [
       {
         url: "/github-demo.gif",
@@ -34,9 +34,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Valentine Memory Game 💝",
+    title: "Lubber's Memory Game 💝",
     description:
-      "A romantic heart-shaped memory game to ask your special someone to be your Valentine!",
+      "A romantic heart-shaped memory game to send lub to your special someone!",
     images: ["/github-demo.gif"],
   },
   other: {
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
         title: "Play the Game",
         action: {
           type: "launch_frame",
-          name: "Valentine Memory Game",
+          name: "Lubber's Memory Game",
           splashImageUrl: "/hamster_jumping.gif",
           splashBackgroundColor: "#000000",
         },

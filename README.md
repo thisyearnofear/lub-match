@@ -1,6 +1,6 @@
-# Valentine's Memory Game Proposal 💝
+# Lubber's Memory Game 💝
 
-A romantic and interactive way to ask your special someone to be your Valentine! This web application features a memory card game in a heart shape, where matching all pairs reveals a special Valentine's proposal with cute animations and effects.
+A romantic and interactive way to send lub to your special someone! This web application features a memory card game in a heart shape, where matching all pairs reveals a special Lubbly proposal with cute animations and effects.
 
 ![Demo Preview](public/github-demo.gif)
 
@@ -31,8 +31,8 @@ You can see the live demo of the game [here](https://valentines-proposal-visibai
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/visibait/valentines.git
-cd valentines
+git clone https://github.com/visibait/lubbers-game.git
+cd lubbers-game
 ```
 
 2. Install dependencies:
@@ -110,6 +110,6 @@ visibait - [https://visibait.com]
 
 ---
 
-Made with ❤️ for my Valentine
+Made with ❤️ to send lub
 
 *Note: This project is meant for romantic purposes. Please use responsibly and spread love!*

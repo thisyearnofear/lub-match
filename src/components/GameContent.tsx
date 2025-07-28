@@ -22,20 +22,22 @@ export default function GameContent({
 }: GameContentProps) {
   useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (justCreated && typeof window !== "undefined") {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (justCreated && isClient) {
       // Toast: link copied
-      window.alert("Game created – link copied to clipboard!");
+      window.alert("Lub sent – link copied to clipboard!");
     }
-  }, [justCreated]);
+  }, [justCreated, isClient]);
 
   const handleShowProposal = () => {
-    setIsTransitioning(true);
-
     // Check if running in Farcaster and send celebration event
-    if (typeof window !== "undefined" && (window as any)?.fc) {
+    if (isClient && (window as any)?.fc) {
       try {
         (window as any).fc.requestNotificationPermission?.();
         // Could add confetti or celebration effects here
@@ -44,20 +46,25 @@ export default function GameContent({
       }
     }
 
+    // A short delay for the final transition
     setTimeout(() => {
       setShowValentinesProposal(true);
-    }, 2000);
+    }, 500);
   };
 
-  const share = () => {
+  const share = async () => {
     const url = window.location.href;
-    const shareText = `💝 Play this romantic memory game with me! Can you match all the hearts? ${url}`;
+    const shareText = `💝 Play this Lubber's memory game with me! Can you match all the hearts? ${url}`;
 
-    // Copy to clipboard
-    navigator.clipboard.writeText(url);
+    // Copy to clipboard (with error handling)
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (error) {
+      console.log('Could not copy to clipboard:', error);
+    }
 
     // Check if running in Farcaster
-    if (typeof window !== "undefined" && (window as any)?.fc) {
+    if (isClient && (window as any)?.fc) {
       // Use Farcaster SDK for native sharing if available
       try {
         (window as any).fc.share?.({
@@ -70,7 +77,7 @@ export default function GameContent({
           `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`,
         );
       }
-    } else {
+    } else if (isClient) {
       // Open Warpcast compose
       window.open(
         `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`,
@@ -79,50 +86,43 @@ export default function GameContent({
   };
 
   return (
-    <>
-      <div className="w-full flex justify-end mb-2">
-        <button
-          onClick={share}
-          className="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-        >
-          {typeof window !== "undefined" && (window as any)?.fc
-            ? "💝 Share Game"
-            : "🚀 Cast This"}
-        </button>
-      </div>
+    <div className="flex flex-col items-center justify-center w-full">
       {!showValentinesProposal ? (
-        <motion.div
-          initial={{ opacity: 1 }}
-          animate={{ opacity: isTransitioning ? 0 : 1 }}
-          transition={{ duration: 2 }}
-        >
+        <>
           <PhotoPairGame
             images={pairUrls}
             handleShowProposalAction={handleShowProposal}
           />
-        </motion.div>
+          <div className="w-full flex justify-center mt-4" style={{ maxWidth: 'min(85vh, 90vw)' }}>
+            <button
+              onClick={share}
+              className="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              {isClient && (window as any)?.fc
+                ? "💝 Share Game"
+                : "🚀 Cast This"}
+            </button>
+          </div>
+        </>
       ) : (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 2 }}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            type: "spring",
+            stiffness: 260,
+            damping: 20,
+            delay: 0.2,
+          }}
           className="relative"
         >
-          <ValentinesProposal revealImages={revealUrls} message={message} />
-
-          {/* Farcaster-optimized completion overlay */}
-          {typeof window !== "undefined" && (window as any)?.fc && (
-            <div className="absolute top-4 right-4">
-              <button
-                onClick={share}
-                className="px-3 py-2 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg transition-colors"
-              >
-                💝 Share Result
-              </button>
-            </div>
-          )}
+          <ValentinesProposal
+            revealImages={revealUrls}
+            message={message}
+            onShare={share}
+          />
         </motion.div>
       )}
-    </>
+    </div>
   );
 }

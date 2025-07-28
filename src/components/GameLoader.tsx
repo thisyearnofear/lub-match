@@ -1,74 +1,46 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import GameContent from './GameContent';
-import GameLoadingStates from './GameLoadingStates';
-import { gatewayUrl, fallbackGatewayUrl } from '@/utils/ipfs';
+import { useState, useEffect } from "react";
+import GameContent from "./GameContent";
+import GameLoadingStates from "./GameLoadingStates";
+import { storage } from "@/utils/decentralizedStorage";
+import { imageLoader } from "@/utils/reliableImageLoader";
 
 interface GameLoaderProps {
   cid: string;
   justCreated: boolean;
 }
 
-async function fetchMetadata(cid: string, maxRetries = 5) {
-  // Try primary gateway first, then fallback
-  const gateways = [
-    () => gatewayUrl(cid, "metadata.json"),
-    () => fallbackGatewayUrl(cid, "metadata.json"),
-  ];
-  
-  for (const getUrl of gateways) {
-    const url = getUrl();
-    console.log(`Trying gateway: ${url}`);
+async function fetchMetadata(cid: string): Promise<{ metadata: any; workingGateway: string } | null> {
+  try {
+    // Use the reliable gateway system
+    const workingGateway = await storage.testGatewayHealth(cid);
+    const metadataUrl = `${workingGateway}/ipfs/${cid}/metadata.json`;
     
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const res = await fetch(url, { 
-          cache: "no-store",
-          signal: AbortSignal.timeout(15000) // 15 second timeout
-        });
-        
-        if (res.ok) {
-          const metadata = await res.json();
-          console.log(`Metadata fetched successfully from ${url} on attempt ${attempt}`);
-          return metadata;
-        }
-        
-        console.warn(`${url} attempt ${attempt}/${maxRetries} failed: ${res.status} ${res.statusText}`);
-        
-        // If it's a 404, the content might not be propagated yet - retry
-        if (res.status === 404 && attempt < maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000); // Exponential backoff, max 8s
-          console.log(`Waiting ${delay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        
-        // For other errors on this gateway, try next gateway
-        break;
-        
-      } catch (error) {
-        console.warn(`${url} attempt ${attempt}/${maxRetries} error:`, error);
-        
-        if (attempt < maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
-          console.log(`Waiting ${delay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        
-        // Try next gateway
-        break;
-      }
+    console.log(`✅ Using working gateway: ${workingGateway}`);
+    
+    const response = await fetch(metadataUrl, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch metadata: ${response.status}`);
     }
+
+    const metadata = await response.json();
+    console.log(`✅ Metadata loaded successfully from ${workingGateway}`);
+    
+    return { metadata, workingGateway };
+  } catch (error) {
+    console.error(`❌ Failed to load metadata for CID: ${cid}`, error);
+    return null;
   }
-  
-  console.error(`All gateways failed for CID: ${cid}`);
-  return null;
 }
 
 export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
-  const [metadata, setMetadata] = useState<any>(null);
+  const [gameData, setGameData] = useState<{ metadata: any; workingGateway: string } | null>(null);
+  const [imageUrls, setImageUrls] = useState<{ pairs: string[]; reveal: string[] }>({ pairs: [], reveal: [] });
   const [loading, setLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -76,10 +48,32 @@ export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
     setLoading(true);
     try {
       const result = await fetchMetadata(cid);
-      setMetadata(result);
+      if (result) {
+        setGameData(result);
+        
+        // Generate reliable image URLs
+        const { metadata } = result;
+        const pairUrls = await Promise.all(
+          metadata.pairs.map((filename: string) => 
+            imageLoader.getWorkingImageUrl(cid, filename)
+          )
+        );
+        
+        const revealFiles = metadata.reveal?.length ? metadata.reveal : metadata.pairs;
+        const revealUrls = await Promise.all(
+          revealFiles.map((filename: string) => 
+            imageLoader.getWorkingImageUrl(cid, filename)
+          )
+        );
+
+        setImageUrls({ pairs: pairUrls, reveal: revealUrls });
+        
+        // Preload images for better UX
+        await imageLoader.preloadImages(cid, [...metadata.pairs, ...revealFiles]);
+      }
     } catch (error) {
-      console.error('Failed to load game:', error);
-      setMetadata(null);
+      console.error("Failed to load game:", error);
+      setGameData(null);
     } finally {
       setLoading(false);
     }
@@ -90,26 +84,29 @@ export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
   }, [cid, retryCount]);
 
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
-    setMetadata(null); // Reset metadata to trigger loading state
+    setRetryCount((prev) => prev + 1);
+    setGameData(null);
+    setImageUrls({ pairs: [], reveal: [] });
   };
 
-  if (loading || !metadata || !metadata.pairs || !Array.isArray(metadata.pairs)) {
+  if (
+    loading ||
+    !gameData ||
+    !gameData.metadata ||
+    !gameData.metadata.pairs ||
+    !Array.isArray(gameData.metadata.pairs) ||
+    imageUrls.pairs.length === 0
+  ) {
     return <GameLoadingStates cid={cid} onRetry={handleRetry} />;
   }
 
-  const pairUrls: string[] = metadata.pairs.map((name: string) =>
-    gatewayUrl(cid, name),
-  );
-  const revealUrls: string[] = (
-    metadata.reveal?.length ? metadata.reveal : metadata.pairs
-  ).map((name: string) => gatewayUrl(cid, name));
+  const { metadata } = gameData;
 
   return (
     <main className="flex items-center justify-center min-h-screen bg-black relative px-10">
       <GameContent
-        pairUrls={pairUrls}
-        revealUrls={revealUrls}
+        pairUrls={imageUrls.pairs}
+        revealUrls={imageUrls.reveal}
         message={metadata.message}
         justCreated={justCreated}
       />

@@ -25,11 +25,11 @@ export async function POST(req: NextRequest) {
               <meta property="fc:frame:button:1" content="🎮 Start Playing" />
               <meta property="fc:frame:button:1:action" content="link" />
               <meta property="fc:frame:button:1:target" content="${baseUrl}" />
-              <meta property="fc:frame:button:2" content="💝 Create Custom Game" />
+              <meta property="fc:frame:button:2" content="💝 Send Lub" />
               <meta property="fc:frame:button:2:action" content="link" />
               <meta property="fc:frame:button:2:target" content="${baseUrl}/create" />
               <meta property="og:image" content="${baseUrl}/github-demo.gif" />
-              <meta property="og:title" content="Valentine Memory Game 💝" />
+              <meta property="og:title" content="Lubber's Memory Game 💝" />
               <meta property="og:description" content="A romantic heart-shaped memory game!" />
             </head>
             <body>
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
               <meta property="fc:frame:button:1" content="🎮 Play Again" />
               <meta property="fc:frame:button:1:action" content="link" />
               <meta property="fc:frame:button:1:target" content="${baseUrl}" />
-              <meta property="fc:frame:button:2" content="💝 Create Your Own" />
+              <meta property="fc:frame:button:2" content="💝 Send Your Lub" />
               <meta property="fc:frame:button:2:action" content="link" />
               <meta property="fc:frame:button:2:target" content="${baseUrl}/create" />
               <meta property="og:image" content="${baseUrl}/hamster_jumping.gif" />
@@ -81,12 +81,12 @@ export async function POST(req: NextRequest) {
             <head>
               <meta property="fc:frame" content="vNext" />
               <meta property="fc:frame:image" content="${baseUrl}/github-demo.gif" />
-              <meta property="fc:frame:button:1" content="💝 Play Valentine Game" />
+              <meta property="fc:frame:button:1" content="💝 Play Lubber's Game" />
               <meta property="fc:frame:button:1:action" content="link" />
               <meta property="fc:frame:button:1:target" content="${baseUrl}" />
               <meta property="og:image" content="${baseUrl}/github-demo.gif" />
-              <meta property="og:title" content="Valentine Memory Game 💝" />
-              <meta property="og:description" content="A romantic heart-shaped memory game to ask your special someone to be your Valentine!" />
+              <meta property="og:title" content="Lubber's Memory Game 💝" />
+              <meta property="og:description" content="A romantic heart-shaped memory game to send lub to your special someone!" />
             </head>
             <body>
               <p>Valentine Memory Game - A romantic way to ask someone special! 💝</p>
@@ -127,12 +127,12 @@ export async function GET() {
       <head>
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content="${baseUrl}/github-demo.gif" />
-        <meta property="fc:frame:button:1" content="💝 Play Valentine Game" />
+        <meta property="fc:frame:button:1" content="💝 Play Lubber's Game" />
         <meta property="fc:frame:button:1:action" content="link" />
         <meta property="fc:frame:button:1:target" content="${baseUrl}" />
         <meta property="og:image" content="${baseUrl}/github-demo.gif" />
-        <meta property="og:title" content="Valentine Memory Game 💝" />
-        <meta property="og:description" content="A romantic heart-shaped memory game to ask your special someone to be your Valentine!" />
+        <meta property="og:title" content="Lubber's Memory Game 💝" />
+        <meta property="og:description" content="A romantic heart-shaped memory game to send lub to your special someone!" />
       </head>
       <body>
         <h1>Valentine Memory Game 💝</h1>

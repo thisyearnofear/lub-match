@@ -289,12 +289,45 @@ export async function deleteGame(
   }
 }
 
-// Gateway URL with multiple fallbacks
+// Gateway URLs with multiple fallbacks for better reliability
 export const gatewayUrl = (cid: string, filename: string) => {
-  // Try Pinata gateway first (faster), fallback to IPFS.io
+  // Try Pinata gateway first (faster), but may have SSL issues in dev
   return `https://gateway.pinata.cloud/ipfs/${cid}/${filename}`;
 };
 
-// Alternative gateway for redundancy
+// Multiple fallback gateways for redundancy
 export const fallbackGatewayUrl = (cid: string, filename: string) =>
   `https://ipfs.io/ipfs/${cid}/${filename}`;
+
+export const secondaryFallbackGatewayUrl = (cid: string, filename: string) =>
+  `https://cloudflare-ipfs.com/ipfs/${cid}/${filename}`;
+
+export const tertiaryFallbackGatewayUrl = (cid: string, filename: string) =>
+  `https://${cid}.ipfs.dweb.link/${filename}`;
+
+// Development-friendly gateway (often more reliable for local dev)
+export const devGatewayUrl = (cid: string, filename: string) =>
+  `https://ipfs.io/ipfs/${cid}/${filename}`;
+
+// Get all available gateways in order of preference
+export const getAllGateways = (cid: string, filename: string) => {
+  const isDev = process.env.NODE_ENV === 'development';
+  
+  if (isDev) {
+    // In development, prioritize more reliable gateways first
+    return [
+      devGatewayUrl(cid, filename),
+      secondaryFallbackGatewayUrl(cid, filename),
+      tertiaryFallbackGatewayUrl(cid, filename),
+      gatewayUrl(cid, filename), // Pinata last in dev due to SSL issues
+    ];
+  }
+  
+  // In production, use Pinata first (faster)
+  return [
+    gatewayUrl(cid, filename),
+    fallbackGatewayUrl(cid, filename),
+    secondaryFallbackGatewayUrl(cid, filename),
+    tertiaryFallbackGatewayUrl(cid, filename),
+  ];
+};

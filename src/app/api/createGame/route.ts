@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { uploadGame } from "@/utils/ipfs";
+import { storage } from "@/utils/decentralizedStorage";
 
 export const runtime = "nodejs"; // force Node, not edge
 
@@ -48,23 +48,17 @@ export async function POST(req: Request) {
     // Only send reveal if at least 1 image is provided
     const revealList = reveal && reveal.length > 0 ? reveal : undefined;
 
-    const result = await uploadGame(
+    const result = await storage.uploadGame(
       pairs,
       revealList,
       message,
-      {
-        mode: storageMode as "quick" | "private",
-        apiKey: userApiKey || undefined,
-      },
-      {
-        maxFileSize: 5, // 5MB limit for mobile
-      },
+      userApiKey || undefined
     );
 
     return NextResponse.json({
       cid: result.cid,
       deletable: result.deletable,
-      storageMode: result.storageMode,
+      storageMode: storageMode,
     });
   } catch (error: any) {
     console.error("CreateGame API error:", error);

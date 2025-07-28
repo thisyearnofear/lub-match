@@ -44,7 +44,7 @@ export default function GameLoadingStates({ cid, onRetry }: GameLoadingStatesPro
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-2">Game Created! 🎉</h2>
             <p className="text-lg text-gray-600">
-              Your Valentine's memory game is being prepared...
+              Your Lubber's memory game is being prepared...
             </p>
           </div>
           

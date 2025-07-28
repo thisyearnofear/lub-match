@@ -21,4 +21,4 @@ export const defaultRevealImages = [
   "/game-photos/33.avif", "/game-photos/34.avif", "/game-photos/35.avif", "/game-photos/36.avif",
 ];
 
-export const defaultMessage = "Will you be my Valentine?";
+export const defaultMessage = "Will you accept my lub?";

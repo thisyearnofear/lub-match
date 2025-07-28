@@ -37,7 +37,7 @@ function DebugInfo() {
 
 const PAIRS_LIMIT = 8;
 const REVEAL_LIMIT = 36;
-const DEFAULT_MESSAGE = "Will you be my Valentine? 💕";
+const DEFAULT_MESSAGE = "Will you accept my lub? 💕";
 
 type StorageMode = "quick" | "private";
 
@@ -228,7 +228,15 @@ function CreateGameContent() {
       setDeletable(result.deletable || false);
       setShowOnchain(true);
       const url = `${window.location.origin}/game/${result.cid}?created=1`;
-      await navigator.clipboard.writeText(url);
+      
+      // Try to copy to clipboard, but don't fail if it doesn't work
+      try {
+        await navigator.clipboard.writeText(url);
+        console.log('✅ Link copied to clipboard');
+      } catch (clipboardError) {
+        console.log('⚠️ Could not copy to clipboard (document not focused):', clipboardError);
+        // Fallback: we'll show the link in the UI instead
+      }
       // Do not redirect yet
     } catch (err: any) {
       console.error("Upload error:", err);
@@ -299,10 +307,10 @@ function CreateGameContent() {
         {/* Header */}
         <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-6 text-white text-center">
           <h1 className="text-xl font-bold mb-2">
-            Create Your Valentine's Game 💝
+            Send Your Lub 💝
           </h1>
           <p className="text-pink-100 text-sm">
-            Upload photos to create a heart-shaped memory game
+            Upload photos to send lub with a heart-shaped memory game
           </p>
         </div>
 
@@ -476,7 +484,7 @@ function CreateGameContent() {
                 </div>
                 {cid && (
                   <p className="text-xs text-gray-600 text-center">
-                    ✨ Almost ready! Taking you to your Valentine's game...
+                    ✨ Almost ready! Taking you to your Lubber's game...
                   </p>
                 )}
               </div>
@@ -501,7 +509,7 @@ function CreateGameContent() {
                   {cid ? "Preparing your game..." : "Creating game..."}
                 </div>
               ) : (
-                `💝 Create Game (${pairs.length}/${PAIRS_LIMIT} photos)`
+                `💝 Send Lub (${pairs.length}/${PAIRS_LIMIT} photos)`
               )}
             </button>
           </form>
@@ -509,8 +517,34 @@ function CreateGameContent() {
           {cid && showOnchain && (
             <div className="mt-8 p-6 rounded-xl bg-pink-50 border border-pink-200 shadow">
               <div className="mb-2 text-lg font-semibold flex items-center gap-2">
-                🎉 Game created!{" "}
-                <span className="text-pink-600">Link copied to clipboard.</span>
+                🎉 Game created!
+              </div>
+              
+              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800 font-medium mb-2">Share your game:</p>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/game/${cid}?created=1`}
+                    readOnly
+                    className="flex-1 px-2 py-1 text-xs bg-white border rounded text-blue-700 font-mono"
+                    onClick={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    onClick={async () => {
+                      const url = `${window.location.origin}/game/${cid}?created=1`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        alert('Link copied!');
+                      } catch (error) {
+                        console.log('Could not copy to clipboard:', error);
+                      }
+                    }}
+                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
 
               {deletable && (

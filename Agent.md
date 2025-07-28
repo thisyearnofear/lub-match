@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a **Lubber's Memory Game** - a romantic, interactive web application that creates a heart-shaped memory card game where users match photo pairs. Upon completion, it reveals a Lubbly's proposal with beautiful animations, fireworks, and playful interactions.
+This is a **Lubber's Memory Game** - a romantic, interactive web application that creates a heart-shaped memory card game where users match photo pairs. Upon completion, it reveals a Lubbly proposal with beautiful animations, fireworks, and playful interactions.
 
 ### Key Features
 

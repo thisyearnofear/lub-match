@@ -55,20 +55,20 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-black relative">
+    <div className="flex flex-col h-screen bg-black relative">
       {/* Mobile-friendly header */}
       <div className="fixed top-4 left-4 right-4 z-50 flex justify-between items-center">
-        <div className="text-white text-lg font-bold">💝 Valentine's Game</div>
+        <div className="text-white text-lg font-bold">💝 Lubber's Game</div>
         <Link
           href="/create"
           className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full text-sm font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"
         >
-          Create Your Own
+          Make Lub
         </Link>
       </div>
 
       {/* Main game area */}
-      <div className="flex-1 flex items-center justify-center px-4 pt-16 pb-4">
+      <div className="flex-grow flex items-center justify-center px-4 pt-16 pb-4">
         {!showValentinesProposal ? (
           <motion.div
             initial={{ opacity: 1 }}

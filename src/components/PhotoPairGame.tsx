@@ -48,6 +48,8 @@ export default function PhotoPairGame({
   const [incorrect, setIncorrect] = useState<number[]>([]);
   const [justMatched, setJustMatched] = useState<number[]>([]);
 
+  const [isComplete, setIsComplete] = useState(false);
+
   // Initialize zoom system
   const zoomControls = useGameZoom({
     zoomedScale: 1.3,
@@ -95,14 +97,17 @@ export default function PhotoPairGame({
   };
 
   useEffect(() => {
-    if (matched.length === imagePairs.length) {
-      handleShowProposalAction();
+    if (matched.length === imagePairs.length && !isComplete) {
+      setIsComplete(true);
+      setTimeout(() => {
+        handleShowProposalAction();
+      }, 1500); // Wait for animations to finish
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matched]);
+  }, [matched, isComplete]);
 
   return (
-    <div className="relative flex justify-center items-center min-h-screen w-full px-4 sm:px-6 py-8">
+    <div className="relative flex justify-center items-center w-full px-4 sm:px-6 py-8">
       <div
         className="grid grid-cols-7 gap-2 sm:gap-3"
         style={{
@@ -121,6 +126,7 @@ export default function PhotoPairGame({
               width={400}
               height={400}
               priority
+              unoptimized
             />
           ))}
         </div>
@@ -152,13 +158,18 @@ export default function PhotoPairGame({
               key={i}
               className="relative cursor-pointer"
               style={{ width: cellSize, height: cellSize }}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: isComplete ? 1 : 1.05 }}
               animate={{
                 scale: isSelected ? 1.15 : 1,
                 zIndex: isSelected ? 10 : 0,
+                y: isComplete ? -100 : 0,
+                opacity: isComplete ? 0 : 1,
               }}
-              transition={{ duration: 0.3 }}
-              onClick={() => handleClick(cell)}
+              transition={{
+                duration: 0.3,
+                delay: isComplete ? Math.random() * 0.8 : 0,
+              }}
+              onClick={() => !isComplete && handleClick(cell)}
             >
               {!isSelected && !isMatched && (
                 <motion.div
@@ -187,6 +198,7 @@ export default function PhotoPairGame({
                       fill
                       sizes="(max-width: 768px) 16vw, 13vh"
                       priority={true}
+                      unoptimized
                       className="rounded-xl sm:rounded-2xl border-2 sm:border-4 border-gray-400 shadow-lg sm:shadow-xl object-cover"
                     />
                   </div>

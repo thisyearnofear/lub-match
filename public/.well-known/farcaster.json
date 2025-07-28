@@ -1,12 +1,12 @@
 {
   "frame": {
     "version": "1",
-    "name": "Valentine Memory Game",
+    "name": "Lubber's Memory Game",
     "iconUrl": "/hamster_jumping.gif",
     "homeUrl": "/",
     "imageUrl": "/github-demo.gif",
     "button": {
-      "title": "💝 Play Valentine Game",
+      "title": "💝 Play Lubber's Game",
       "action": {
         "type": "launch_frame"
       }
