@@ -113,7 +113,7 @@ export default function PhotoPairGame({
       >
         {/* Image preload - improved with proper sizes */}
         <div className="hidden">
-          {shuffledPairs.map((image, i) => (
+          {shuffledPairs.filter(Boolean).map((image, i) => (
             <Image
               key={i}
               src={image}
@@ -172,7 +172,7 @@ export default function PhotoPairGame({
                 />
               )}
 
-              {(isSelected || isMatched) && (
+              {(isSelected || isMatched) && shuffledPairs[cell] && (
                 <motion.div
                   className="absolute inset-0"
                   initial={{ rotateY: -180 }}

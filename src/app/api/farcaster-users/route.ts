@@ -42,15 +42,41 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+// Utility function for fetch with timeout and retry
+async function fetchWithRetry(url: string, options: RequestInit, retries = 2, timeout = 15000): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      console.log(`Fetch attempt ${i + 1}/${retries + 1} failed:`, error);
+      if (i === retries) throw error;
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+    }
+  }
+  throw new Error('All retry attempts failed');
+}
+
 // Fetch trending users from Neynar API
 async function fetchTrendingUsers(count: number, minFollowers: number): Promise<FarcasterUser[]> {
   if (!NEYNAR_API_KEY) {
-    throw new Error("NEYNAR_API_KEY not configured");
+    console.error("NEYNAR_API_KEY not configured - check your .env.local file");
+    throw new Error("NEYNAR_API_KEY not configured - check your .env.local file");
   }
 
-  const limit = Math.min(MAX_TRENDING_LIMIT, count * 5); // Get more than needed for filtering
+  const limit = Math.min(10, count); // Neynar API max limit is 10
   
-  const response = await fetch(
+  console.log(`Fetching trending users: limit=${limit}, minFollowers=${minFollowers}`);
+  
+  const response = await fetchWithRetry(
     `${NEYNAR_API_BASE}/feed/trending?limit=${limit}`,
     {
       headers: {
@@ -60,8 +86,12 @@ async function fetchTrendingUsers(count: number, minFollowers: number): Promise<
     },
   );
 
+  console.log(`Neynar API response: ${response.status} ${response.statusText}`);
+
   if (!response.ok) {
-    throw new Error(`Neynar API error: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    console.error("Neynar API error details:", errorText);
+    throw new Error(`Neynar API error: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
   const data: FarcasterFeed = await response.json();
@@ -74,6 +104,7 @@ async function fetchTrendingUsers(count: number, minFollowers: number): Promise<
     if (
       user.follower_count >= minFollowers &&
       user.pfp_url &&
+      user.pfp_url.trim() !== '' &&
       user.username &&
       !uniqueUsers.has(user.fid)
     ) {
@@ -100,7 +131,7 @@ async function fetchHighQualityUsers(needed: number): Promise<FarcasterUser[]> {
   const selectedFids = shuffleArray(qualityFids).slice(0, needed);
   const fidsQuery = selectedFids.join(",");
 
-  const response = await fetch(
+  const response = await fetchWithRetry(
     `${NEYNAR_API_BASE}/user/bulk?fids=${fidsQuery}`,
     {
       headers: {
@@ -126,13 +157,22 @@ export async function GET(req: NextRequest) {
     const minFollowers = parseInt(searchParams.get("minFollowers") || "100");
     const type = searchParams.get("type") || "trending";
 
+    // Debug logging
+    console.log("API Route Debug:", {
+      hasApiKey: !!NEYNAR_API_KEY,
+      apiKeyLength: NEYNAR_API_KEY?.length || 0,
+      count,
+      minFollowers,
+      type
+    });
+
     let users: FarcasterUser[] = [];
 
     if (type === "trending") {
       try {
-        users = await fetchTrendingUsers(count, minFollowers);
+        users = await fetchTrendingUsers(Math.min(10, count), minFollowers);
         
-        // If we don't have enough users, supplement with high-quality users
+        // Always supplement with high-quality users since trending is limited to 10
         if (users.length < count) {
           const additionalUsers = await fetchHighQualityUsers(count - users.length);
           users.push(...additionalUsers);
@@ -184,7 +224,7 @@ export async function POST(req: NextRequest) {
     }
 
     const fidsQuery = fids.join(",");
-    const response = await fetch(
+    const response = await fetchWithRetry(
       `${NEYNAR_API_BASE}/user/bulk?fids=${fidsQuery}`,
       {
         headers: {

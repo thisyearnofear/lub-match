@@ -1,10 +1,11 @@
-# Agent.md - Valentine's Memory Game Project
+# Agent.md - Lubber's Memory Game Project
 
 ## Project Overview
 
-This is a **Valentine's Memory Game** - a romantic, interactive web application that creates a heart-shaped memory card game where users match photo pairs. Upon completion, it reveals a Valentine's proposal with beautiful animations, fireworks, and playful interactions.
+This is a **Lubber's Memory Game** - a romantic, interactive web application that creates a heart-shaped memory card game where users match photo pairs. Upon completion, it reveals a Lubbly's proposal with beautiful animations, fireworks, and playful interactions.
 
 ### Key Features
+
 - 🎮 Heart-shaped memory card game layout (16 cards from 8 pairs)
 - 💝 Custom photo upload and game creation
 - 🎆 Romantic proposal screen with fireworks animation
@@ -17,6 +18,7 @@ This is a **Valentine's Memory Game** - a romantic, interactive web application 
 ## Technical Stack
 
 ### Frontend
+
 - **Next.js 15** (App Router) - React framework
 - **React 19** - UI library
 - **TypeScript** - Type safety
@@ -25,17 +27,20 @@ This is a **Valentine's Memory Game** - a romantic, interactive web application 
 - **@fireworks-js/react** - Celebration effects
 
 ### Backend & Storage
+
 - **Next.js API Routes** - Backend endpoints
 - **Pinata** - IPFS storage with dual-mode architecture
 - **Vercel** - Deployment platform
 
 ### Blockchain Integration
+
 - **Wagmi** - React hooks for Ethereum
 - **RainbowKit** - Wallet connection UI
 - **Viem** - Ethereum client
 - **Base & Base Sepolia** - Target networks
 
 ### Development Tools
+
 - **ESLint** - Code linting
 - **PostCSS** - CSS processing
 - **pnpm** - Package manager
@@ -75,6 +80,7 @@ valentines-game/
 ## Core Components
 
 ### 1. PhotoPairGame.tsx
+
 - **Purpose**: Main memory game logic and UI
 - **Features**:
   - Heart-shaped grid layout (7x6 grid with strategic null cells)
@@ -84,6 +90,7 @@ valentines-game/
   - Image preloading for smooth performance
 
 ### 2. ValentinesProposal.tsx
+
 - **Purpose**: Romantic proposal screen after game completion
 - **Features**:
   - Multi-step reveal animation (3 steps over 15 seconds)
@@ -93,6 +100,7 @@ valentines-game/
   - Custom message support
 
 ### 3. Game Creation Flow (/create)
+
 - **Purpose**: Allow users to create custom games with dual storage modes
 - **Features**:
   - Drag & drop photo upload (8 pairs + 36 optional reveal images)
@@ -105,6 +113,7 @@ valentines-game/
 ## Data Flow
 
 ### Game Creation
+
 1. User selects storage mode (Quick Share or Private Control)
 2. User uploads 8 photos (pairs) + optional 36 reveal photos
 3. Files uploaded to Pinata IPFS based on selected mode:
@@ -116,6 +125,7 @@ valentines-game/
 7. Shareable URL: `/game/[cid]` with storage mode indication
 
 ### Game Playing
+
 1. Load metadata from IPFS using CID
 2. Fetch images from Pinata gateway (with IPFS fallback)
 3. Shuffle and display memory game
@@ -140,7 +150,9 @@ VERCEL_URL=your-app.vercel.app
 ## Key Algorithms
 
 ### Heart Layout
+
 The game uses a predefined 7x6 grid with strategic null positions to create a heart shape:
+
 ```typescript
 const heartLayout: CellType[][] = [
   [null, 0, 1, null, 2, 3, null],
@@ -153,7 +165,9 @@ const heartLayout: CellType[][] = [
 ```
 
 ### Shuffle Algorithm
+
 Fisher-Yates shuffle for random card distribution:
+
 ```typescript
 const shuffleArray = (array: string[]) => {
   for (let i = array.length - 1; i > 0; i--) {
@@ -167,6 +181,7 @@ const shuffleArray = (array: string[]) => {
 ## Development Workflow
 
 ### Setup
+
 ```bash
 # Install dependencies
 pnpm install
@@ -182,6 +197,7 @@ pnpm start
 ```
 
 ### Adding New Features
+
 1. **UI Components**: Add to `src/components/`
 2. **API Endpoints**: Add to `src/app/api/`
 3. **Utilities**: Add to `src/utils/`
@@ -190,12 +206,14 @@ pnpm start
 ## Performance Considerations
 
 ### Image Optimization
+
 - Uses Next.js Image component with proper `sizes` attributes
 - AVIF format for smaller file sizes
 - Preloading for smooth card flips
 - Progressive loading with placeholder states
 
 ### Animation Performance
+
 - Hardware-accelerated CSS transforms
 - Framer Motion with optimized spring animations
 - Strategic use of `will-change` properties
@@ -204,12 +222,14 @@ pnpm start
 ### Security Considerations
 
 ### Storage Modes
+
 - **Quick Share**: Content is permanent and publicly accessible
 - **Private Control**: Users maintain deletion rights via their Pinata account
 - All IPFS content is publicly accessible with the CID
 - No sensitive data should be uploaded without understanding permanence
 
 ### Blockchain Integration
+
 - Uses established patterns (Wagmi + RainbowKit)
 - Minimal smart contract interaction
 - Gas-optimized transactions
@@ -217,11 +237,13 @@ pnpm start
 ## Deployment
 
 ### Vercel (Recommended)
+
 - Automatic deployments from Git
 - Environment variables via dashboard
 - Edge functions for API routes
 
 ### Other Platforms
+
 - Requires Node.js runtime for API routes
 - Environment variables must be configured
 - Build step: `pnpm build`
@@ -229,6 +251,7 @@ pnpm start
 ## Troubleshooting
 
 ### Common Issues
+
 1. **Images not loading**: Check Pinata gateway availability and IPFS fallback
 2. **Wallet connection fails**: Verify network configuration
 3. **Game creation fails**: Check Pinata JWT token or user API key
@@ -236,6 +259,7 @@ pnpm start
 5. **Private mode fails**: Verify user's Pinata API key permissions
 
 ### Debug Tools
+
 - Browser DevTools for performance profiling
 - React DevTools for component debugging
 - Network tab for IPFS request monitoring
@@ -243,12 +267,14 @@ pnpm start
 ## Future Enhancement Ideas
 
 ### Gameplay
+
 - Multiple difficulty levels (different grid sizes)
 - Timer challenges
 - Multiplayer support
 - Sound effects and music
 
 ### Technical
+
 - Progressive Web App (PWA) support
 - Offline gameplay capability for cached games
 - Advanced image processing and optimization
@@ -257,6 +283,7 @@ pnpm start
 - Advanced Pinata management dashboard
 
 ### Social
+
 - Leaderboards
 - Social sharing improvements
 - Template gallery
@@ -265,18 +292,21 @@ pnpm start
 ## Contributing Guidelines
 
 ### Code Style
+
 - Use TypeScript for all new code
 - Follow existing Tailwind CSS patterns
 - Implement proper error handling
 - Add comments for complex logic
 
 ### Testing
+
 - Test on multiple devices and browsers
 - Verify IPFS integration in production
 - Test wallet connection flows
 - Validate responsive design
 
 ### Pull Requests
+
 - Include description of changes
 - Update this Agent.md if architecture changes
 - Ensure all environment variables are documented

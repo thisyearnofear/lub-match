@@ -67,6 +67,12 @@ export async function POST(req: Request) {
       storageMode: result.storageMode,
     });
   } catch (error: any) {
+    console.error("CreateGame API error:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name
+    });
     return NextResponse.json(
       { error: error?.message ?? "Server error" },
       { status: 500 },

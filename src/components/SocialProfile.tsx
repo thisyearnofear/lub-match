@@ -79,13 +79,19 @@ export default function SocialProfile({
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
         <div className="relative">
-          <Image
-            src={user.pfp_url}
-            alt={`${user.display_name}'s profile`}
-            width={48}
-            height={48}
-            className="rounded-full object-cover"
-          />
+          {user.pfp_url ? (
+            <Image
+              src={user.pfp_url}
+              alt={`${user.display_name}'s profile`}
+              width={48}
+              height={48}
+              className="rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+              <span className="text-gray-400 text-lg">👤</span>
+            </div>
+          )}
           {gameCreator && (
             <div className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full flex items-center justify-center">
               <span className="text-white text-xs">💝</span>
@@ -217,13 +223,19 @@ export function CompactSocialProfile({
       transition={{ duration: 0.2 }}
       className={`flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-lg p-2 ${className}`}
     >
-      <Image
-        src={user.pfp_url}
-        alt={user.display_name}
-        width={32}
-        height={32}
-        className="rounded-full object-cover"
-      />
+      {user.pfp_url ? (
+        <Image
+          src={user.pfp_url}
+          alt={user.display_name}
+          width={32}
+          height={32}
+          className="rounded-full object-cover"
+        />
+      ) : (
+        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+          <span className="text-gray-400 text-sm">👤</span>
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 truncate">
           {user.display_name}

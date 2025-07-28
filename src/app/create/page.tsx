@@ -241,7 +241,24 @@ function CreateGameContent() {
 
   const handleSkip = () => {
     if (cid) {
-      router.push(`/game/${cid}?created=1`);
+      // Add a delightful transition before redirecting
+      setLoading(true);
+      setUploadProgress(0);
+      
+      // Animate progress to build anticipation
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            // Redirect after a brief moment to show completion
+            setTimeout(() => {
+              router.push(`/game/${cid}?created=1`);
+            }, 500);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 100);
     }
   };
 
@@ -252,7 +269,23 @@ function CreateGameContent() {
       const hash = await publish(cid, message);
       if (hash) {
         window.open(`https://basescan.org/tx/${hash}`, "_blank");
-        router.push(`/game/${cid}?created=1`);
+        
+        // Add delightful transition for mint success too
+        setLoading(true);
+        setUploadProgress(0);
+        
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(progressInterval);
+              setTimeout(() => {
+                router.push(`/game/${cid}?created=1`);
+              }, 500);
+              return 100;
+            }
+            return prev + 15;
+          });
+        }, 80);
       }
 
     } catch (err: any) {
@@ -430,7 +463,9 @@ function CreateGameContent() {
             {loading && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>Creating your game...</span>
+                  <span>
+                    {cid ? "Preparing your game..." : "Creating your game..."}
+                  </span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -439,6 +474,11 @@ function CreateGameContent() {
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
                 </div>
+                {cid && (
+                  <p className="text-xs text-gray-600 text-center">
+                    ✨ Almost ready! Taking you to your Valentine's game...
+                  </p>
+                )}
               </div>
             )}
 
@@ -458,7 +498,7 @@ function CreateGameContent() {
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Creating game...
+                  {cid ? "Preparing your game..." : "Creating game..."}
                 </div>
               ) : (
                 `💝 Create Game (${pairs.length}/${PAIRS_LIMIT} photos)`
@@ -574,7 +614,11 @@ function CreateGameContent() {
   );
 }
 
-const CreateGamePage = dynamic(() => Promise.resolve(CreateGameContent), {
+const CreateGamePage = dynamic(() => Promise.resolve(() => (
+  <Web3Provider>
+    <CreateGameContent />
+  </Web3Provider>
+)), {
   ssr: false,
 });
 

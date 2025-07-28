@@ -1,8 +1,35 @@
 import { PINATA_JWT } from "../config";
+import { PinataSDK } from "pinata";
+
+// Modern, clean approach using the official Pinata SDK
+// This resolves the "More than one file and/or directory" error definitively
 
 // Dual-mode storage architecture for Valentine's Memory Game
 // Mode 1: Quick Share (App-controlled Pinata)
 // Mode 2: Private Control (User's own API key)
+
+// Helper functions for clean, DRY code
+function getFileExtension(filename: string): string {
+  return filename.split('.').pop() || 'unknown';
+}
+
+function createGameMetadata(
+  message: string, 
+  pairs: File[], 
+  reveal: File[] | undefined, 
+  storageMode: "quick" | "private"
+): string {
+  return JSON.stringify({
+    message,
+    // Match the actual file structure (files are at root level, not in subdirectories)
+    pairs: pairs.map((f, i) => `pair-${i}.${getFileExtension(f.name)}`),
+    reveal: reveal?.map((f, i) => `reveal-${i}.${getFileExtension(f.name)}`) || [],
+    createdAt: new Date().toISOString(),
+    storageMode,
+  });
+}
+
+
 
 interface StorageConfig {
   mode: "quick" | "private";
@@ -20,15 +47,14 @@ interface UploadOptions {
   maxFileSize?: number; // in MB
 }
 
-// Quick Share Mode - App-controlled Pinata
+// Quick Share Mode - App-controlled Pinata using modern SDK
 async function uploadToAppPinata(
   pairs: File[],
   reveal: File[] | undefined,
   message: string,
   options: UploadOptions = {},
 ): Promise<UploadResult> {
-
-const appPinataKey = PINATA_JWT;
+  const appPinataKey = PINATA_JWT;
 
   if (!appPinataKey) {
     console.log("No PINATA_JWT provided, using mock CID");
@@ -48,17 +74,14 @@ const appPinataKey = PINATA_JWT;
       "reveal images",
     );
 
-    // Check file sizes for mobile optimization (max 5MB per file)
+    // Check file sizes for mobile optimization
     const maxSize = (options.maxFileSize || 5) * 1024 * 1024;
     const oversizedFiles = [...pairs, ...(reveal || [])].filter(
       (file) => file.size > maxSize,
     );
 
     if (oversizedFiles.length > 0) {
-      console.error(
-        "Oversized files detected:",
-        oversizedFiles.map((f) => ({ name: f.name, size: f.size })),
-      );
+      console.error("Oversized files detected:", oversizedFiles.map((f) => ({ name: f.name, size: f.size })));
       throw new Error(
         `Some files are too large. Please use images under ${options.maxFileSize || 5}MB for best mobile performance.`,
       );
@@ -66,96 +89,76 @@ const appPinataKey = PINATA_JWT;
 
     options.onProgress?.(10);
 
-    const formData = new FormData();
+    // Initialize Pinata SDK
+    const pinata = new PinataSDK({
+      pinataJwt: appPinataKey,
+      pinataGateway: "gateway.pinata.cloud", // Default gateway
+    });
 
-    // Add all files to form data with progress tracking
     options.onProgress?.(20);
 
+    // Create file array for directory upload
+    const allFiles: File[] = [];
+
+    // Add pairs with proper naming
     pairs.forEach((file, index) => {
-      formData.append("file", file, `pair-${index}-${file.name}`);
+      const fileName = `pair-${index}.${getFileExtension(file.name)}`;
+      const renamedFile = new File([file], fileName, { type: file.type });
+      allFiles.push(renamedFile);
     });
 
     options.onProgress?.(40);
 
+    // Add reveal images
     reveal?.forEach((file, index) => {
-      formData.append("file", file, `reveal-${index}-${file.name}`);
+      const fileName = `reveal-${index}.${getFileExtension(file.name)}`;
+      const renamedFile = new File([file], fileName, { type: file.type });
+      allFiles.push(renamedFile);
     });
 
     options.onProgress?.(60);
 
-    // Add metadata
-    const metadata = new Blob(
-      [
-        JSON.stringify({
-          message,
-          pairs: pairs.map((f, i) => `pair-${i}-${f.name}`),
-          reveal: reveal?.map((f, i) => `reveal-${i}-${f.name}`) || [],
-          createdAt: new Date().toISOString(),
-          storageMode: "quick",
-        }),
-      ],
-      { type: "application/json" },
-    );
-
-    formData.append("file", metadata, "metadata.json");
-
-    const pinataMetadata = JSON.stringify({
-      name: `Valentine Game - ${Date.now()}`,
-      keyvalues: {
-        gameType: "valentine-memory",
-        createdAt: new Date().toISOString(),
-        deletable: "false",
-      },
-    });
-    formData.append("pinataMetadata", pinataMetadata);
+    // Add metadata file
+    const metadata = createGameMetadata(message, pairs, reveal, "quick");
+    const metadataFile = new File([metadata], "metadata.json", { type: "application/json" });
+    allFiles.push(metadataFile);
 
     options.onProgress?.(80);
 
-    const response = await fetch(
-      "https://api.pinata.cloud/pinning/pinFileToIPFS",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${appPinataKey}`,
-        },
-        body: formData,
-      },
-    );
+    // Upload using the modern SDK fileArray method
+    const upload = await pinata.upload.public
+      .fileArray(allFiles)
+      .name(`Valentine Game - ${Date.now()}`)
+      .keyvalues({
+        gameType: "valentine-memory",
+        createdAt: new Date().toISOString(),
+        deletable: "false",
+      });
 
-    options.onProgress?.(95);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        "Pinata API error:",
-        response.status,
-        response.statusText,
-        errorText,
-      );
-      throw new Error(
-        `Pinata upload failed: ${response.status} ${response.statusText} - ${errorText}`,
-      );
-    }
-
-    const result = await response.json();
-    console.log("Pinata upload successful:", result.IpfsHash);
     options.onProgress?.(100);
 
+    console.log("Pinata upload successful:", upload.cid);
+
     return {
-      cid: result.IpfsHash,
+      cid: upload.cid,
       deletable: false,
       storageMode: "quick",
     };
   } catch (error) {
     console.error("App Pinata upload failed:", error);
-    // Don't return error CID in production, throw the error instead
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
+    
     throw new Error(
       `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }
 
-// Private Control Mode - User's own Pinata
+// Private Control Mode - User's own Pinata using modern SDK
 async function uploadToUserPinata(
   pairs: File[],
   reveal: File[] | undefined,
@@ -179,10 +182,7 @@ async function uploadToUserPinata(
     );
 
     if (oversizedFiles.length > 0) {
-      console.error(
-        "Oversized files detected:",
-        oversizedFiles.map((f) => ({ name: f.name, size: f.size })),
-      );
+      console.error("Oversized files detected:", oversizedFiles.map((f) => ({ name: f.name, size: f.size })));
       throw new Error(
         `Some files are too large. Please use images under ${options.maxFileSize || 5}MB for best mobile performance.`,
       );
@@ -190,71 +190,58 @@ async function uploadToUserPinata(
 
     options.onProgress?.(10);
 
-    const formData = new FormData();
+    // Initialize Pinata SDK with user's key
+    const pinata = new PinataSDK({
+      pinataJwt: userApiKey,
+      pinataGateway: "gateway.pinata.cloud",
+    });
 
-    // Add all files to form data
+    options.onProgress?.(30);
+
+    // Create file array for directory upload
+    const allFiles: File[] = [];
+
+    // Add pairs with proper naming
     pairs.forEach((file, index) => {
-      formData.append("file", file, `pair-${index}-${file.name}`);
+      const fileName = `pair-${index}.${getFileExtension(file.name)}`;
+      const renamedFile = new File([file], fileName, { type: file.type });
+      allFiles.push(renamedFile);
     });
 
+    options.onProgress?.(50);
+
+    // Add reveal images
     reveal?.forEach((file, index) => {
-      formData.append("file", file, `reveal-${index}-${file.name}`);
+      const fileName = `reveal-${index}.${getFileExtension(file.name)}`;
+      const renamedFile = new File([file], fileName, { type: file.type });
+      allFiles.push(renamedFile);
     });
 
-    // Add metadata
-    const metadata = new Blob(
-      [
-        JSON.stringify({
-          message,
-          pairs: pairs.map((f, i) => `pair-${i}-${f.name}`),
-          reveal: reveal?.map((f, i) => `reveal-${i}-${f.name}`) || [],
-          createdAt: new Date().toISOString(),
-          storageMode: "private",
-        }),
-      ],
-      { type: "application/json" },
-    );
+    options.onProgress?.(70);
 
-    formData.append("file", metadata, "metadata.json");
+    // Add metadata file
+    const metadata = createGameMetadata(message, pairs, reveal, "private");
+    const metadataFile = new File([metadata], "metadata.json", { type: "application/json" });
+    allFiles.push(metadataFile);
 
-    const pinataMetadata = JSON.stringify({
-      name: `Private Valentine Game - ${Date.now()}`,
-      keyvalues: {
+    options.onProgress?.(90);
+
+    // Upload using the modern SDK
+    const upload = await pinata.upload.public
+      .fileArray(allFiles)
+      .name(`Private Valentine Game - ${Date.now()}`)
+      .keyvalues({
         gameType: "valentine-memory-private",
         createdAt: new Date().toISOString(),
         deletable: "true",
-      },
-    });
-    formData.append("pinataMetadata", pinataMetadata);
+      });
 
-    const response = await fetch(
-      "https://api.pinata.cloud/pinning/pinFileToIPFS",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${userApiKey}`,
-        },
-        body: formData,
-      },
-    );
+    options.onProgress?.(100);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        "Private Pinata API error:",
-        response.status,
-        response.statusText,
-        errorText,
-      );
-      throw new Error(
-        `Private Pinata upload failed: ${response.status} ${response.statusText} - ${errorText}`,
-      );
-    }
-
-    const result = await response.json();
-    console.log("Private Pinata upload successful:", result.IpfsHash);
+    console.log("Private Pinata upload successful:", upload.cid);
+    
     return {
-      cid: result.IpfsHash,
+      cid: upload.cid,
       deletable: true,
       storageMode: "private",
     };

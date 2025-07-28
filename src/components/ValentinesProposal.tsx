@@ -13,6 +13,8 @@ type ValentinesProposalProps = {
 const playfairDisplay = Playfair_Display({
   display: "swap",
   subsets: ["latin"],
+  fallback: ["serif"],
+  preload: false,
 });
 
 export default function ValentinesProposal({
@@ -28,12 +30,17 @@ export default function ValentinesProposal({
     left: string;
   } | null>(null);
   const [showFireworks, setShowFireworks] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   const getRandomPosition = () => {
     const randomTop = Math.random() * 80;
     const randomLeft = Math.random() * 80;
     return { top: `${randomTop}%`, left: `${randomLeft}%` };
   };
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (step < 2) {
@@ -130,7 +137,7 @@ export default function ValentinesProposal({
                       }
                     : {}
                 }
-                onMouseEnter={() => setPosition(getRandomPosition())}
+                onMouseEnter={() => isClient && setPosition(getRandomPosition())}
               >
                 No, I won&apos;t 😢
               </button>

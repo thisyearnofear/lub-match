@@ -3,6 +3,8 @@ import { Playfair_Display } from "next/font/google";
 const playfairDisplay = Playfair_Display({
   display: "swap",
   subsets: ["latin"],
+  fallback: ["serif"],
+  preload: false,
 });
 
 export default function TextFooter() {
