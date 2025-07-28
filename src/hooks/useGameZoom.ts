@@ -28,8 +28,9 @@ export function useGameZoom(options: UseGameZoomOptions = {}): ZoomControls {
     zoomedScale = 1.2, // Reduced from 1.4 to prevent cutoff
     baseScale = 0.9, // Increased from 0.85 for better visibility
     transitionDuration = 600,
-    autoZoomOutDelay = 1500,
   } = options;
+
+  const autoZoomOutDelay = options.autoZoomOutDelay ?? 1500;
 
   const [zoomState, setZoomState] = useState<ZoomState>({
     scale: baseScale,
@@ -41,9 +42,10 @@ export function useGameZoom(options: UseGameZoomOptions = {}): ZoomControls {
 
   // Clear timeout on unmount
   useEffect(() => {
+    const currentTimeoutRef = zoomTimeoutRef.current;
     return () => {
-      if (zoomTimeoutRef.current) {
-        clearTimeout(zoomTimeoutRef.current);
+      if (currentTimeoutRef) {
+        clearTimeout(currentTimeoutRef);
       }
     };
   }, []);
@@ -114,6 +116,7 @@ export function useAutoZoom(
   selected: number[],
   matched: number[],
   zoomControls: ZoomControls,
+  autoZoomOutDelay: number,
 ) {
   const { zoomToCard, zoomOut } = zoomControls;
   const previousSelectedRef = useRef<number[]>([]);
@@ -138,7 +141,7 @@ export function useAutoZoom(
       }
       zoomTimeoutRef.current = setTimeout(() => {
         zoomOut();
-      }, 1500);
+      }, autoZoomOutDelay);
     } else if (selected.length === 0 && previousSelected.length > 0) {
       // Cards deselected - zoom out
       zoomOut();
@@ -156,13 +159,14 @@ export function useAutoZoom(
         zoomOut();
       }, 500);
     }
-  }, [matched.length, zoomOut]);
+  }, [matched.length, zoomOut, autoZoomOutDelay]);
 
   // Cleanup
   useEffect(() => {
+    const currentTimeoutRef = zoomTimeoutRef.current;
     return () => {
-      if (zoomTimeoutRef.current) {
-        clearTimeout(zoomTimeoutRef.current);
+      if (currentTimeoutRef) {
+        clearTimeout(currentTimeoutRef);
       }
     };
   }, []);

@@ -55,10 +55,11 @@ export default function PhotoPairGame({
     zoomedScale: 1.3,
     baseScale: 0.9,
     transitionDuration: 500,
+    autoZoomOutDelay: 1500,
   });
 
   // Auto-zoom behavior
-  useAutoZoom(selected, matched, zoomControls);
+  useAutoZoom(selected, matched, zoomControls, 1500);
 
   useEffect(() => {
     setShuffledPairs(shuffleArray([...imagePairs]));

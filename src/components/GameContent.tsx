@@ -14,6 +14,13 @@ interface GameContentProps {
   justCreated: boolean;
 }
 
+interface FarcasterWindow extends Window {
+  fc?: {
+    requestNotificationPermission?: () => void;
+    share?: (options: { text: string; url: string }) => void;
+  };
+}
+
 export default function GameContent({
   pairUrls,
   revealUrls,
@@ -37,11 +44,11 @@ export default function GameContent({
 
   const handleShowProposal = () => {
     // Check if running in Farcaster and send celebration event
-    if (isClient && (window as any)?.fc) {
+    if (isClient && (window as FarcasterWindow)?.fc) {
       try {
-        (window as any).fc.requestNotificationPermission?.();
+        (window as FarcasterWindow).fc?.requestNotificationPermission?.();
         // Could add confetti or celebration effects here
-      } catch (error) {
+      } catch (_error) {
         console.log("Farcaster notification not available");
       }
     }
@@ -54,33 +61,33 @@ export default function GameContent({
 
   const share = async () => {
     const url = window.location.href;
-    const shareText = `💝 Play this Lubber's memory game with me! Can you match all the hearts? ${url}`;
+    const shareText = `💝 Will you Lub me? Match all the hearts? ${url}`;
 
     // Copy to clipboard (with error handling)
     try {
       await navigator.clipboard.writeText(url);
-    } catch (error) {
-      console.log('Could not copy to clipboard:', error);
+    } catch (_error) {
+      console.log("Could not copy to clipboard:", _error);
     }
 
     // Check if running in Farcaster
-    if (isClient && (window as any)?.fc) {
+    if (isClient && (window as FarcasterWindow)?.fc) {
       // Use Farcaster SDK for native sharing if available
       try {
-        (window as any).fc.share?.({
+        (window as FarcasterWindow).fc?.share?.({
           text: shareText,
           url: url,
         });
-      } catch (error) {
+      } catch (_error) {
         console.log("Farcaster share not available, falling back to Warpcast");
         window.open(
-          `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`,
+          `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`
         );
       }
     } else if (isClient) {
       // Open Warpcast compose
       window.open(
-        `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`,
+        `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`
       );
     }
   };
@@ -93,12 +100,15 @@ export default function GameContent({
             images={pairUrls}
             handleShowProposalAction={handleShowProposal}
           />
-          <div className="w-full flex justify-center mt-4" style={{ maxWidth: 'min(85vh, 90vw)' }}>
+          <div
+            className="w-full flex justify-center mt-4"
+            style={{ maxWidth: "min(85vh, 90vw)" }}
+          >
             <button
               onClick={share}
               className="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >
-              {isClient && (window as any)?.fc
+              {isClient && (window as FarcasterWindow)?.fc
                 ? "💝 Share Game"
                 : "🚀 Cast This"}
             </button>

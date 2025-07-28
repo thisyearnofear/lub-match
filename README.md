@@ -1,4 +1,4 @@
-# Lubber's Memory Game 💝
+# Lubbers Match 💝
 
 A romantic and interactive way to send lub to your special someone! This web application features a memory card game in a heart shape, where matching all pairs reveals a special Lubbly proposal with cute animations and effects.
 
@@ -30,12 +30,14 @@ You can see the live demo of the game [here](https://valentines-proposal-visibai
 ## Getting Started 🚀
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/visibait/lubbers-game.git
 cd lubbers-game
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 # or
@@ -43,12 +45,14 @@ yarn install
 ```
 
 3. Replace the photos:
+
    - Navigate to the `public/game-photos` directory
    - Replace the existing images (1.avif through 36.avif) with your own photos
    - Make sure to keep the same naming convention
    - Use photos of you and your partner together!
 
 4. Start the development server:
+
 ```bash
 npm run dev
 # or
@@ -60,16 +64,19 @@ yarn dev
 ## Customization 🎨
 
 ### Changing Photos
+
 - Add your photos to `public/game-photos/`
 - Name them from 1.avif to 36.avif
 - For best results, use square images of the same size
 - Convert your images to .avif format for better performance
 
 ### Modifying Text
+
 - Edit proposal messages in `components/ValentinesProposal.tsx`
 - Change game instructions in `components/TextFooter.tsx`
 
 ### Styling
+
 - The project uses Tailwind CSS for styling
 - Modify colors, fonts, and other styles in the respective component files
 - Main color schemes can be adjusted in `tailwind.config.js`
@@ -106,10 +113,11 @@ This project is licensed under the MIT License.
 visibait - [https://visibait.com]
 
 ## Donate
+
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/visibait)
 
 ---
 
 Made with ❤️ to send lub
 
-*Note: This project is meant for romantic purposes. Please use responsibly and spread love!*
+_Note: This project is meant for romantic purposes. Please use responsibly and spread love!_

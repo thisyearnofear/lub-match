@@ -62,7 +62,7 @@ class ReliableImageLoader {
       });
 
       return isWorking;
-    } catch (error) {
+    } catch {
       this.gatewayHealth.set(healthKey, {
         working: false,
         lastChecked: Date.now()

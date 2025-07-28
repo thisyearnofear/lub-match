@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Dropzone, { FileRejection } from "react-dropzone";
+import Dropzone from "react-dropzone";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { usePublishGame } from "@/hooks/usePublishGame";
@@ -10,10 +10,13 @@ import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import Web3Provider from "@/components/Web3Provider";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import FarcasterUsernameInput from "@/components/FarcasterUsernameInput";
+import LubCreationModeSelector, { LubCreationMode } from "@/components/LubCreationModeSelector";
 
 // Debug info component
 function DebugInfo() {
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     setDebugInfo({
@@ -36,20 +39,18 @@ function DebugInfo() {
 }
 
 const PAIRS_LIMIT = 8;
-const REVEAL_LIMIT = 36;
+
 const DEFAULT_MESSAGE = "Will you accept my lub? 💕";
 
 type StorageMode = "quick" | "private";
 
 function DropzoneField({
-  label,
   files,
   setFiles,
   maxFiles,
   accept,
   disabled,
 }: {
-  label: string;
   files: File[];
   setFiles: (f: File[]) => void;
   maxFiles: number;
@@ -57,7 +58,7 @@ function DropzoneField({
   disabled?: boolean;
 }) {
   const onDrop = useCallback(
-    (accepted: File[], rejected: FileRejection[]) => {
+    (accepted: File[]) => {
       if (accepted.length + files.length > maxFiles) return;
       setFiles([...files, ...accepted.slice(0, maxFiles - files.length)]);
     },
@@ -129,10 +130,19 @@ function DropzoneField({
   );
 }
 
+interface FarcasterUser {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp_url: string;
+  follower_count: number;
+}
+
 function CreateGameContent() {
   useMiniAppReady();
+  const [lubMode, setLubMode] = useState<LubCreationMode | null>(null);
   const [pairs, setPairs] = useState<File[]>([]);
-  const [reveal, setReveal] = useState<File[]>([]);
+  const [farcasterUsers, setFarcasterUsers] = useState<FarcasterUser[]>([]);
   const [message, setMessage] = useState(DEFAULT_MESSAGE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,14 +163,28 @@ function CreateGameContent() {
     publish,
     isPending,
     data: txHash,
-    error: publishErr,
     enabled,
   } = usePublishGame();
   const { isConnected } = useAccount();
 
+  // Check if user has provided enough content based on selected mode
+  const hasEnoughContent = lubMode === "photos" 
+    ? pairs.length === PAIRS_LIMIT 
+    : lubMode === "farcaster" 
+      ? farcasterUsers.length >= 4
+      : false;
+  
+  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pairs.length !== PAIRS_LIMIT) return;
+    
+    // Validate that user has provided enough content
+    if (!hasEnoughContent) {
+      setError("Please select a lub creation mode and provide enough content.");
+      return;
+    }
+    
     if (storageMode === "private" && !userApiKey.trim()) {
       setError("Please provide your Pinata API key for private mode");
       return;
@@ -178,15 +202,17 @@ function CreateGameContent() {
       if (storageMode === "private") {
         formData.append("userApiKey", userApiKey);
       }
-      pairs.forEach((f) => formData.append("pairs", f, f.name));
-      reveal.forEach((f) => formData.append("reveal", f, f.name));
+      if (lubMode) {
+        formData.append("lubMode", lubMode);
+      }
 
       // Debug logging
       console.log("Starting upload with formData:", {
         storageMode,
         userApiKeyProvided: !!userApiKey,
+        lubMode,
         pairsCount: pairs.length,
-        revealCount: reveal.length,
+        farcasterUsersCount: farcasterUsers.length,
         messageLength: message.length,
       });
 
@@ -238,9 +264,13 @@ function CreateGameContent() {
         // Fallback: we'll show the link in the UI instead
       }
       // Do not redirect yet
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Upload error:", err);
-      setError(err.message ?? "Could not create game.");
+      let errorMessage = "Could not create game.";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
       setUploadProgress(0);
     } finally {
       setLoading(false);
@@ -296,8 +326,8 @@ function CreateGameContent() {
         }, 80);
       }
 
-    } catch (err: any) {
-      setOnchainError(err?.message ?? "Error publishing on-chain");
+    } catch (err: unknown) {
+      setOnchainError(err instanceof Error ? err.message : "Error publishing on-chain");
     }
   };
 
@@ -310,7 +340,7 @@ function CreateGameContent() {
             Send Your Lub 💝
           </h1>
           <p className="text-pink-100 text-sm">
-            Upload photos to send lub with a heart-shaped memory game
+            Create a delightful lub for your special someone!
           </p>
         </div>
 
@@ -400,49 +430,52 @@ function CreateGameContent() {
                   }}
                   className="mt-3 text-sm text-gray-600 hover:text-gray-800"
                 >
-                  ← Back to simple mode
+                  &larr; Back to simple mode
                 </button>
               </div>
             )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Photo Upload */}
-            <div>
-              <h3 className="font-semibold mb-3 text-gray-800">
-                📸 Upload Your Photos
-              </h3>
-              <DropzoneField
-                label={`Add ${PAIRS_LIMIT} photos for the memory game`}
-                files={pairs}
-                setFiles={setPairs}
-                maxFiles={PAIRS_LIMIT}
-                accept={{ "image/*": [] }}
-                disabled={loading || !!cid}
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Tip: Use photos of you two together for the best experience!
-              </p>
-            </div>
+            <LubCreationModeSelector
+              selectedMode={lubMode}
+              onModeSelect={setLubMode}
+              disabled={loading || !!cid}
+            />
 
-            {/* Optional Reveal Photos */}
-            <div>
-              <h3 className="font-semibold mb-3 text-gray-800">
-                ✨ Bonus Photos (Optional)
-              </h3>
-              <DropzoneField
-                label={`Add up to ${REVEAL_LIMIT} photos for the proposal reveal`}
-                files={reveal}
-                setFiles={setReveal}
-                maxFiles={REVEAL_LIMIT}
-                accept={{ "image/*": [] }}
-                disabled={loading || !!cid}
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                💕 These photos will create a beautiful collage during the
-                proposal
-              </p>
-            </div>
+            {lubMode === "photos" && (
+              <div>
+                <h3 className="font-semibold mb-3 text-gray-800">
+                  📸 Upload Your Photos {pairs.length === PAIRS_LIMIT ? "✅" : `(${pairs.length}/${PAIRS_LIMIT})`}
+                </h3>
+                <DropzoneField
+                  files={pairs}
+                  setFiles={setPairs}
+                  maxFiles={PAIRS_LIMIT}
+                  accept={{ "image/*": [] }}
+                  disabled={loading || !!cid}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Tip: Use photos of you two together for the best experience!
+                </p>
+              </div>
+            )}
+
+            {lubMode === "farcaster" && (
+              <div>
+                <h3 className="font-semibold mb-3 text-gray-800">
+                  ✨ Add Farcaster Friends {farcasterUsers.length >= 4 ? "✅" : `(${farcasterUsers.length} selected)`}
+                </h3>
+                <FarcasterUsernameInput
+                  onUsersSelected={setFarcasterUsers}
+                  maxUsers={8}
+                  disabled={loading || !!cid}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  💕 Their profile pictures will create a beautiful collage during the proposal.
+                </p>
+              </div>
+            )}
 
             {/* Custom Message */}
             <div>
@@ -484,7 +517,7 @@ function CreateGameContent() {
                 </div>
                 {cid && (
                   <p className="text-xs text-gray-600 text-center">
-                    ✨ Almost ready! Taking you to your Lubber's game...
+                    &#9733; Almost ready! Taking you to your Lubber&apos;s game...
                   </p>
                 )}
               </div>
@@ -501,15 +534,19 @@ function CreateGameContent() {
               className={`w-full py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-pink-500 to-rose-500 shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-60 disabled:transform-none ${
                 loading ? "cursor-wait" : ""
               }`}
-              disabled={pairs.length !== PAIRS_LIMIT || loading || !!cid}
+              disabled={!lubMode || !hasEnoughContent || loading || !!cid}
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  {cid ? "Preparing your game..." : "Creating game..."}
+                  {cid ? "Preparing your lub..." : "Creating lub..."}
                 </div>
               ) : (
-                `💝 Send Lub (${pairs.length}/${PAIRS_LIMIT} photos)`
+                lubMode === "photos"
+                  ? `💝 Send Lub (${pairs.length}/${PAIRS_LIMIT} photos)`
+                  : lubMode === "farcaster"
+                    ? `💝 Send Lub (${farcasterUsers.length}/4+ friends)`
+                    : `💝 Select a mode to send lub`
               )}
             </button>
           </form>
@@ -631,12 +668,12 @@ function CreateGameContent() {
                 : "🔒 Private mode: You control your content"}
             </p>
             <div className="mt-4 text-center">
-              <a
+              <Link
                 href="/"
                 className="text-pink-500 hover:text-pink-600 text-sm font-medium"
               >
-                ← Try the demo game first
-              </a>
+                &larr; Try the demo game first
+              </Link>
             </div>
 
             {/* Debug information for troubleshooting */}

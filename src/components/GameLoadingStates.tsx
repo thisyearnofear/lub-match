@@ -44,7 +44,7 @@ export default function GameLoadingStates({ cid, onRetry }: GameLoadingStatesPro
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-2">Game Created! 🎉</h2>
             <p className="text-lg text-gray-600">
-              Your Lubber's memory game is being prepared...
+              Your Lubber&apos;s memory game is being prepared...
             </p>
           </div>
           
@@ -76,7 +76,7 @@ export default function GameLoadingStates({ cid, onRetry }: GameLoadingStatesPro
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-3">Almost Ready!</h2>
             <p className="text-gray-600 mb-4">
-              We're fetching your game from our secure network. This usually takes 10-30 seconds.
+              We&apos;re fetching your game from our secure network. This usually takes 10-30 seconds.
             </p>
           </div>
           
@@ -117,7 +117,7 @@ export default function GameLoadingStates({ cid, onRetry }: GameLoadingStatesPro
           
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 mb-6 border border-yellow-200">
             <p className="text-sm text-yellow-800">
-              <strong>Good news:</strong> Your game was created successfully! We're just making sure everything loads perfectly for your special someone. 💕
+              <strong>Good news:</strong> Your game was created successfully! We&apos;re just making sure everything loads perfectly for your special someone. 💕
             </p>
           </div>
           
@@ -150,7 +150,7 @@ export default function GameLoadingStates({ cid, onRetry }: GameLoadingStatesPro
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-3">Taking Longer Than Expected</h2>
           <p className="text-gray-600 mb-6">
-            Don't worry! Your game was created successfully, but our network is being a bit slow today.
+            Don&apos;t worry! Your game was created successfully, but our network is being a bit slow today.
           </p>
         </div>
         

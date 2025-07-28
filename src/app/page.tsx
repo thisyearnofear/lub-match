@@ -25,7 +25,7 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false);
 
   // Dynamic Farcaster users for social experience - only on client
-  const { users, loading, error, getRandomPairs } = useFarcasterUsers({
+  const { users, loading, getRandomPairs, error } = useFarcasterUsers({
     count: 16,
     minFollowers: 50,
     enableAutoRefresh: false, // Disable auto-refresh to prevent hydration issues
@@ -58,7 +58,7 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-black relative">
       {/* Mobile-friendly header */}
       <div className="fixed top-4 left-4 right-4 z-50 flex justify-between items-center">
-        <div className="text-white text-lg font-bold">💝 Lubber's Game</div>
+        <div className="text-white text-lg font-bold">💝 Lubber&apos;s Game</div>
         <Link
           href="/create"
           className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full text-sm font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"

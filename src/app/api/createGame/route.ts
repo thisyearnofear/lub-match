@@ -3,24 +3,88 @@ import { storage } from "@/utils/decentralizedStorage";
 
 export const runtime = "nodejs"; // force Node, not edge
 
+// Helper function to fetch Farcaster PFPs and convert to File objects
+interface FarcasterUser {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp_url: string;
+  follower_count: number;
+}
+
+async function fetchFarcasterPfps(users: FarcasterUser[]): Promise<File[]> {
+  const files: File[] = [];
+  
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i];
+    try {
+      const response = await fetch(user.pfp_url);
+      if (!response.ok) {
+        console.warn(`Failed to fetch PFP for ${user.username}: ${response.status}`);
+        continue;
+      }
+      
+      const blob = await response.blob();
+      const extension = user.pfp_url.split('.').pop()?.split('?')[0] || 'jpg';
+      const fileName = `${user.username}-pfp.${extension}`;
+      
+      const file = new File([blob], fileName, { type: blob.type });
+      files.push(file);
+    } catch (error) {
+      console.warn(`Error fetching PFP for ${user.username}:`, error);
+    }
+  }
+  
+  return files;
+}
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const message = formData.get("message") as string | null;
     const storageMode = (formData.get("storageMode") as string) || "quick";
     const userApiKey = formData.get("userApiKey") as string | null;
-    const pairs = formData.getAll("pairs") as File[];
-    const reveal = formData.getAll("reveal") as File[];
+    const lubMode = formData.get("lubMode") as string | null;
+    let pairs: File[] = [];
+    let farcasterUsers: FarcasterUser[] = [];
 
-    if (!message || !pairs || pairs.length !== 8) {
+    if (lubMode === "photos") {
+      pairs = formData.getAll("pairs") as File[];
+      if (pairs.length !== 8) {
+        return NextResponse.json(
+          { error: "You must upload exactly 8 photos for photo mode." },
+          { status: 400 },
+        );
+      }
+    } else if (lubMode === "farcaster") {
+      const farcasterUsersJson = formData.get("farcasterUsers") as string | null;
+      if (farcasterUsersJson) {
+        try {
+          farcasterUsers = JSON.parse(farcasterUsersJson);
+        } catch (error) {
+          console.error("Failed to parse Farcaster users:", error);
+          return NextResponse.json(
+            { error: "Invalid Farcaster users data." },
+            { status: 400 },
+          );
+        }
+      }
+      if (farcasterUsers.length < 4 || farcasterUsers.length > 8) {
+        return NextResponse.json(
+          { error: "You must select between 4 and 8 Farcaster friends for Farcaster mode." },
+          { status: 400 },
+        );
+      }
+    } else {
       return NextResponse.json(
-        { error: "You must upload exactly 8 card images and a message." },
+        { error: "Invalid lub creation mode selected." },
         { status: 400 },
       );
     }
-    if (reveal && reveal.length > 36) {
+
+    if (!message) {
       return NextResponse.json(
-        { error: "You may upload up to 36 reveal images." },
+        { error: "Message is required." },
         { status: 400 },
       );
     }
@@ -31,9 +95,23 @@ export async function POST(req: Request) {
       );
     }
 
+    // Fetch Farcaster PFPs and convert to files
+    let revealFiles: File[] = [];
+    if (farcasterUsers.length > 0) {
+      try {
+        revealFiles = await fetchFarcasterPfps(farcasterUsers);
+      } catch (error) {
+        console.error("Failed to fetch Farcaster PFPs:", error);
+        return NextResponse.json(
+          { error: "Failed to fetch profile pictures from Farcaster" },
+          { status: 500 },
+        );
+      }
+    }
+
     // Mobile optimization: Check file sizes
     const maxSize = 5 * 1024 * 1024; // 5MB
-    const allFiles = [...pairs, ...(reveal || [])];
+    const allFiles = [...pairs, ...revealFiles];
     const oversizedFiles = allFiles.filter((file) => file.size > maxSize);
 
     if (oversizedFiles.length > 0) {
@@ -45,11 +123,25 @@ export async function POST(req: Request) {
       );
     }
 
-    // Only send reveal if at least 1 image is provided
-    const revealList = reveal && reveal.length > 0 ? reveal : undefined;
+    let gamePairs: File[];
+    let revealList: File[] | undefined;
 
+    if (lubMode === "photos") {
+      gamePairs = pairs;
+      revealList = undefined; // No specific reveal images for photo mode
+    } else if (lubMode === "farcaster") {
+      gamePairs = revealFiles.slice(0, 8); // Use PFPs as game pairs
+      revealList = revealFiles; // Use all fetched PFPs as reveal images
+    } else {
+      // This case should ideally be caught earlier by validation
+      return NextResponse.json(
+        { error: "Invalid lub creation mode for file processing." },
+        { status: 400 },
+      );
+    }
+    
     const result = await storage.uploadGame(
-      pairs,
+      gamePairs,
       revealList,
       message,
       userApiKey || undefined
@@ -60,15 +152,19 @@ export async function POST(req: Request) {
       deletable: result.deletable,
       storageMode: storageMode,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("CreateGame API error:", error);
+    let errorMessage = "Server error";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
     console.error("Error details:", {
-      message: error?.message,
-      stack: error?.stack,
-      name: error?.name
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : "N/A",
+      name: error instanceof Error ? error.name : "N/A",
     });
     return NextResponse.json(
-      { error: error?.message ?? "Server error" },
+      { error: errorMessage },
       { status: 500 },
     );
   }

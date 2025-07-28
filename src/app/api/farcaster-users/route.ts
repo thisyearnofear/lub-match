@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { NEYNAR_API_KEY, NEYNAR_API_BASE, MAX_TRENDING_LIMIT } from "@/config";
+import { NEYNAR_API_KEY, NEYNAR_API_BASE } from "@/config";
 
 export const runtime = "nodejs";
 
@@ -116,6 +116,44 @@ async function fetchTrendingUsers(count: number, minFollowers: number): Promise<
   return shuffleArray(usersArray).slice(0, count);
 }
 
+// Search users by username
+async function searchUsers(query: string, limit: number = 10): Promise<FarcasterUser[]> {
+  if (!NEYNAR_API_KEY) {
+    throw new Error("NEYNAR_API_KEY not configured");
+  }
+
+  console.log(`Searching users: query="${query}", limit=${limit}`);
+  
+  const response = await fetchWithRetry(
+    `${NEYNAR_API_BASE}/user/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+    {
+      headers: {
+        "X-API-KEY": NEYNAR_API_KEY,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Neynar search API error:", errorText);
+    throw new Error(`Search failed: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  console.log("Search API response structure:", JSON.stringify(data, null, 2));
+  
+  // Handle different response structures
+  const users = data.result?.users || data.users || [];
+  
+  // Filter and validate users
+  return users.filter((user: FarcasterUser) => 
+    user.pfp_url && 
+    user.pfp_url.trim() !== '' && 
+    user.username
+  );
+}
+
 // Fetch high-quality users as backup
 async function fetchHighQualityUsers(needed: number): Promise<FarcasterUser[]> {
   if (!NEYNAR_API_KEY) {
@@ -156,6 +194,14 @@ export async function GET(req: NextRequest) {
     const count = parseInt(searchParams.get("count") || "16");
     const minFollowers = parseInt(searchParams.get("minFollowers") || "100");
     const type = searchParams.get("type") || "trending";
+    const search = searchParams.get("search");
+    const limit = parseInt(searchParams.get("limit") || "10");
+
+    // Handle search requests
+    if (search) {
+      const searchResults = await searchUsers(search, limit);
+      return NextResponse.json({ users: searchResults });
+    }
 
     // Debug logging
     console.log("API Route Debug:", {

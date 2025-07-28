@@ -5,12 +5,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000",
+      : "http://localhost:3000"
   ),
-  title: "Lubber's Memory Game",
-  description: "Send lub & share a heart-shaped memory card game!",
+  title: "Lubbers Match",
+  description: "Send lub & feel da lub!",
   keywords: [
-    "Lubber's card game",
+    "Lubbers card game",
     "romantic proposal game",
     "photo card challenge",
     "send lub game",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     "proposal game",
   ],
   openGraph: {
-    title: "Lubber's Memory Game 💝",
+    title: "Lubbers Match 💝",
     description:
       "A romantic heart-shaped memory game to send lub to your special someone!",
     images: [
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Lubber's Memory Game 💝",
+    title: "Lubbers Match 💝",
     description:
       "A romantic heart-shaped memory game to send lub to your special someone!",
     images: ["/github-demo.gif"],
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
         title: "Play the Game",
         action: {
           type: "launch_frame",
-          name: "Lubber's Memory Game",
+          name: "Lubbers Match",
           splashImageUrl: "/hamster_jumping.gif",
           splashBackgroundColor: "#000000",
         },

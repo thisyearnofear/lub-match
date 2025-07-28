@@ -1,12 +1,12 @@
 {
   "frame": {
     "version": "1",
-    "name": "Lubber's Memory Game",
+    "name": "Lubbers Match",
     "iconUrl": "/hamster_jumping.gif",
     "homeUrl": "/",
     "imageUrl": "/github-demo.gif",
     "button": {
-      "title": "💝 Play Lubber's Game",
+      "title": "💝 Play Lubbers Match!",
       "action": {
         "type": "launch_frame"
       }

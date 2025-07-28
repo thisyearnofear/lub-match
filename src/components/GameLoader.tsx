@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import GameContent from "./GameContent";
 import GameLoadingStates from "./GameLoadingStates";
 import { storage } from "@/utils/decentralizedStorage";
@@ -11,7 +11,7 @@ interface GameLoaderProps {
   justCreated: boolean;
 }
 
-async function fetchMetadata(cid: string): Promise<{ metadata: any; workingGateway: string } | null> {
+async function fetchMetadata(cid: string): Promise<{ metadata: Record<string, unknown>; workingGateway: string } | null> {
   try {
     // Use the reliable gateway system
     const workingGateway = await storage.testGatewayHealth(cid);
@@ -39,12 +39,12 @@ async function fetchMetadata(cid: string): Promise<{ metadata: any; workingGatew
 }
 
 export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
-  const [gameData, setGameData] = useState<{ metadata: any; workingGateway: string } | null>(null);
+  const [gameData, setGameData] = useState<{ metadata: Record<string, unknown>; workingGateway: string } | null>(null);
   const [imageUrls, setImageUrls] = useState<{ pairs: string[]; reveal: string[] }>({ pairs: [], reveal: [] });
   const [loading, setLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
 
-  const loadGame = async () => {
+  const loadGame = useCallback(async () => {
     setLoading(true);
     try {
       const result = await fetchMetadata(cid);
@@ -54,12 +54,12 @@ export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
         // Generate reliable image URLs
         const { metadata } = result;
         const pairUrls = await Promise.all(
-          metadata.pairs.map((filename: string) => 
+          (metadata.pairs as string[]).map((filename: string) => 
             imageLoader.getWorkingImageUrl(cid, filename)
           )
         );
         
-        const revealFiles = metadata.reveal?.length ? metadata.reveal : metadata.pairs;
+        const revealFiles = (metadata.reveal as string[] | undefined)?.length ? (metadata.reveal as string[]) : (metadata.pairs as string[]);
         const revealUrls = await Promise.all(
           revealFiles.map((filename: string) => 
             imageLoader.getWorkingImageUrl(cid, filename)
@@ -69,7 +69,7 @@ export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
         setImageUrls({ pairs: pairUrls, reveal: revealUrls });
         
         // Preload images for better UX
-        await imageLoader.preloadImages(cid, [...metadata.pairs, ...revealFiles]);
+        await imageLoader.preloadImages(cid, [...(metadata.pairs as string[]), ...(revealFiles as string[])]);
       }
     } catch (error) {
       console.error("Failed to load game:", error);
@@ -77,11 +77,11 @@ export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [cid, setImageUrls]);
 
   useEffect(() => {
     loadGame();
-  }, [cid, retryCount]);
+  }, [cid, retryCount, loadGame]);
 
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1);
@@ -107,7 +107,7 @@ export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
       <GameContent
         pairUrls={imageUrls.pairs}
         revealUrls={imageUrls.reveal}
-        message={metadata.message}
+        message={metadata.message as string}
         justCreated={justCreated}
       />
     </main>
