@@ -23,7 +23,9 @@ secret*
 
 # API keys and tokens
 *api-key*
-*token*
+*-token*
+*_token*
+*.token
 *jwt*
 
 # =============================================================================
