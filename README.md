@@ -1,25 +1,120 @@
-# Lubbers Match 💝
+# 💝 Lub Match - The Ultimate Valentine's Memory Game
 
-A romantic and interactive way to send lub to your special someone! This web application features a memory card game in a heart shape, where matching all pairs reveals a special Lubbly proposal with cute animations and effects.
+A romantic heart-shaped memory card game with Web3 token economics, NFT minting, and social features. Built for love, powered by blockchain.
 
 ![Demo Preview](public/github-demo.gif)
 
-## Demo 🎮
+## 🌟 **What Makes Lub Match Special**
 
-You can see the live demo of the game [here](https://valentines-proposal-visibait.vercel.app).
+### 🎮 **Core Game Experience**
 
-## Features ✨
+- **Heart-shaped memory game** with romantic card matching
+- **Custom photo uploads** - use your own memories
+- **Personal messages** - add romantic touches
+- **Beautiful animations** - smooth, delightful interactions
+- **Mobile-first design** - perfect on any device
 
-- Interactive memory card game in a heart shape layout
-- Beautiful animations and transitions using Framer Motion
-- Customizable with your own photos
-- Romantic proposal screen with:
-  - Fireworks animation on acceptance
-  - Playful "No" button that moves away when hovered
-  - Cute hamster GIFs and images
-- Elegant design with Playfair Display font
-- Fully responsive layout
-- Built with Next.js and Tailwind CSS
+### 🚀 **Web3 Features**
+
+- **LUB Token Economics** - earn and spend tokens for game creation
+- **NFT Minting** - immortalize completed games as NFTs
+- **Progressive Web3** - works great without wallet, enhanced with it
+- **Arbitrum Mainnet** - low gas fees, fast transactions
+
+### 👥 **Social Features**
+
+- **Farcaster Integration** - connect with friends
+- **Social Games** - username guessing challenges
+- **Viral Sharing** - spread the love across platforms
+- **Achievement System** - track your lub journey
+
+## 🎯 **How It Works**
+
+### **For Newcomers**
+
+```
+Demo Game → Social Games → "First lub FREE!" → Create & Share
+```
+
+### **For Web3 Users**
+
+```
+Connect Wallet → Earn LUB → Create Games → Mint NFTs → Build Collection
+```
+
+## 🚀 **Live Demo**
+
+Experience Lub Match: [https://valentines-proposal-visibait.vercel.app](https://valentines-proposal-visibait.vercel.app)
+
+## 🛠️ **Tech Stack**
+
+### **Frontend**
+
+- **Next.js 14** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **Framer Motion** - Smooth animations
+- **Wagmi + Viem** - Web3 React hooks
+
+### **Blockchain**
+
+- **Arbitrum Mainnet** - Layer 2 for low gas fees
+- **Smart Contracts** - LUB Token (ERC-20) + Heart NFT (ERC-721)
+- **RainbowKit** - Beautiful wallet connection
+- **IPFS** - Decentralized metadata storage
+
+### **Social & APIs**
+
+- **Neynar API** - Farcaster integration
+- **Pinata** - IPFS pinning service
+- **Analytics** - User progression tracking
+
+## 🚀 **Quick Start**
+
+### **Prerequisites**
+
+- Node.js 18+ and pnpm
+- Neynar API key (for Farcaster features)
+- Pinata JWT (for IPFS storage)
+
+### **Installation**
+
+```bash
+# Clone the repository
+git clone https://github.com/thisyearnofear/valentines-game.git
+cd valentines-game
+
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your API keys
+
+# Run development server
+pnpm dev
+```
+
+### **Environment Setup**
+
+```env
+# Required for Farcaster features
+NEYNAR_API_KEY=your_neynar_api_key
+NEXT_PUBLIC_NEYNAR_API_KEY=your_neynar_api_key
+
+# Required for IPFS storage
+PINATA_JWT=your_pinata_jwt
+
+# Smart contract addresses (Arbitrum Mainnet)
+NEXT_PUBLIC_LUB_TOKEN_ADDRESS=0xc51065eCBe91E7DbA69934F37130DCA29E516189
+NEXT_PUBLIC_HEART_NFT_ADDRESS=0x18082d110113B40A24A41dF10b4b249Ee461D3eb
+
+# Feature flags
+NEXT_PUBLIC_ENABLE_ONCHAIN=true
+NEXT_PUBLIC_ENABLE_TOKEN_ECONOMICS=true
+NEXT_PUBLIC_ENABLE_NFT_MINTING=true
+NEXT_PUBLIC_ENABLE_SOCIAL_EARNING=true
+```
 
 ## Prerequisites 📋
 
@@ -32,8 +127,8 @@ You can see the live demo of the game [here](https://valentines-proposal-visibai
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/visibait/lubbers-game.git
-cd lubbers-game
+git clone https://github.com/visibait/lub-match.git
+cd lub-match
 ```
 
 2. Install dependencies:

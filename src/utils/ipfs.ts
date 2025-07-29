@@ -9,15 +9,17 @@ import { PinataSDK } from "pinata";
 // Mode 2: Private Control (User's own API key)
 
 // Helper functions for clean, DRY code
-function getFileExtension(filename: string): string {
+export function getFileExtension(filename: string): string {
   return filename.split('.').pop() || 'unknown';
 }
 
-function createGameMetadata(
-  message: string, 
-  pairs: File[], 
-  reveal: File[] | undefined, 
-  storageMode: "quick" | "private"
+// Unified metadata creation for both game storage and NFT metadata
+export function createGameMetadata(
+  message: string,
+  pairs: File[],
+  reveal: File[] | undefined,
+  storageMode: "quick" | "private",
+  additionalData?: Record<string, any>
 ): string {
   return JSON.stringify({
     message,
@@ -26,6 +28,45 @@ function createGameMetadata(
     reveal: reveal?.map((f, i) => `reveal-${i}.${getFileExtension(f.name)}`) || [],
     createdAt: new Date().toISOString(),
     storageMode,
+    ...additionalData,
+  });
+}
+
+// Unified NFT metadata creation for Heart NFTs
+export function createNFTMetadata(
+  gameData: {
+    message: string;
+    imageHashes: string[];
+    layout: number[];
+    completedAt: bigint;
+    creator: string;
+    completer: string;
+    gameType: "custom" | "demo";
+  },
+  additionalAttributes?: Array<{ trait_type: string; value: string | number }>
+): string {
+  return JSON.stringify({
+    name: `Heart Memory Game - ${gameData.gameType === "custom" ? "Custom" : "Demo"}`,
+    description: `A completed heart-shaped memory game with the message: "${gameData.message}"`,
+    image: `ipfs://placeholder-heart-${Date.now()}`, // Will be replaced with actual heart image
+    attributes: [
+      { trait_type: "Game Type", value: gameData.gameType },
+      { trait_type: "Message", value: gameData.message },
+      { trait_type: "Images Count", value: gameData.imageHashes.length },
+      { trait_type: "Completed At", value: Number(gameData.completedAt) },
+      { trait_type: "Creator", value: gameData.creator },
+      { trait_type: "Completer", value: gameData.completer },
+      ...(additionalAttributes || [])
+    ],
+    properties: {
+      imageHashes: gameData.imageHashes,
+      layout: gameData.layout,
+      message: gameData.message,
+      completedAt: gameData.completedAt.toString(),
+      creator: gameData.creator,
+      completer: gameData.completer,
+      gameType: gameData.gameType
+    }
   });
 }
 

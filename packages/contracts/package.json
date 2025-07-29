@@ -1,0 +1,19 @@
+{
+  "name": "lub-match-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Lub Match - LUB Token and Heart NFT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:arbitrum": "hardhat run scripts/deployArbitrumMainnet.ts --network arbitrum",
+    "check-balance": "hardhat run scripts/checkBalance.ts --network arbitrum",
+    "verify": "hardhat verify --network arbitrum"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "hardhat": "^2.19.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}

@@ -4,12 +4,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import Fireworks from "@fireworks-js/react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAccount } from "wagmi";
 import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
+import HeartNFTMinter from "./HeartNFTMinter";
+import { useUserProgression } from "@/utils/userProgression";
+import { WEB3_CONFIG } from "@/config";
 
 type ValentinesProposalProps = {
   revealImages?: string[]; // falls back to defaultRevealImages
   message?: string; // falls back to defaultMessage
   onShare?: () => void;
+  gameLayout?: number[];
+  gameType?: "custom" | "demo";
+  creator?: `0x${string}`;
 };
 
 // Function to shuffle an array
@@ -32,6 +39,9 @@ export default function ValentinesProposal({
   revealImages,
   message,
   onShare,
+  gameLayout = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  gameType = "custom",
+  creator,
 }: ValentinesProposalProps) {
   const sourceImages =
     revealImages && revealImages.length >= 8
@@ -55,6 +65,11 @@ export default function ValentinesProposal({
   } | null>(null);
   const [showFireworks, setShowFireworks] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [showNFTMinter, setShowNFTMinter] = useState(false);
+  const { address } = useAccount();
+
+  // User progression integration
+  const { progress, features, recordEvent } = useUserProgression();
 
   const getRandomPosition = () => {
     const randomTop = Math.random() * 80;
@@ -64,7 +79,18 @@ export default function ValentinesProposal({
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+
+    // Record game completion when proposal screen loads
+    recordEvent({
+      type: "game_complete",
+      timestamp: new Date().toISOString(),
+      data: {
+        gameType,
+        hasCustomImages: revealImages && revealImages.length > 0,
+        messageLength: heading.length,
+      },
+    });
+  }, [recordEvent, gameType, revealImages, heading.length]);
 
   useEffect(() => {
     if (step < 2) {
@@ -211,7 +237,7 @@ export default function ValentinesProposal({
               height={200}
               unoptimized
             />
-            <div className="flex space-x-4 mt-6">
+            <div className="flex flex-wrap justify-center gap-3 mt-6">
               {onShare && (
                 <button
                   onClick={onShare}
@@ -219,6 +245,28 @@ export default function ValentinesProposal({
                 >
                   💝 Share on Farcaster
                 </button>
+              )}
+              {/* NFT Minting - show based on user progression and features */}
+              {creator &&
+                address &&
+                features.nftMinting &&
+                WEB3_CONFIG.features.nftMintingEnabled && (
+                  <button
+                    onClick={() => setShowNFTMinter(true)}
+                    className="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  >
+                    💎{" "}
+                    {progress.nftsMinted === 0
+                      ? "Mint First NFT"
+                      : "Mint as NFT"}
+                  </button>
+                )}
+
+              {/* Show Web3 hint for eligible users who haven't connected */}
+              {creator && !address && features.walletConnection && (
+                <div className="text-xs text-gray-500 text-center">
+                  💡 Connect wallet to mint this heart as an NFT
+                </div>
               )}
               <Link
                 href="/"
@@ -252,6 +300,35 @@ export default function ValentinesProposal({
             }}
           />
         </div>
+      )}
+
+      {/* NFT Minter Modal */}
+      {showNFTMinter && creator && address && (
+        <HeartNFTMinter
+          gameImages={sourceImages}
+          gameLayout={gameLayout}
+          message={heading}
+          gameType={gameType}
+          creator={creator}
+          onClose={() => setShowNFTMinter(false)}
+          onMinted={(tokenId) => {
+            console.log("NFT minted with token ID:", tokenId);
+
+            // Record NFT minting in user progression
+            recordEvent({
+              type: "nft_minted",
+              timestamp: new Date().toISOString(),
+              data: {
+                tokenId: tokenId.toString(),
+                gameType,
+                creator,
+                messageLength: heading.length,
+              },
+            });
+
+            // Could show success message here
+          }}
+        />
       )}
     </div>
   );

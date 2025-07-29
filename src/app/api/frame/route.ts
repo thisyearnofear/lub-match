@@ -29,11 +29,11 @@ export async function POST(req: NextRequest) {
               <meta property="fc:frame:button:2:action" content="link" />
               <meta property="fc:frame:button:2:target" content="${baseUrl}/create" />
               <meta property="og:image" content="${baseUrl}/github-demo.gif" />
-              <meta property="og:title" content="Lubbers Match 💝" />
+              <meta property="og:title" content="lub match 💝" />
               <meta property="og:description" content="A romantic heart-shaped memory game!" />
             </head>
             <body>
-              <p>Welcome to Lubbers Match! Click to start playing.</p>
+              <p>Welcome to lub match! Click to start playing.</p>
             </body>
           </html>`,
           {
@@ -81,15 +81,15 @@ export async function POST(req: NextRequest) {
             <head>
               <meta property="fc:frame" content="vNext" />
               <meta property="fc:frame:image" content="${baseUrl}/github-demo.gif" />
-              <meta property="fc:frame:button:1" content="💝 Play Lubbers Match" />
+              <meta property="fc:frame:button:1" content="💝 Play lub match" />
               <meta property="fc:frame:button:1:action" content="link" />
               <meta property="fc:frame:button:1:target" content="${baseUrl}" />
               <meta property="og:image" content="${baseUrl}/github-demo.gif" />
-              <meta property="og:title" content="Lubbers Match 💝" />
+              <meta property="og:title" content="lub match 💝" />
               <meta property="og:description" content="A romantic heart-shaped memory game to send lub to your special someone!" />
             </head>
             <body>
-              <p>Lubbers Match - A romantic way to ask someone special! 💝</p>
+              <p>lub match - A romantic way to ask someone special! 💝</p>
             </body>
           </html>`,
           {
@@ -127,15 +127,15 @@ export async function GET() {
       <head>
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content="${baseUrl}/github-demo.gif" />
-        <meta property="fc:frame:button:1" content="💝 Play Lubbers Match" />
+        <meta property="fc:frame:button:1" content="💝 Play lub match" />
         <meta property="fc:frame:button:1:action" content="link" />
         <meta property="fc:frame:button:1:target" content="${baseUrl}" />
         <meta property="og:image" content="${baseUrl}/github-demo.gif" />
-        <meta property="og:title" content="Lubbers Match 💝" />
+        <meta property="og:title" content="lub match 💝" />
         <meta property="og:description" content="A romantic heart-shaped memory game to send lub to your special someone!" />
       </head>
       <body>
-        <h1>Lubbers Match 💝</h1>
+        <h1>lub match 💝</h1>
         <p>A romantic heart-shaped memory game to ask your special someone to be your Valentine!</p>
         <a href="${baseUrl}">Play Now</a>
       </body>

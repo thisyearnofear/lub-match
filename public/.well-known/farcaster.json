@@ -1,12 +1,12 @@
 {
   "frame": {
     "version": "1",
-    "name": "Lubbers Match",
+    "name": "Lub Match",
     "iconUrl": "/hamster_jumping.gif",
     "homeUrl": "/",
     "imageUrl": "/github-demo.gif",
     "button": {
-      "title": "💝 Play Lubbers Match!",
+      "title": "💝 Play Lub Match!",
       "action": {
         "type": "launch_frame"
       }

@@ -1,0 +1,305 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import {
+  FarcasterUser,
+  UsernameGuessingGame,
+  UsernameGuessingResult,
+} from "@/types/socialGames";
+import { gameStorage } from "@/utils/gameStorage";
+import { scoreCalculator } from "@/utils/scoreCalculator";
+
+interface UsernameGuessingGameProps {
+  game: UsernameGuessingGame;
+  onGameComplete: (result: UsernameGuessingResult) => void;
+  onExit: () => void;
+}
+
+interface QuestionData {
+  user: FarcasterUser;
+  options: string[];
+  userGuess?: string;
+  isCorrect?: boolean;
+  timeSpent?: number;
+}
+
+export default function UsernameGuessingGameComponent({
+  game,
+  onGameComplete,
+  onExit,
+}: UsernameGuessingGameProps) {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [questions, setQuestions] = useState<QuestionData[]>([]);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [showResult, setShowResult] = useState(false);
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [gameStartTime] = useState(Date.now());
+  const [score, setScore] = useState(0);
+
+  // Initialize questions
+  useEffect(() => {
+    const gameQuestions: QuestionData[] = game.users.map((user) => {
+      const correctAnswer = user.username;
+      const wrongAnswers = game.options
+        .filter((option) => option !== correctAnswer)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+
+      const shuffledOptions = [correctAnswer, ...wrongAnswers].sort(
+        () => Math.random() - 0.5
+      );
+
+      return {
+        user,
+        options: shuffledOptions,
+      };
+    });
+
+    setQuestions(gameQuestions);
+    setQuestionStartTime(Date.now());
+  }, [game]);
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
+
+  const handleAnswerSelect = useCallback(
+    (answer: string) => {
+      if (selectedAnswer) return; // Prevent multiple selections
+
+      setSelectedAnswer(answer);
+
+      const timeSpent = (Date.now() - questionStartTime) / 1000;
+      const isCorrect = answer === currentQuestion.user.username;
+
+      // Update question data
+      const updatedQuestions = [...questions];
+      updatedQuestions[currentQuestionIndex] = {
+        ...currentQuestion,
+        userGuess: answer,
+        isCorrect,
+        timeSpent,
+      };
+      setQuestions(updatedQuestions);
+
+      if (isCorrect) {
+        setScore((prev) => prev + 1);
+      }
+
+      setShowResult(true);
+
+      // Auto-advance after showing result
+      setTimeout(() => {
+        if (isLastQuestion) {
+          completeGame(updatedQuestions);
+        } else {
+          nextQuestion();
+        }
+      }, 1500);
+    },
+    [
+      selectedAnswer,
+      currentQuestion,
+      questions,
+      currentQuestionIndex,
+      isLastQuestion,
+      questionStartTime,
+    ]
+  );
+
+  const nextQuestion = () => {
+    setCurrentQuestionIndex((prev) => prev + 1);
+    setSelectedAnswer(null);
+    setShowResult(false);
+    setQuestionStartTime(Date.now());
+  };
+
+  const completeGame = async (finalQuestions: QuestionData[]) => {
+    const totalTime = (Date.now() - gameStartTime) / 1000;
+    const correctGuesses = finalQuestions.filter((q) => q.isCorrect).length;
+    const accuracy = (correctGuesses / finalQuestions.length) * 100;
+
+    const result: UsernameGuessingResult = {
+      gameId: game.id,
+      playerId: await gameStorage.generatePlayerId(),
+      score: 0, // Will be calculated by scoreCalculator
+      maxScore: finalQuestions.length * 100, // Assuming 100 points per correct answer
+      accuracy,
+      timeSpent: totalTime,
+      completedAt: new Date(),
+      gameData: {
+        correctGuesses,
+        totalQuestions: finalQuestions.length,
+        questionsData: finalQuestions.map((q) => ({
+          user: q.user,
+          userGuess: q.userGuess!,
+          correctAnswer: q.user.username,
+          isCorrect: q.isCorrect!,
+          timeSpent: q.timeSpent!,
+        })),
+      },
+    };
+
+    // Calculate final score
+    result.score = scoreCalculator.calculateUsernameGuessingScore(result);
+
+    // Save result
+    await gameStorage.saveGameResult(result);
+
+    onGameComplete(result);
+  };
+
+  if (!currentQuestion) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white">Loading game...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-6 bg-gradient-to-br from-purple-900 to-pink-900 rounded-2xl shadow-2xl">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="text-white">
+          <h2 className="text-2xl font-bold">{game.name}</h2>
+          <p className="text-purple-200">
+            Question {currentQuestionIndex + 1} of {questions.length}
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-white text-right">
+            <div className="text-sm text-purple-200">Score</div>
+            <div className="text-xl font-bold">
+              {score}/{questions.length}
+            </div>
+          </div>
+          <button
+            onClick={onExit}
+            className="text-purple-200 hover:text-white transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="w-full bg-purple-800 rounded-full h-2 mb-8">
+        <motion.div
+          className="bg-gradient-to-r from-pink-500 to-purple-500 h-2 rounded-full"
+          initial={{ width: 0 }}
+          animate={{
+            width: `${((currentQuestionIndex + 1) / questions.length) * 100}%`,
+          }}
+          transition={{ duration: 0.5 }}
+        />
+      </div>
+
+      {/* Question */}
+      <div className="text-center mb-8">
+        <motion.div
+          key={currentQuestionIndex}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <div className="relative w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-purple-400">
+            <Image
+              src={currentQuestion.user.pfp_url}
+              alt="Profile"
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          </div>
+          <h3 className="text-xl text-white font-semibold">
+            What's this user's username?
+          </h3>
+          {currentQuestion.user.bio && (
+            <p className="text-purple-200 text-sm mt-2 max-w-md mx-auto">
+              "{currentQuestion.user.bio}"
+            </p>
+          )}
+        </motion.div>
+
+        {/* Answer Options */}
+        <div className="grid grid-cols-2 gap-4">
+          <AnimatePresence>
+            {currentQuestion.options.map((option, index) => {
+              const isSelected = selectedAnswer === option;
+              const isCorrect = option === currentQuestion.user.username;
+              const showCorrect = showResult && isCorrect;
+              const showIncorrect = showResult && isSelected && !isCorrect;
+
+              return (
+                <motion.button
+                  key={option}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  onClick={() => handleAnswerSelect(option)}
+                  disabled={selectedAnswer !== null}
+                  className={`
+                    p-4 rounded-xl font-semibold transition-all duration-300
+                    ${
+                      !showResult
+                        ? "bg-purple-700 hover:bg-purple-600 text-white hover:scale-105"
+                        : showCorrect
+                        ? "bg-green-500 text-white"
+                        : showIncorrect
+                        ? "bg-red-500 text-white"
+                        : "bg-purple-800 text-purple-300"
+                    }
+                    ${selectedAnswer && !showResult ? "opacity-50" : ""}
+                  `}
+                >
+                  @{option}
+                  {showResult && isCorrect && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="ml-2"
+                    >
+                      ✓
+                    </motion.span>
+                  )}
+                  {showResult && isSelected && !isCorrect && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="ml-2"
+                    >
+                      ✗
+                    </motion.span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+
+        {/* Result Feedback */}
+        <AnimatePresence>
+          {showResult && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6"
+            >
+              {selectedAnswer === currentQuestion.user.username ? (
+                <div className="text-green-400 font-semibold">
+                  🎉 Correct! Great job!
+                </div>
+              ) : (
+                <div className="text-red-400 font-semibold">
+                  ❌ Incorrect. The answer was @{currentQuestion.user.username}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}

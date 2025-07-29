@@ -7,10 +7,11 @@ export const metadata: Metadata = {
       ? `https://${process.env.VERCEL_URL}`
       : "http://localhost:3000"
   ),
-  title: "Lubbers Match",
+  title: "Lub Match",
   description: "Send lub & feel da lub!",
   keywords: [
-    "Lubbers card game",
+    "Lub Match",
+    "memory card game",
     "romantic proposal game",
     "photo card challenge",
     "send lub game",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     "proposal game",
   ],
   openGraph: {
-    title: "Lubbers Match 💝",
+    title: "lub match 💝",
     description:
       "A romantic heart-shaped memory game to send lub to your special someone!",
     images: [
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Lubbers Match 💝",
+    title: "lub match 💝",
     description:
       "A romantic heart-shaped memory game to send lub to your special someone!",
     images: ["/github-demo.gif"],
@@ -52,7 +53,7 @@ export const metadata: Metadata = {
         title: "Play the Game",
         action: {
           type: "launch_frame",
-          name: "Lubbers Match",
+          name: "lub match",
           splashImageUrl: "/hamster_jumping.gif",
           splashBackgroundColor: "#000000",
         },
@@ -60,8 +61,6 @@ export const metadata: Metadata = {
     }),
   },
 };
-
-
 
 import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
 
@@ -72,6 +71,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        />
+        <meta name="theme-color" content="#ec4899" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
       <body>
         <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
       </body>

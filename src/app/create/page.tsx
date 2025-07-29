@@ -12,11 +12,20 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import FarcasterUsernameInput from "@/components/FarcasterUsernameInput";
-import LubCreationModeSelector, { LubCreationMode } from "@/components/LubCreationModeSelector";
+import LubCreationModeSelector, {
+  LubCreationMode,
+} from "@/components/LubCreationModeSelector";
+import { useUserProgression } from "@/utils/userProgression";
+import { useLubToken } from "@/hooks/useLubToken";
+import { PricingDisplay } from "@/components/PricingDisplay";
+import { LoadingState, NetworkError } from "@/components/ErrorBoundary";
+import { WEB3_CONFIG } from "@/config";
 
 // Debug info component
 function DebugInfo() {
-  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
+  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(
+    null
+  );
 
   useEffect(() => {
     setDebugInfo({
@@ -62,7 +71,7 @@ function DropzoneField({
       if (accepted.length + files.length > maxFiles) return;
       setFiles([...files, ...accepted.slice(0, maxFiles - files.length)]);
     },
-    [files, setFiles, maxFiles],
+    [files, setFiles, maxFiles]
   );
 
   const removeFile = (idx: number) => {
@@ -159,32 +168,34 @@ function CreateGameContent() {
   const [showOnchain, setShowOnchain] = useState(false);
 
   const router = useRouter();
+  const { publish, isPending, data: txHash, enabled } = usePublishGame();
+
+  // User progression and pricing integration
+  const { progress, features, messaging, recordEvent } = useUserProgression();
   const {
-    publish,
-    isPending,
-    data: txHash,
-    enabled,
-  } = usePublishGame();
+    canCreateFarcasterLub,
+    getRomanceLubCost,
+    progress: lubProgress,
+  } = useLubToken();
   const { isConnected } = useAccount();
 
   // Check if user has provided enough content based on selected mode
-  const hasEnoughContent = lubMode === "photos" 
-    ? pairs.length === PAIRS_LIMIT 
-    : lubMode === "farcaster" 
+  const hasEnoughContent =
+    lubMode === "photos"
+      ? pairs.length === PAIRS_LIMIT
+      : lubMode === "farcaster"
       ? farcasterUsers.length === 8
       : false;
-  
-  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate that user has provided enough content
     if (!hasEnoughContent) {
       setError("Please select a lub creation mode and provide enough content.");
       return;
     }
-    
+
     if (storageMode === "private" && !userApiKey.trim()) {
       setError("Please provide your Pinata API key for private mode");
       return;
@@ -263,13 +274,28 @@ function CreateGameContent() {
       setDeletable(result.deletable || false);
       setShowOnchain(true);
       const url = `${window.location.origin}/game/${result.cid}?created=1`;
-      
+
+      // Record lub creation in user progression
+      recordEvent({
+        type: "lub_created",
+        timestamp: new Date().toISOString(),
+        data: {
+          mode: lubMode === "photos" ? "romance" : "farcaster",
+          cid: result.cid,
+          storageMode,
+          messageLength: message.length,
+        },
+      });
+
       // Try to copy to clipboard, but don't fail if it doesn't work
       try {
         await navigator.clipboard.writeText(url);
-        console.log('✅ Link copied to clipboard');
+        console.log("✅ Link copied to clipboard");
       } catch (clipboardError) {
-        console.log('⚠️ Could not copy to clipboard (document not focused):', clipboardError);
+        console.log(
+          "⚠️ Could not copy to clipboard (document not focused):",
+          clipboardError
+        );
         // Fallback: we'll show the link in the UI instead
       }
       // Do not redirect yet
@@ -291,10 +317,10 @@ function CreateGameContent() {
       // Add a delightful transition before redirecting
       setLoading(true);
       setUploadProgress(0);
-      
+
       // Animate progress to build anticipation
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
+        setUploadProgress((prev) => {
           if (prev >= 100) {
             clearInterval(progressInterval);
             // Redirect after a brief moment to show completion
@@ -316,13 +342,13 @@ function CreateGameContent() {
       const hash = await publish(cid, message);
       if (hash) {
         window.open(`https://basescan.org/tx/${hash}`, "_blank");
-        
+
         // Add delightful transition for mint success too
         setLoading(true);
         setUploadProgress(0);
-        
+
         const progressInterval = setInterval(() => {
-          setUploadProgress(prev => {
+          setUploadProgress((prev) => {
             if (prev >= 100) {
               clearInterval(progressInterval);
               setTimeout(() => {
@@ -334,9 +360,10 @@ function CreateGameContent() {
           });
         }, 80);
       }
-
     } catch (err: unknown) {
-      setOnchainError(err instanceof Error ? err.message : "Error publishing on-chain");
+      setOnchainError(
+        err instanceof Error ? err.message : "Error publishing on-chain"
+      );
     }
   };
 
@@ -345,9 +372,7 @@ function CreateGameContent() {
       <div className="max-w-md w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-6 text-white text-center">
-          <h1 className="text-xl font-bold mb-2">
-            Send Your Lub 💝
-          </h1>
+          <h1 className="text-xl font-bold mb-2">Send Your Lub 💝</h1>
           <p className="text-pink-100 text-sm">
             Create a delightful lub for your special someone!
           </p>
@@ -377,7 +402,9 @@ function CreateGameContent() {
             >
               <span>🔧 Advanced: Use your own storage</span>
               <span
-                className={`transform transition-transform ${showAdvanced ? "rotate-180" : ""}`}
+                className={`transform transition-transform ${
+                  showAdvanced ? "rotate-180" : ""
+                }`}
               >
                 ▼
               </span>
@@ -452,10 +479,64 @@ function CreateGameContent() {
               disabled={loading || !!cid}
             />
 
+            {/* Minimal Pricing Display - only show when relevant */}
+            {lubMode &&
+              features.pricingDisplay &&
+              WEB3_CONFIG.features.tokenEconomics && (
+                <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border border-pink-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      {lubMode === "farcaster"
+                        ? "🎮 Farcaster Lub"
+                        : "💝 Romance Lub"}
+                    </span>
+                    {progress.totalLubsCreated === 0 && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                        First one FREE! 🎉
+                      </span>
+                    )}
+                  </div>
+
+                  {progress.totalLubsCreated > 0 && (
+                    <div className="text-sm text-gray-600">
+                      {lubMode === "farcaster" ? (
+                        <span>
+                          Hold 50 LUB to create • Tokens stay in your wallet
+                        </span>
+                      ) : (
+                        <span>Costs LUB tokens • Supports the ecosystem</span>
+                      )}
+                    </div>
+                  )}
+
+                  {!isConnected && progress.totalLubsCreated > 0 && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <ConnectButton.Custom>
+                        {({ openConnectModal }) => (
+                          <button
+                            type="button"
+                            onClick={openConnectModal}
+                            className="text-xs bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 transition-colors"
+                          >
+                            Connect Wallet
+                          </button>
+                        )}
+                      </ConnectButton.Custom>
+                      <span className="text-xs text-gray-500">
+                        to see pricing
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
             {lubMode === "photos" && (
               <div>
                 <h3 className="font-semibold mb-3 text-gray-800">
-                  📸 Upload Your Photos {pairs.length === PAIRS_LIMIT ? "✅" : `(${pairs.length}/${PAIRS_LIMIT})`}
+                  📸 Upload Your Photos{" "}
+                  {pairs.length === PAIRS_LIMIT
+                    ? "✅"
+                    : `(${pairs.length}/${PAIRS_LIMIT})`}
                 </h3>
                 <DropzoneField
                   files={pairs}
@@ -465,7 +546,8 @@ function CreateGameContent() {
                   disabled={loading || !!cid}
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  💡 Tip: Use photos of you two together for the best experience!
+                  💡 Tip: Use photos of you two together for the best
+                  experience!
                 </p>
               </div>
             )}
@@ -473,7 +555,10 @@ function CreateGameContent() {
             {lubMode === "farcaster" && (
               <div>
                 <h3 className="font-semibold mb-3 text-gray-800">
-                  ✨ Add Farcaster Friends {farcasterUsers.length === 8 ? "✅" : `(${farcasterUsers.length}/8)`}
+                  ✨ Add Farcaster Friends{" "}
+                  {farcasterUsers.length === 8
+                    ? "✅"
+                    : `(${farcasterUsers.length}/8)`}
                 </h3>
                 <FarcasterUsernameInput
                   onUsersSelected={setFarcasterUsers}
@@ -481,7 +566,8 @@ function CreateGameContent() {
                   disabled={loading || !!cid}
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  💕 Their profile pictures will create a beautiful collage during the proposal.
+                  💕 Their profile pictures will create a beautiful collage
+                  during the proposal.
                 </p>
               </div>
             )}
@@ -511,31 +597,38 @@ function CreateGameContent() {
 
             {/* Upload Progress */}
             {loading && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>
-                    {cid ? "Preparing your game..." : "Creating your game..."}
-                  </span>
-                  <span>{uploadProgress}%</span>
+              <div className="space-y-4">
+                <LoadingState
+                  type="game"
+                  message={
+                    cid ? "Preparing your game..." : "Creating your game..."
+                  }
+                />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Progress</span>
+                    <span className="font-semibold text-purple-600">
+                      {uploadProgress}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-pink-500 to-rose-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                  {cid && (
+                    <p className="text-xs text-gray-600 text-center">
+                      &#9733; Almost ready! Taking you to your Lubber&apos;s
+                      game...
+                    </p>
+                  )}
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-pink-500 to-rose-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  ></div>
-                </div>
-                {cid && (
-                  <p className="text-xs text-gray-600 text-center">
-                    &#9733; Almost ready! Taking you to your Lubber&apos;s game...
-                  </p>
-                )}
               </div>
             )}
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
+              <NetworkError message={error} onRetry={() => setError(null)} />
             )}
 
             <button
@@ -550,12 +643,12 @@ function CreateGameContent() {
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   {cid ? "Preparing your lub..." : "Creating lub..."}
                 </div>
+              ) : lubMode === "photos" ? (
+                `💝 Send Lub (${pairs.length}/${PAIRS_LIMIT} photos)`
+              ) : lubMode === "farcaster" ? (
+                `💝 Send Lub (${farcasterUsers.length}/8 friends)`
               ) : (
-                lubMode === "photos"
-                  ? `💝 Send Lub (${pairs.length}/${PAIRS_LIMIT} photos)`
-                  : lubMode === "farcaster"
-                    ? `💝 Send Lub (${farcasterUsers.length}/8 friends)`
-                    : `💝 Select a mode to send lub`
+                `💝 Select a mode to send lub`
               )}
             </button>
           </form>
@@ -565,13 +658,19 @@ function CreateGameContent() {
               <div className="mb-2 text-lg font-semibold flex items-center gap-2">
                 🎉 Game created!
               </div>
-              
+
               <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-800 font-medium mb-2">Share your game:</p>
+                <p className="text-sm text-blue-800 font-medium mb-2">
+                  Share your game:
+                </p>
                 <div className="flex items-center gap-2">
-                  <input 
-                    type="text" 
-                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/game/${cid}?created=1`}
+                  <input
+                    type="text"
+                    value={`${
+                      typeof window !== "undefined"
+                        ? window.location.origin
+                        : ""
+                    }/game/${cid}?created=1`}
                     readOnly
                     className="flex-1 px-2 py-1 text-xs bg-white border rounded text-blue-700 font-mono"
                     onClick={(e) => e.currentTarget.select()}
@@ -581,9 +680,9 @@ function CreateGameContent() {
                       const url = `${window.location.origin}/game/${cid}?created=1`;
                       try {
                         await navigator.clipboard.writeText(url);
-                        alert('Link copied!');
+                        alert("Link copied!");
                       } catch (error) {
-                        console.log('Could not copy to clipboard:', error);
+                        console.log("Could not copy to clipboard:", error);
                       }
                     }}
                     className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -694,12 +793,16 @@ function CreateGameContent() {
   );
 }
 
-const CreateGamePage = dynamic(() => Promise.resolve(() => (
-  <Web3Provider>
-    <CreateGameContent />
-  </Web3Provider>
-)), {
-  ssr: false,
-});
+const CreateGamePage = dynamic(
+  () =>
+    Promise.resolve(() => (
+      <Web3Provider>
+        <CreateGameContent />
+      </Web3Provider>
+    )),
+  {
+    ssr: false,
+  }
+);
 
 export default CreateGamePage;

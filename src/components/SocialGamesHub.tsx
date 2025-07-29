@@ -1,0 +1,481 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  FarcasterUser,
+  GameResult,
+  LeaderboardEntry,
+} from "@/types/socialGames";
+import { socialGameFactory } from "@/utils/socialGameFactory";
+import { gameStorage } from "@/utils/gameStorage";
+import { scoreCalculator } from "@/utils/scoreCalculator";
+import UsernameGuessingGameComponent from "./UsernameGuessingGame";
+import { useUserProgression } from "@/utils/userProgression";
+import { useLubToken } from "@/hooks/useLubToken";
+import { WEB3_CONFIG } from "@/config";
+import { useEarningNotifications } from "./EarningToast";
+
+interface SocialGamesHubProps {
+  users: FarcasterUser[];
+  onClose: () => void;
+}
+
+type GameMode =
+  | "menu"
+  | "username-guessing"
+  | "pfp-matching"
+  | "social-trivia"
+  | "leaderboard"
+  | "results";
+
+export default function SocialGamesHub({
+  users,
+  onClose,
+}: SocialGamesHubProps) {
+  const [currentMode, setCurrentMode] = useState<GameMode>("menu");
+  const [currentGame, setCurrentGame] = useState<any>(null);
+  const [gameResult, setGameResult] = useState<GameResult | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [playerStats, setPlayerStats] = useState<LeaderboardEntry | null>(null);
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">(
+    "medium"
+  );
+
+  // User progression integration
+  const { features, recordEvent } = useUserProgression();
+  const { earnLub } = useLubToken();
+  const { showEarning, ToastContainer } = useEarningNotifications();
+
+  // Load player stats and leaderboard on mount
+  useEffect(() => {
+    loadPlayerData();
+  }, []);
+
+  const loadPlayerData = async () => {
+    const playerId = await gameStorage.generatePlayerId();
+    const stats = await gameStorage.getPlayerStats(playerId);
+    const board = await gameStorage.getLeaderboard(undefined, 10);
+
+    setPlayerStats(stats);
+    setLeaderboard(board);
+  };
+
+  const startUsernameGuessingGame = () => {
+    const game = socialGameFactory.createUsernameGuessingGame(
+      users,
+      difficulty
+    );
+    setCurrentGame(game);
+    setCurrentMode("username-guessing");
+  };
+
+  const handleGameComplete = (result: GameResult) => {
+    setGameResult(result);
+    setCurrentMode("results");
+    loadPlayerData(); // Refresh stats
+
+    // Record social game completion in user progression
+    recordEvent({
+      type: "social_game",
+      timestamp: new Date().toISOString(),
+      data: {
+        gameId: result.gameId,
+        score: result.score,
+        maxScore: result.maxScore,
+        accuracy: result.accuracy,
+        timeSpent: result.timeSpent,
+        difficulty,
+      },
+    });
+
+    // Award LUB tokens for game completion (if features enabled)
+    if (features.tokenEarning && WEB3_CONFIG.features.socialEarning) {
+      earnLub("social_game_win");
+
+      // Show earning notification
+      const earningAmount = WEB3_CONFIG.earning.socialGameWin;
+      showEarning(earningAmount, "Completed social game!");
+    }
+  };
+
+  const backToMenu = () => {
+    setCurrentMode("menu");
+    setCurrentGame(null);
+    setGameResult(null);
+  };
+
+  const showLeaderboard = () => {
+    setCurrentMode("leaderboard");
+  };
+
+  if (users.length < 4) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-gradient-to-br from-purple-900 to-pink-900 p-8 rounded-2xl shadow-2xl max-w-md mx-4">
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Not Enough Users
+          </h2>
+          <p className="text-purple-200 mb-6">
+            We need at least 4 Farcaster users to start the social games. Please
+            add a Neynar API key to fetch real user data.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-3 px-6 rounded-xl font-semibold hover:from-pink-600 hover:to-purple-600 transition-all"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-purple-700"
+      >
+        <AnimatePresence mode="wait">
+          {currentMode === "menu" && (
+            <motion.div
+              key="menu"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="p-8"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-white mb-2">
+                    🎮 Farcaster Social Games
+                  </h1>
+                  <p className="text-purple-200">
+                    Test your knowledge of the Farcaster community!
+                  </p>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="text-purple-200 hover:text-white text-2xl transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Player Stats */}
+              {playerStats && (
+                <div className="bg-purple-800 bg-opacity-50 rounded-xl p-6 mb-8">
+                  <h3 className="text-xl font-semibold text-white mb-4">
+                    Your Stats
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-pink-400">
+                        {playerStats.totalScore}
+                      </div>
+                      <div className="text-sm text-purple-200">Total Score</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-400">
+                        {playerStats.gamesPlayed}
+                      </div>
+                      <div className="text-sm text-purple-200">
+                        Games Played
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-400">
+                        {playerStats.averageAccuracy.toFixed(1)}%
+                      </div>
+                      <div className="text-sm text-purple-200">Accuracy</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-yellow-400">
+                        {playerStats.farcasterKnowledgeLevel}
+                      </div>
+                      <div className="text-sm text-purple-200">Level</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Difficulty Selector */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Select Difficulty
+                </h3>
+                <div className="flex gap-4">
+                  {(["easy", "medium", "hard"] as const).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setDifficulty(level)}
+                      className={`
+                        px-6 py-3 rounded-xl font-semibold transition-all capitalize
+                        ${
+                          difficulty === level
+                            ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white"
+                            : "bg-purple-700 text-purple-200 hover:bg-purple-600"
+                        }
+                      `}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Game Options */}
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={startUsernameGuessingGame}
+                  className="bg-gradient-to-br from-blue-600 to-purple-600 p-6 rounded-xl text-left hover:from-blue-700 hover:to-purple-700 transition-all"
+                >
+                  <div className="text-2xl mb-2">🎯</div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Username Challenge
+                  </h3>
+                  <p className="text-blue-100 text-sm">
+                    Match profile pictures to their usernames. Test your
+                    Farcaster knowledge!
+                  </p>
+                  <div className="mt-4 text-xs text-blue-200">
+                    {difficulty === "easy"
+                      ? "4 users"
+                      : difficulty === "medium"
+                      ? "8 users"
+                      : "12 users"}{" "}
+                    • ~
+                    {difficulty === "easy"
+                      ? "1"
+                      : difficulty === "medium"
+                      ? "2"
+                      : "4"}{" "}
+                    min
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-gradient-to-br from-green-600 to-teal-600 p-6 rounded-xl text-left opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  <div className="text-2xl mb-2">🧩</div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    PFP Memory Match
+                  </h3>
+                  <p className="text-green-100 text-sm">
+                    Classic memory game with Farcaster profile pictures.
+                  </p>
+                  <div className="mt-4 text-xs text-green-200">
+                    Coming Soon!
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-gradient-to-br from-orange-600 to-red-600 p-6 rounded-xl text-left opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  <div className="text-2xl mb-2">🧠</div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Social Trivia
+                  </h3>
+                  <p className="text-orange-100 text-sm">
+                    Answer questions about follower counts, bios, and more.
+                  </p>
+                  <div className="mt-4 text-xs text-orange-200">
+                    Coming Soon!
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={showLeaderboard}
+                  className="bg-gradient-to-br from-yellow-600 to-orange-600 p-6 rounded-xl text-left hover:from-yellow-700 hover:to-orange-700 transition-all"
+                >
+                  <div className="text-2xl mb-2">🏆</div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Leaderboard
+                  </h3>
+                  <p className="text-yellow-100 text-sm">
+                    See how you rank against other players.
+                  </p>
+                  <div className="mt-4 text-xs text-yellow-200">
+                    {leaderboard.length} players ranked
+                  </div>
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+
+          {currentMode === "username-guessing" && currentGame && (
+            <motion.div
+              key="username-guessing"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-8"
+            >
+              <UsernameGuessingGameComponent
+                game={currentGame}
+                onGameComplete={handleGameComplete}
+                onExit={backToMenu}
+              />
+            </motion.div>
+          )}
+
+          {currentMode === "results" && gameResult && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="p-8 text-center"
+            >
+              <div className="mb-8">
+                <div className="text-6xl mb-4">🎉</div>
+                <h2 className="text-3xl font-bold text-white mb-2">
+                  Game Complete!
+                </h2>
+                <p className="text-purple-200">Here's how you did:</p>
+              </div>
+
+              <div className="bg-purple-800 bg-opacity-50 rounded-xl p-8 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div>
+                    <div className="text-3xl font-bold text-pink-400">
+                      {gameResult.score}
+                    </div>
+                    <div className="text-purple-200">Final Score</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-bold text-green-400">
+                      {gameResult.accuracy.toFixed(1)}%
+                    </div>
+                    <div className="text-purple-200">Accuracy</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-bold text-blue-400">
+                      {gameResult.timeSpent.toFixed(1)}s
+                    </div>
+                    <div className="text-purple-200">Time</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-yellow-400">
+                      {playerStats?.farcasterKnowledgeLevel || "Newcomer"}
+                    </div>
+                    <div className="text-purple-200">Level</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={backToMenu}
+                  className="bg-gradient-to-r from-pink-500 to-purple-500 text-white py-3 px-8 rounded-xl font-semibold hover:from-pink-600 hover:to-purple-600 transition-all"
+                >
+                  Play Again
+                </button>
+                <button
+                  onClick={showLeaderboard}
+                  className="bg-purple-700 text-white py-3 px-8 rounded-xl font-semibold hover:bg-purple-600 transition-all"
+                >
+                  View Leaderboard
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {currentMode === "leaderboard" && (
+            <motion.div
+              key="leaderboard"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-8"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold text-white">
+                  🏆 Leaderboard
+                </h2>
+                <button
+                  onClick={backToMenu}
+                  className="text-purple-200 hover:text-white transition-colors"
+                >
+                  ← Back
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {leaderboard.map((entry, index) => (
+                  <div
+                    key={entry.playerId || index}
+                    className={`
+                      bg-purple-800 bg-opacity-50 rounded-xl p-6 flex items-center justify-between
+                      ${index < 3 ? "border-2 border-yellow-400" : ""}
+                    `}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`
+                        text-2xl font-bold w-8 text-center
+                        ${
+                          index === 0
+                            ? "text-yellow-400"
+                            : index === 1
+                            ? "text-gray-300"
+                            : index === 2
+                            ? "text-orange-400"
+                            : "text-purple-200"
+                        }
+                      `}
+                      >
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="text-white font-semibold">
+                          {entry.playerName || "Anonymous Player"}
+                        </div>
+                        <div className="text-purple-200 text-sm">
+                          {entry.farcasterKnowledgeLevel} • {entry.gamesPlayed}{" "}
+                          games
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-pink-400">
+                        {entry.totalScore}
+                      </div>
+                      <div className="text-purple-200 text-sm">
+                        {entry.averageAccuracy.toFixed(1)}% avg
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {leaderboard.length === 0 && (
+                <div className="text-center text-purple-200 py-12">
+                  <div className="text-4xl mb-4">🎮</div>
+                  <p>No games played yet. Be the first to set a score!</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Earning notifications */}
+      <ToastContainer />
+    </div>
+  );
+}

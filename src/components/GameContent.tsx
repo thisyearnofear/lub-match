@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import PhotoPairGame from "@/components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
+import { useUserProgression } from "@/utils/userProgression";
 
 interface GameContentProps {
   pairUrls: string[];
@@ -30,6 +31,9 @@ export default function GameContent({
   useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [isClient, setIsClient] = useState(false);
+
+  // User progression integration
+  const { recordEvent } = useUserProgression();
 
   useEffect(() => {
     setIsClient(true);
@@ -62,6 +66,20 @@ export default function GameContent({
   const share = async () => {
     const url = window.location.href;
     const shareText = `💝 Will you Lub me? Match all the hearts? ${url}`;
+
+    // Record sharing event in user progression
+    recordEvent({
+      type: "game_shared",
+      timestamp: new Date().toISOString(),
+      data: {
+        url,
+        shareText,
+        platform:
+          isClient && (window as FarcasterWindow)?.fc
+            ? "farcaster"
+            : "warpcast",
+      },
+    });
 
     // Copy to clipboard (with error handling)
     try {

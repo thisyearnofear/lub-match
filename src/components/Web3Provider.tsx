@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { WagmiProvider } from "wagmi";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { base, baseSepolia } from "viem/chains";
+import { base, baseSepolia, arbitrum, arbitrumSepolia } from "viem/chains";
 import "@rainbow-me/rainbowkit/styles.css";
 
 interface Web3ProviderProps {
@@ -17,8 +17,9 @@ export default function Web3Provider({ children }: Web3ProviderProps) {
     getDefaultConfig({
       appName: "Valentine Memory Game",
       projectId:
-        process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "valentine-memory-game",
-      chains: [base, baseSepolia],
+        process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
+        "valentine-memory-game",
+      chains: [arbitrum, base, baseSepolia, arbitrumSepolia],
       ssr: false,
     })
   );

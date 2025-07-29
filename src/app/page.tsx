@@ -7,7 +7,10 @@ import Link from "next/link";
 import TextFooter from "@/components/TextFooter";
 import PhotoPairGame from "../components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
+import SocialGamesHub from "@/components/SocialGamesHub";
+
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
+import { useSocialGames } from "@/hooks/useSocialGames";
 import {
   defaultPairs,
   defaultRevealImages,
@@ -31,6 +34,15 @@ export default function Home() {
     enableAutoRefresh: false, // Disable auto-refresh to prevent hydration issues
   });
 
+  // Social games functionality
+  const {
+    isGameActive,
+    startSocialGames,
+    closeSocialGames,
+    canPlayGames,
+    refreshPlayerData,
+  } = useSocialGames();
+
   // Game images - stable on server, dynamic on client
   const [gameImages, setGameImages] = useState(defaultPairs);
 
@@ -47,24 +59,52 @@ export default function Home() {
     }
   }, [isClient, users, loading, getRandomPairs]);
 
+  // Refresh player data when component mounts
+  useEffect(() => {
+    if (isClient) {
+      refreshPlayerData();
+    }
+  }, [isClient, refreshPlayerData]);
+
   const handleShowProposal = () => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setShowValentinesProposal(true);
-    }, ANIM_DURATION * 1000);
+    // For the home page demo, redirect to social games instead of proposal
+    if (isClient && canPlayGames(users)) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        startSocialGames();
+      }, ANIM_DURATION * 1000);
+    } else {
+      // Fallback to proposal if social games aren't available
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setShowValentinesProposal(true);
+      }, ANIM_DURATION * 1000);
+    }
   };
 
   return (
     <div className="flex flex-col h-screen bg-black relative">
       {/* Mobile-friendly header */}
       <div className="fixed top-4 left-4 right-4 z-50 flex justify-between items-center">
-        <div className="text-white text-lg font-bold">💝 Lubber&apos;s Game</div>
-        <Link
-          href="/create"
-          className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full text-sm font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"
-        >
-          Make Lub
-        </Link>
+        <div className="text-white text-lg font-bold">
+          💝 Lubber&apos;s Game
+        </div>
+        <div className="flex gap-2">
+          {isClient && canPlayGames(users) && (
+            <button
+              onClick={startSocialGames}
+              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-full text-sm font-semibold shadow-lg hover:from-purple-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-105"
+            >
+              🎮 Social Games
+            </button>
+          )}
+          <Link
+            href="/create"
+            className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full text-sm font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"
+          >
+            Make Lub
+          </Link>
+        </div>
       </div>
 
       {/* Main game area */}
@@ -105,6 +145,11 @@ export default function Home() {
           </p>
         )}
       </div>
+
+      {/* Social Games Modal */}
+      {isGameActive && (
+        <SocialGamesHub users={users} onClose={closeSocialGames} />
+      )}
     </div>
   );
 }

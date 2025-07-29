@@ -21,7 +21,7 @@ export default function TextFooter() {
       <h1
         className={`absolute right-4 sm:right-10 bottom-4 sm:bottom-5 transform text-white text-2xl sm:text-4xl md:text-5xl font-bold leading-tight text-right ${playfairDisplay.className}`}
       >
-        to reveal <br /> <span className="text-gray-400">the surprise</span>
+        to unlock <br /> <span className="text-gray-400">social games</span>
       </h1>
     </>
   );
