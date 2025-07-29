@@ -68,6 +68,11 @@ export default function GameLoader({ cid, justCreated }: GameLoaderProps) {
 
         setImageUrls({ pairs: pairUrls, reveal: revealUrls });
         
+        // Debug logging
+        console.log("GameLoader - Generated image URLs:");
+        console.log("Pair URLs:", pairUrls);
+        console.log("Reveal URLs:", revealUrls);
+        
         // Preload images for better UX
         await imageLoader.preloadImages(cid, [...(metadata.pairs as string[]), ...(revealFiles as string[])]);
       }

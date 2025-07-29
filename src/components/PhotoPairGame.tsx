@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState, useEffect, useMemo } from "react";
-import { defaultPairs } from "@/data/defaultGame";
 import { useGameZoom, useAutoZoom } from "@/hooks/useGameZoom";
 import { SimpleMobileZoomControls } from "./MobileZoomControls";
 
@@ -27,7 +26,7 @@ const heartLayout: CellType[][] = [
 ];
 
 type PhotoPairGameProps = {
-  images?: string[]; // expects 8 images; falls back to defaultPairs
+  images: string[]; // requires exactly 8 IPFS image URLs
   handleShowProposalAction: () => void;
 };
 
@@ -35,8 +34,19 @@ export default function PhotoPairGame({
   images: imagesProp,
   handleShowProposalAction,
 }: PhotoPairGameProps) {
-  const imagesFinal =
-    imagesProp && imagesProp.length === 8 ? imagesProp : defaultPairs;
+  // Debug logging
+  console.log("PhotoPairGame received images:", imagesProp);
+  console.log("Images length:", imagesProp?.length);
+  
+  // Throw error if we don't have proper IPFS images
+  if (!imagesProp || imagesProp.length !== 8) {
+    throw new Error(`PhotoPairGame requires exactly 8 images, got ${imagesProp?.length || 0}. Images: ${JSON.stringify(imagesProp)}`);
+  }
+  
+  const imagesFinal = imagesProp;
+  
+  // More debug logging
+  console.log("Using IPFS images:", imagesFinal);
   const imagePairs = useMemo(
     () => imagesFinal.flatMap((img) => [img, img]),
     [imagesFinal],

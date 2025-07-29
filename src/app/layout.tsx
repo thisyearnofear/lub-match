@@ -61,10 +61,9 @@ export const metadata: Metadata = {
   },
 };
 
-// import { WagmiConfig } from "wagmi";
-// import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-// import { wagmiConfig } from "@/wallet/wagmiConfig";
-// import "@rainbow-me/rainbowkit/styles.css";
+
+
+import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
 
 export default function RootLayout({
   children,
@@ -73,7 +72,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
+      </body>
     </html>
   );
 }

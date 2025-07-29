@@ -171,7 +171,7 @@ function CreateGameContent() {
   const hasEnoughContent = lubMode === "photos" 
     ? pairs.length === PAIRS_LIMIT 
     : lubMode === "farcaster" 
-      ? farcasterUsers.length >= 4
+      ? farcasterUsers.length === 8
       : false;
   
   
@@ -204,6 +204,15 @@ function CreateGameContent() {
       }
       if (lubMode) {
         formData.append("lubMode", lubMode);
+      }
+
+      // Add mode-specific data
+      if (lubMode === "photos") {
+        pairs.forEach((file) => {
+          formData.append("pairs", file);
+        });
+      } else if (lubMode === "farcaster") {
+        formData.append("farcasterUsers", JSON.stringify(farcasterUsers));
       }
 
       // Debug logging
@@ -464,7 +473,7 @@ function CreateGameContent() {
             {lubMode === "farcaster" && (
               <div>
                 <h3 className="font-semibold mb-3 text-gray-800">
-                  ✨ Add Farcaster Friends {farcasterUsers.length >= 4 ? "✅" : `(${farcasterUsers.length} selected)`}
+                  ✨ Add Farcaster Friends {farcasterUsers.length === 8 ? "✅" : `(${farcasterUsers.length}/8)`}
                 </h3>
                 <FarcasterUsernameInput
                   onUsersSelected={setFarcasterUsers}
@@ -545,7 +554,7 @@ function CreateGameContent() {
                 lubMode === "photos"
                   ? `💝 Send Lub (${pairs.length}/${PAIRS_LIMIT} photos)`
                   : lubMode === "farcaster"
-                    ? `💝 Send Lub (${farcasterUsers.length}/4+ friends)`
+                    ? `💝 Send Lub (${farcasterUsers.length}/8 friends)`
                     : `💝 Select a mode to send lub`
               )}
             </button>

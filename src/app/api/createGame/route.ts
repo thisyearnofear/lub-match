@@ -69,9 +69,9 @@ export async function POST(req: Request) {
           );
         }
       }
-      if (farcasterUsers.length < 4 || farcasterUsers.length > 8) {
+      if (farcasterUsers.length !== 8) {
         return NextResponse.json(
-          { error: "You must select between 4 and 8 Farcaster friends for Farcaster mode." },
+          { error: "You must select exactly 8 Farcaster friends for Farcaster mode." },
           { status: 400 },
         );
       }
