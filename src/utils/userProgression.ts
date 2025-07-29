@@ -1,7 +1,7 @@
 // User Progression System - Track user journey and enable progressive Web3 features
 // Maintains user state across sessions and determines feature visibility
 
-import { WEB3_CONFIG } from "../config";
+import { WEB3_CONFIG } from "@/config";
 import { pricingEngine, UserPricingState, LubMode } from "./pricingEngine";
 import { analytics } from "./analytics";
 

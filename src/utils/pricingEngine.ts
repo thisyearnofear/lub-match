@@ -1,7 +1,7 @@
 // Unified Pricing Engine - Single source of truth for all pricing logic
 // Handles Farcaster hold requirements, Romance spending costs, NFT pricing, and earning calculations
 
-import { WEB3_CONFIG } from "../config";
+import { WEB3_CONFIG } from "@/config";
 
 export type LubMode = "farcaster" | "romance";
 export type EarningAction = "photo_inclusion" | "game_completion" | "referral" | "social_game_win";

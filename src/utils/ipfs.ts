@@ -1,4 +1,4 @@
-import { PINATA_JWT } from "../config";
+import { PINATA_JWT } from "@/config";
 import { PinataSDK } from "pinata";
 
 // Modern, clean approach using the official Pinata SDK

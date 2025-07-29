@@ -1,9 +1,11 @@
 "use client";
 
-import { useWriteContract, useReadContract, useAccount } from "wagmi";
+import { useWriteContract, useReadContract, useAccount, useConfig } from "wagmi";
 import { parseAbi, parseEther } from "viem";
+import { readContract } from "viem/actions";
+import { getClient } from "@wagmi/core";
 import { arbitrum } from "viem/chains";
-import { WEB3_CONFIG } from "../config";
+import { WEB3_CONFIG } from "@/config";
 import { generateGameHash, GameHashData, convertHeartLayoutToContractFormat } from "../utils/gameHash";
 import { uploadNFTMetadata, createNFTMetadataPreview } from "../utils/nftMetadata";
 
@@ -17,7 +19,7 @@ const HEART_NFT_ABI = parseAbi([
   "function balanceOf(address owner) view returns (uint256)",
   "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
   "event HeartMinted(uint256 indexed tokenId, address indexed creator, address indexed completer, string gameType, uint256 pricePaid, bool usedLubDiscount)"
-]);
+] as const);
 
 export interface HeartData {
   imageHashes: string[];
@@ -33,6 +35,7 @@ export interface HeartData {
 export function useHeartNFT() {
   const { address } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
+  const config = useConfig();
   
   const enabled = !!HEART_NFT_ADDRESS;
 
@@ -54,7 +57,7 @@ export function useHeartNFT() {
   });
 
   // Read user's NFT balance
-  const { data: nftBalance = 0n } = useReadContract({
+  const { data: nftBalance = BigInt(0) } = useReadContract({
     address: HEART_NFT_ADDRESS,
     abi: HEART_NFT_ABI,
     functionName: "balanceOf",
@@ -65,9 +68,12 @@ export function useHeartNFT() {
   // Check if a game can be minted
   const canMintGame = async (gameHash: string): Promise<boolean> => {
     if (!HEART_NFT_ADDRESS || !enabled) return false;
-    
+
     try {
-      const result = await readContract({
+      const client = getClient(config);
+      if (!client) throw new Error("No client available");
+
+      const result = await readContract(client, {
         address: HEART_NFT_ADDRESS,
         abi: HEART_NFT_ABI,
         functionName: "canMintGame",
@@ -96,7 +102,7 @@ export function useHeartNFT() {
       address: HEART_NFT_ADDRESS,
       abi: HEART_NFT_ABI,
       functionName: "mintCompletedHeart",
-      args: [heartData, gameHash, useLubDiscount],
+      args: [heartData, gameHash, useLubDiscount] as any,
       value: mintPrice,
       chainId: arbitrum.id
     });
@@ -241,9 +247,3 @@ export function useHeartNFT() {
   };
 }
 
-// Helper function for reading contracts (used internally)
-async function readContract(_params: any) {
-  // This would use wagmi's readContract in a real implementation
-  // For now, we'll use a placeholder
-  throw new Error("readContract not implemented - use useReadContract hook instead");
-}

@@ -2,7 +2,7 @@
 // Integrates with existing IPFS infrastructure and game data
 
 import { PinataSDK } from "pinata";
-import { PINATA_JWT, IPFS_CONFIG } from "../config";
+import { PINATA_JWT, IPFS_CONFIG } from "@/config";
 import { createNFTMetadata } from "./ipfs";
 import { generateGameHash, GameHashData } from "./gameHash";
 
@@ -165,7 +165,7 @@ export async function fetchNFTMetadata(metadataURI: string): Promise<HeartNFTMet
     for (const gateway of gateways) {
       try {
         const response = await fetch(`${gateway}/ipfs/${cid}`, {
-          timeout: IPFS_CONFIG.upload.timeout
+          signal: AbortSignal.timeout(IPFS_CONFIG.upload.timeout)
         });
         
         if (response.ok) {

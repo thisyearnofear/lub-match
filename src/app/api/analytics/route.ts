@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const enrichedEvent = {
       ...event,
       serverTimestamp: new Date().toISOString(),
-      ip: request.ip || "unknown",
+      ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
       userAgent: request.headers.get("user-agent") || "unknown",
     };
 
