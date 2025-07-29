@@ -6,8 +6,8 @@ import { readContract } from "viem/actions";
 import { getClient } from "@wagmi/core";
 import { arbitrum } from "viem/chains";
 import { WEB3_CONFIG } from "@/config";
-import { generateGameHash, GameHashData, convertHeartLayoutToContractFormat } from "../utils/gameHash";
-import { uploadNFTMetadata, createNFTMetadataPreview } from "../utils/nftMetadata";
+import { generateGameHash, GameHashData, convertHeartLayoutToContractFormat } from "@/utils/gameHash";
+import { uploadNFTMetadata, createNFTMetadataPreview } from "@/utils/nftMetadata";
 
 const HEART_NFT_ADDRESS = WEB3_CONFIG.contracts.heartNFT;
 
