@@ -15,50 +15,7 @@ export interface FarcasterUser {
   };
 }
 
-// Deterministic mock usernames to avoid hydration mismatches
-const MOCK_USERNAMES = [
-  "vitalik", "dwr", "balajis", "linda", "jessepollak", "rish", "manan", "ted",
-  "horsefacts", "proxystudio", "keccers", "july", "varunsrin", "colin",
-  "davidfurlong", "nolanz", "trevor", "luc", "schmoodles", "gami",
-] as const;
-
-/**
- * Generate deterministic mock users to avoid hydration mismatches
- * Uses consistent data based on index to ensure server/client consistency
- */
-export function generateMockUsers(count: number): FarcasterUser[] {
-  return Array.from({ length: count }, (_, i) => ({
-    fid: 1000 + i,
-    username: MOCK_USERNAMES[i % MOCK_USERNAMES.length] || `user${i}`,
-    display_name: `Farcaster User ${i + 1}`,
-    pfp_url: `/game-photos/${(i % 8) + 1}.avif`, // Use existing fallback images
-    bio: "Building the future of social",
-    follower_count: 1000 + i * 123, // Deterministic follower count
-    following_count: 100 + i * 47, // Deterministic following count
-    verified_addresses: {
-      eth_addresses: [
-        `0x${"0".repeat(40 - i.toString(16).length)}${i.toString(16)}`,
-      ],
-      sol_addresses: [],
-    },
-  }));
-}
-
-/**
- * Get fallback image URLs for the memory game
- */
-export function getFallbackGameImages(): string[] {
-  return [
-    "/game-photos/1.avif",
-    "/game-photos/2.avif", 
-    "/game-photos/3.avif",
-    "/game-photos/4.avif",
-    "/game-photos/5.avif",
-    "/game-photos/6.avif",
-    "/game-photos/7.avif",
-    "/game-photos/8.avif",
-  ];
-}
+// Mock data functions removed - app should fail gracefully when Farcaster data unavailable
 
 /**
  * Utility function to shuffle array (Fisher-Yates algorithm)

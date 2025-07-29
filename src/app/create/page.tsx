@@ -619,8 +619,7 @@ function CreateGameContent() {
                   </div>
                   {cid && (
                     <p className="text-xs text-gray-600 text-center">
-                      &#9733; Almost ready! Taking you to your Lubber&apos;s
-                      game...
+                      &#9733; Almost ready! Taking you to your Lub Match...
                     </p>
                   )}
                 </div>

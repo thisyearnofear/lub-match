@@ -42,6 +42,11 @@ export default function SocialGamesHub({
     "medium"
   );
 
+  // Filter users to only include those with valid profile pictures and usernames
+  const validUsers = users.filter(
+    (user) => user.pfp_url && user.username && user.pfp_url.trim() !== ""
+  );
+
   // User progression integration
   const { features, recordEvent } = useUserProgression();
   const { earnLub } = useLubToken();
@@ -63,7 +68,7 @@ export default function SocialGamesHub({
 
   const startUsernameGuessingGame = () => {
     const game = socialGameFactory.createUsernameGuessingGame(
-      users,
+      validUsers,
       difficulty
     );
     setCurrentGame(game);
@@ -109,16 +114,17 @@ export default function SocialGamesHub({
     setCurrentMode("leaderboard");
   };
 
-  if (users.length < 4) {
+  if (validUsers.length < 4) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-gradient-to-br from-purple-900 to-pink-900 p-8 rounded-2xl shadow-2xl max-w-md mx-4">
           <h2 className="text-2xl font-bold text-white mb-4">
-            Not Enough Users
+            Not Enough Valid Users
           </h2>
           <p className="text-purple-200 mb-6">
-            We need at least 4 Farcaster users to start the social games. Please
-            add a Neynar API key to fetch real user data.
+            We need at least 4 Farcaster users with valid profile pictures to
+            start the social games. Found {validUsers.length} valid users out of{" "}
+            {users.length} total.
           </p>
           <button
             onClick={onClose}

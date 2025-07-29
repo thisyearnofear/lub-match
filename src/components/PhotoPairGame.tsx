@@ -37,19 +37,27 @@ export default function PhotoPairGame({
   // Debug logging
   console.log("PhotoPairGame received images:", imagesProp);
   console.log("Images length:", imagesProp?.length);
-  
-  // Throw error if we don't have proper IPFS images
+
+  // Validate that we have exactly 8 images
   if (!imagesProp || imagesProp.length !== 8) {
-    throw new Error(`PhotoPairGame requires exactly 8 images, got ${imagesProp?.length || 0}. Images: ${JSON.stringify(imagesProp)}`);
+    return (
+      <div className="text-center p-8">
+        <div className="text-4xl mb-4">🚫</div>
+        <h3 className="text-xl font-bold text-white mb-2">Game Unavailable</h3>
+        <p className="text-purple-200">
+          Need exactly 8 images to play. Got {imagesProp?.length || 0}.
+        </p>
+      </div>
+    );
   }
-  
+
   const imagesFinal = imagesProp;
-  
+
   // More debug logging
-  console.log("Using IPFS images:", imagesFinal);
+  console.log("Using Farcaster profile images:", imagesFinal);
   const imagePairs = useMemo(
     () => imagesFinal.flatMap((img) => [img, img]),
-    [imagesFinal],
+    [imagesFinal]
   );
 
   const [shuffledPairs, setShuffledPairs] = useState<string[]>([]);

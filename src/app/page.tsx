@@ -11,11 +11,7 @@ import SocialGamesHub from "@/components/SocialGamesHub";
 
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useSocialGames } from "@/hooks/useSocialGames";
-import {
-  defaultPairs,
-  defaultRevealImages,
-  defaultMessage,
-} from "@/data/defaultGame";
+import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
 
 const ANIM_DURATION = 2;
 
@@ -43,8 +39,8 @@ export default function Home() {
     refreshPlayerData,
   } = useSocialGames();
 
-  // Game images - stable on server, dynamic on client
-  const [gameImages, setGameImages] = useState(defaultPairs);
+  // Game images - only use Farcaster profile images, no fallbacks
+  const [gameImages, setGameImages] = useState<string[]>([]);
 
   // Set client flag
   useEffect(() => {
@@ -55,7 +51,9 @@ export default function Home() {
   useEffect(() => {
     if (isClient && !loading && users.length >= 8) {
       const farcasterPairs = getRandomPairs();
-      setGameImages(farcasterPairs);
+      if (farcasterPairs.length === 8) {
+        setGameImages(farcasterPairs);
+      }
     }
   }, [isClient, users, loading, getRandomPairs]);
 
@@ -86,9 +84,7 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-black relative">
       {/* Mobile-friendly header */}
       <div className="fixed top-4 left-4 right-4 z-50 flex justify-between items-center">
-        <div className="text-white text-lg font-bold">
-          💝 Lubber&apos;s Game
-        </div>
+        <div className="text-white text-lg font-bold">💝 Lub Match</div>
         <div className="flex gap-2">
           {isClient && canPlayGames(users) && (
             <button
@@ -116,11 +112,36 @@ export default function Home() {
             transition={{ duration: ANIM_DURATION }}
             className="w-full max-w-lg"
           >
-            <PhotoPairGame
-              images={gameImages}
-              handleShowProposalAction={handleShowProposal}
-            />
-            <TextFooter />
+            {gameImages.length === 8 ? (
+              <>
+                <PhotoPairGame
+                  images={gameImages}
+                  handleShowProposalAction={handleShowProposal}
+                />
+                <TextFooter />
+              </>
+            ) : (
+              <div className="text-center p-8">
+                <div className="text-6xl mb-4">⚠️</div>
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  Farcaster Features Unavailable
+                </h2>
+                <p className="text-purple-200 mb-4">
+                  {error || "Unable to load Farcaster users for the demo game."}
+                </p>
+                <p className="text-sm text-gray-400">
+                  Please check your Neynar API configuration or try again later.
+                </p>
+                <div className="mt-6">
+                  <Link
+                    href="/create"
+                    className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"
+                  >
+                    Create Custom Game Instead
+                  </Link>
+                </div>
+              </div>
+            )}
           </motion.div>
         ) : (
           <motion.div

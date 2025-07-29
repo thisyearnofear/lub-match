@@ -6,10 +6,8 @@ import {
   DEFAULT_USER_COUNT,
   MIN_FOLLOWERS 
 } from "@/config";
-import { 
-  FarcasterUser, 
-  generateMockUsers, 
-  getFallbackGameImages 
+import {
+  FarcasterUser
 } from "@/utils/mockData";
 
 // Hook options interface
@@ -78,8 +76,7 @@ export function useFarcasterUsers(
   // Fetch users from our API route
   const fetchUsersFromAPI = useCallback(async (): Promise<FarcasterUser[]> => {
     if (!hasApiKey) {
-      setIsUsingMockData(true);
-      return generateMockUsers(count);
+      throw new Error("NEYNAR_API_KEY not configured - Farcaster features unavailable");
     }
 
     try {
@@ -117,7 +114,6 @@ export function useFarcasterUsers(
       return data.users;
     } catch (err) {
       console.error("Error fetching Farcaster users:", err);
-      setIsUsingMockData(true);
       throw err;
     }
   }, [hasApiKey, count, minFollowers, getCachedUsers]);
@@ -137,20 +133,19 @@ export function useFarcasterUsers(
         err instanceof Error ? err.message : "Failed to fetch users";
       setError(errorMessage);
 
-      // Fallback to mock data on error
-      const mockUsers = generateMockUsers(count);
-      setUsers(mockUsers);
-      setIsUsingMockData(true);
+      // Don't fallback to mock data - let the app handle the error state
+      setUsers([]);
+      setIsUsingMockData(false);
     } finally {
       setLoading(false);
     }
-  }, [fetchUsersFromAPI, count]);
+  }, [fetchUsersFromAPI]);
 
   // Generate random pairs from users for the memory game
   const getRandomPairs = useCallback((): string[] => {
     if (users.length < 8) {
-      // Not enough users, return fallback images
-      return getFallbackGameImages();
+      // Not enough users, return empty array to indicate unavailable
+      return [];
     }
 
     // Take first 8 users and use their profile pictures

@@ -53,11 +53,14 @@ export function useSocialGames(): UseSocialGamesReturn {
   }, []);
 
   const canPlayGames = useCallback((users: FarcasterUser[]): boolean => {
-    return users.length >= 4 && users.every(user => 
-      user.pfp_url && 
-      user.username && 
+    // We need at least 4 users with valid profile pictures and usernames
+    const validUsers = users.filter(user =>
+      user.pfp_url &&
+      user.username &&
       user.pfp_url.trim() !== ''
     );
+
+    return validUsers.length >= 4;
   }, []);
 
   const getPlayerAchievements = useCallback(async (): Promise<string[]> => {
