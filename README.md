@@ -98,9 +98,8 @@ pnpm dev
 ### **Environment Setup**
 
 ```env
-# Required for Farcaster features
+# Required for Farcaster features (server-side only, secure)
 NEYNAR_API_KEY=your_neynar_api_key
-NEXT_PUBLIC_NEYNAR_API_KEY=your_neynar_api_key
 
 # Required for IPFS storage
 PINATA_JWT=your_pinata_jwt

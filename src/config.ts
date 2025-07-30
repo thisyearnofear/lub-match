@@ -3,8 +3,8 @@
 export const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY || "";
 export const PINATA_JWT = process.env.PINATA_JWT || "";
 
-// Client-side accessible (public)
-export const NEXT_PUBLIC_NEYNAR_API_KEY = process.env.NEXT_PUBLIC_NEYNAR_API_KEY || "";
+// Feature flags (derived from server-side config)
+export const NEYNAR_FEATURES_ENABLED = !!process.env.NEYNAR_API_KEY;
 
 // API Configuration
 export const NEYNAR_API_BASE = "https://api.neynar.com/v2/farcaster";

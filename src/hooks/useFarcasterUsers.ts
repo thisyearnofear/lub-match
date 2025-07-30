@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { 
-  NEXT_PUBLIC_NEYNAR_API_KEY, 
-  CACHE_DURATION, 
+import {
+  CACHE_DURATION,
   REFRESH_INTERVAL,
   DEFAULT_USER_COUNT,
-  MIN_FOLLOWERS 
+  MIN_FOLLOWERS
 } from "@/config";
 import {
   FarcasterUser
@@ -58,8 +57,25 @@ export function useFarcasterUsers(
   const [isClient, setIsClient] = useState(false);
   const [isUsingMockData, setIsUsingMockData] = useState(false);
 
-  // Check if API key is available
-  const hasApiKey = Boolean(NEXT_PUBLIC_NEYNAR_API_KEY);
+  // Check if API features are available by testing the API endpoint
+  const [hasApiKey, setHasApiKey] = useState(false);
+
+  // Check API availability on mount
+  useEffect(() => {
+    if (!isClient) return;
+
+    const checkApiAvailability = async () => {
+      try {
+        const response = await fetch('/api/farcaster-users?count=1');
+        const data = await response.json();
+        setHasApiKey(!data.error);
+      } catch {
+        setHasApiKey(false);
+      }
+    };
+
+    checkApiAvailability();
+  }, [isClient]);
 
   // Check cache first
   const getCachedUsers = useCallback(
@@ -192,7 +208,7 @@ export function useFarcasterUser(fid: number | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasApiKey = Boolean(NEXT_PUBLIC_NEYNAR_API_KEY);
+  const [hasApiKey, setHasApiKey] = useState(false);
 
   const fetchUser = useCallback(
     async (userFid: number) => {

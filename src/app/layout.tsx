@@ -41,24 +41,26 @@ export const metadata: Metadata = {
     images: ["/github-demo.gif"],
   },
   other: {
-    "fc:frame": "vNext",
-    "fc:frame:image": "/github-demo.gif",
-    "fc:frame:button:1": "💝 Play Game",
-    "fc:frame:button:1:action": "link",
-    "fc:frame:button:1:target": "/",
-    "fc:miniapp": JSON.stringify({
-      version: "1",
+    // Frames v2 (Mini Apps) metadata
+    "fc:frame": JSON.stringify({
+      version: "next",
       imageUrl: "/github-demo.gif",
       button: {
-        title: "Play the Game",
+        title: "💝 Play Lub Match!",
         action: {
           type: "launch_frame",
-          name: "lub match",
+          name: "Lub Match",
+          url: "/",
           splashImageUrl: "/hamster_jumping.gif",
           splashBackgroundColor: "#000000",
         },
       },
     }),
+    // Legacy v1 frame support
+    "fc:frame:image": "/github-demo.gif",
+    "fc:frame:button:1": "💝 Play Game",
+    "fc:frame:button:1:action": "link",
+    "fc:frame:button:1:target": "/",
   },
 };
 
@@ -74,11 +76,40 @@ export default function RootLayout({
       <head>
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
         <meta name="theme-color" content="#ec4899" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="Lub Match" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="format-detection" content="telephone=no" />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+            /* CSS for safe area handling */
+            :root {
+              --safe-area-inset-top: env(safe-area-inset-top);
+              --safe-area-inset-right: env(safe-area-inset-right);
+              --safe-area-inset-bottom: env(safe-area-inset-bottom);
+              --safe-area-inset-left: env(safe-area-inset-left);
+            }
+
+            /* Prevent zoom on input focus */
+            input, select, textarea {
+              font-size: 16px !important;
+            }
+
+            /* Smooth scrolling for mobile */
+            * {
+              -webkit-overflow-scrolling: touch;
+            }
+          `,
+          }}
+        />
       </head>
       <body>
         <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
