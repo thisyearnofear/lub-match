@@ -19,6 +19,9 @@ import { WEB3_CONFIG } from "@/config";
 import { useEarningNotifications } from "./EarningToast";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { useHeartNFT } from "@/hooks/useHeartNFT";
+import SuccessScreen from "./shared/SuccessScreen";
+import ActionButton from "./shared/ActionButton";
+import { useSuccessActions } from "@/hooks/useSuccessActions";
 
 interface SocialGamesHubProps {
   users: FarcasterUser[];
@@ -73,6 +76,9 @@ export default function SocialGamesHub({
     enabled: nftEnabled,
     mintPrices,
   } = useHeartNFT();
+  
+  // Use shared success actions hook
+  const { getSocialGameSuccessActions } = useSuccessActions();
 
   // Load player stats and leaderboard on mount
   useEffect(() => {
@@ -601,19 +607,15 @@ export default function SocialGamesHub({
                 </div>
               )}
 
-              <div className="flex gap-4 justify-center">
-                <button
-                  onClick={backToMenu}
-                  className="bg-gradient-to-r from-pink-500 to-purple-500 text-white py-3 px-8 rounded-xl font-semibold hover:from-pink-600 hover:to-purple-600 transition-all"
-                >
-                  Play Again
-                </button>
-                <button
-                  onClick={showLeaderboard}
-                  className="bg-purple-700 text-white py-3 px-8 rounded-xl font-semibold hover:bg-purple-600 transition-all"
-                >
-                  View Leaderboard
-                </button>
+              <div className="mt-6">
+                <SuccessScreen
+                  title="Game Complete!"
+                  message="Here's how you did:"
+                  celebrationIcon="🎉"
+                  actions={getSocialGameSuccessActions(backToMenu, showLeaderboard)}
+                  layout="two-column"
+                  className="bg-transparent"
+                />
               </div>
             </motion.div>
           )}

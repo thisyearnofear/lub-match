@@ -7,6 +7,8 @@ import PhotoPairGame from "@/components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { useUserProgression } from "@/utils/userProgression";
+import { ShareHelpers } from "@/utils/shareHelpers";
+import ActionButton from "@/components/shared/ActionButton";
 
 interface GameContentProps {
   pairUrls: string[];
@@ -122,14 +124,16 @@ export default function GameContent({
             className="w-full flex justify-center mt-4"
             style={{ maxWidth: "min(85vh, 90vw)" }}
           >
-            <button
+            <ActionButton
               onClick={share}
-              className="px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              variant="gradient-purple"
+              size="sm"
+              icon={isClient && (window as FarcasterWindow)?.fc ? "💝" : "🚀"}
             >
               {isClient && (window as FarcasterWindow)?.fc
-                ? "💝 Share Game"
-                : "🚀 Cast This"}
-            </button>
+                ? "Share Game"
+                : "Cast This"}
+            </ActionButton>
           </div>
         </>
       ) : (

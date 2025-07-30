@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import ActionButton from "./shared/ActionButton";
+import { useSuccessActions } from "@/hooks/useSuccessActions";
 
 interface GameLoadingStatesProps {
   cid: string;
@@ -13,6 +15,9 @@ export default function GameLoadingStates({
     "preparing" | "fetching" | "almostReady" | "failed"
   >("preparing");
   const [timeElapsed, setTimeElapsed] = useState(0);
+  
+  // Use shared success actions hook
+  const { getErrorRecoveryActions } = useSuccessActions();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -203,21 +208,28 @@ export default function GameLoadingStates({
         </div>
 
         <div className="space-y-4">
-          <button
+          <ActionButton
             onClick={onRetry}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+            variant="gradient-pink"
+            fullWidth
+            size="lg"
+            icon="🔄"
           >
             Try Loading Again
-          </button>
+          </ActionButton>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-500 mb-2">Or</p>
-            <a
-              href="/create"
-              className="text-pink-600 hover:text-pink-700 font-medium underline"
-            >
-              Create a new game instead
-            </a>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {getErrorRecoveryActions(onRetry).slice(1).map((action, index) => (
+              <ActionButton
+                key={index}
+                onClick={action.onClick}
+                variant={action.variant}
+                fullWidth
+                icon={action.icon}
+              >
+                {action.label}
+              </ActionButton>
+            ))}
           </div>
         </div>
 

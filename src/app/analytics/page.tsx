@@ -4,12 +4,17 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { analytics } from "@/utils/analytics";
+import ActionButton from "@/components/shared/ActionButton";
+import { useAppNavigation } from "@/hooks/useAppNavigation";
 
 export default function AnalyticsPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [password, setPassword] = useState("");
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState("24h");
+  
+  // Use shared navigation hook
+  const { goHome } = useAppNavigation();
 
   // Simple password protection for admin features
   const handleAuth = () => {
@@ -55,6 +60,18 @@ export default function AnalyticsPage() {
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-4">
+        {/* Navigation Header */}
+        <div className="absolute top-4 left-4">
+          <ActionButton
+            onClick={() => goHome()}
+            variant="ghost"
+            size="sm"
+            icon="←"
+          >
+            Back to App
+          </ActionButton>
+        </div>
+        
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -90,6 +107,18 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
       <div className="max-w-7xl mx-auto">
+        {/* Navigation Header */}
+        <div className="mb-4">
+          <ActionButton
+            onClick={() => goHome()}
+            variant="ghost"
+            size="sm"
+            icon="←"
+          >
+            Back to App
+          </ActionButton>
+        </div>
+        
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

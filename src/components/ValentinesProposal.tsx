@@ -9,6 +9,7 @@ import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
 import HeartNFTMinter from "./HeartNFTMinter";
 import { useUserProgression } from "@/utils/userProgression";
 import { WEB3_CONFIG } from "@/config";
+import NavigationFooter from "./NavigationFooter";
 
 type ValentinesProposalProps = {
   revealImages?: string[]; // falls back to defaultRevealImages

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Dropzone from "react-dropzone";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
@@ -20,6 +19,10 @@ import { useLubToken } from "@/hooks/useLubToken";
 import { PricingDisplay } from "@/components/PricingDisplay";
 import { LoadingState, NetworkError } from "@/components/ErrorBoundary";
 import { WEB3_CONFIG } from "@/config";
+import SuccessScreen from "@/components/shared/SuccessScreen";
+import ActionButton from "@/components/shared/ActionButton";
+import { useSuccessActions } from "@/hooks/useSuccessActions";
+import { useAppNavigation } from "@/hooks/useAppNavigation";
 
 // Debug info component
 function DebugInfo() {
@@ -166,8 +169,9 @@ function CreateGameContent() {
   const [deletable, setDeletable] = useState(false);
   const [onchainError, setOnchainError] = useState<string | null>(null);
   const [showOnchain, setShowOnchain] = useState(false);
+  const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
 
-  const router = useRouter();
+  const { goToGame } = useAppNavigation();
   const { publish, isPending, data: txHash, enabled } = usePublishGame();
 
   // User progression and pricing integration
@@ -178,6 +182,18 @@ function CreateGameContent() {
     progress: lubProgress,
   } = useLubToken();
   const { isConnected } = useAccount();
+  
+  // Use shared success actions hook
+  const { getGameCreationSuccessActions } = useSuccessActions({
+    onReset: () => {
+      setShowSuccessCelebration(false);
+      setCid(null);
+      setPairs([]);
+      setFarcasterUsers([]);
+      setMessage(DEFAULT_MESSAGE);
+      setLubMode(null);
+    }
+  });
 
   // Check if user has provided enough content based on selected mode
   const hasEnoughContent =
@@ -298,7 +314,9 @@ function CreateGameContent() {
         );
         // Fallback: we'll show the link in the UI instead
       }
-      // Do not redirect yet
+      
+      // Show success celebration instead of immediate redirect
+      setShowSuccessCelebration(true);
     } catch (err: unknown) {
       console.error("Upload error:", err);
       let errorMessage = "Could not create game.";
@@ -325,7 +343,7 @@ function CreateGameContent() {
             clearInterval(progressInterval);
             // Redirect after a brief moment to show completion
             setTimeout(() => {
-              router.push(`/game/${cid}?created=1`);
+              goToGame(cid, true);
             }, 500);
             return 100;
           }
@@ -352,7 +370,7 @@ function CreateGameContent() {
             if (prev >= 100) {
               clearInterval(progressInterval);
               setTimeout(() => {
-                router.push(`/game/${cid}?created=1`);
+                goToGame(cid, true);
               }, 500);
               return 100;
             }
@@ -370,13 +388,25 @@ function CreateGameContent() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-100 flex flex-col py-4 px-4">
       <div className="max-w-md w-full mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-6 text-white text-center">
-          <h1 className="text-xl font-bold mb-2">Send Your Lub 💝</h1>
-          <p className="text-pink-100 text-sm">
-            Create a delightful lub for your special someone!
-          </p>
-        </div>
+        {/* Success Celebration Screen */}
+        {showSuccessCelebration && cid ? (
+          <div className="p-8">
+            <SuccessScreen
+              title="Your Heart Game is Ready!"
+              message="Share link copied to clipboard! Your lub is ready to be sent."
+              actions={getGameCreationSuccessActions(cid)}
+              layout="single-column"
+            />
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-6 text-white text-center">
+              <h1 className="text-xl font-bold mb-2">Send Your Lub 💝</h1>
+              <p className="text-pink-100 text-sm">
+                Create a delightful lub for your special someone!
+              </p>
+            </div>
 
         <div className="p-6">
           {/* Forever Storage Notice */}
@@ -787,6 +817,8 @@ function CreateGameContent() {
             <DebugInfo />
           </div>
         </div>
+        </>
+        )}
       </div>
     </main>
   );

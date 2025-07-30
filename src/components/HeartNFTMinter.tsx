@@ -8,6 +8,9 @@ import { formatEther } from "viem";
 import { useHeartNFT, HeartData } from "@/hooks/useHeartNFT";
 import { useLubToken } from "@/hooks/useLubToken";
 import { convertHeartLayoutToContractFormat } from "@/utils/gameHash";
+import SuccessScreen from "./shared/SuccessScreen";
+import ActionButton from "./shared/ActionButton";
+import { useSuccessActions } from "@/hooks/useSuccessActions";
 
 interface HeartNFTMinterProps {
   gameImages: string[];
@@ -50,11 +53,15 @@ export default function HeartNFTMinter({
   const [canMint, setCanMint] = useState(false);
   const [isCheckingMintability, setIsCheckingMintability] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessActions, setShowSuccessActions] = useState(false);
+  const [mintedTokenId, setMintedTokenId] = useState<string | null>(null);
+  
+  // Use shared success actions hook
+  const { getNFTMintSuccessActions } = useSuccessActions();
 
   // Generate game hash and check mintability
   useEffect(() => {
     if (address && gameImages.length > 0) {
-      // Use the unified game hash generation with proper layout
       const hash = generateGameHash(
         gameImages,
         convertHeartLayoutToContractFormat(),
@@ -64,7 +71,6 @@ export default function HeartNFTMinter({
       );
       setGameHash(hash);
 
-      // Check if this game can be minted
       canMintGame(hash)
         .then((canMint) => {
           setCanMint(canMint);
@@ -88,7 +94,6 @@ export default function HeartNFTMinter({
     canMintGame,
   ]);
 
-  // Check if user can afford LUB discount
   const canAffordLubDiscount =
     lubEnabled &&
     discountedMintPrices &&
@@ -108,7 +113,6 @@ export default function HeartNFTMinter({
     try {
       setError(null);
 
-      // Use enhanced minting with automatic metadata upload
       const heartData: Omit<HeartData, "metadataURI"> = {
         imageHashes: gameImages,
         layout: convertHeartLayoutToContractFormat(),
@@ -128,10 +132,8 @@ export default function HeartNFTMinter({
         onMinted(txHash);
       }
 
-      // Close modal after successful mint
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+      setMintedTokenId(txHash);
+      setShowSuccessActions(true);
     } catch (err: any) {
       console.error("Minting error:", err);
       setError(err.message || "Failed to mint NFT");
@@ -146,15 +148,11 @@ export default function HeartNFTMinter({
             NFT Minting Unavailable
           </h2>
           <p className="text-gray-600 mb-6">
-            NFT minting is not configured. Please check your environment
-            settings.
+            NFT minting is not configured. Please check your environment settings.
           </p>
-          <button
-            onClick={onClose}
-            className="w-full bg-gray-500 text-white py-3 px-6 rounded-xl font-semibold"
-          >
+          <ActionButton onClick={onClose} fullWidth variant="secondary">
             Close
-          </button>
+          </ActionButton>
         </div>
       </div>
     );
@@ -171,12 +169,12 @@ export default function HeartNFTMinter({
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">💎 Mint Your Heart</h2>
+            <h2 className="text-2xl font-bold">Mint Your Heart</h2>
             <button
               onClick={onClose}
               className="text-purple-200 hover:text-white text-2xl transition-colors"
             >
-              ✕
+              ×
             </button>
           </div>
           <p className="text-purple-100 text-sm mt-2">
@@ -208,8 +206,32 @@ export default function HeartNFTMinter({
             </div>
           )}
 
+          {/* Success Screen */}
+          {showSuccessActions && mintedTokenId && (
+            <SuccessScreen
+              title="NFT Minted Successfully!"
+              message="Your heart has been immortalized on the blockchain"
+              actions={getNFTMintSuccessActions(
+                mintedTokenId,
+                { cid: gameHash, type: 'heart' },
+                onClose
+              )}
+              additionalContent={
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <p className="text-sm text-green-700">
+                    <strong>Transaction Hash:</strong>
+                  </p>
+                  <p className="text-xs text-green-600 font-mono break-all">
+                    {mintedTokenId}
+                  </p>
+                </div>
+              }
+              layout="single-column"
+            />
+          )}
+
           {/* Mint Interface */}
-          {isConnected && !isCheckingMintability && canMint && (
+          {isConnected && !isCheckingMintability && canMint && !showSuccessActions && (
             <>
               {/* Game Preview */}
               <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200">
@@ -308,28 +330,20 @@ export default function HeartNFTMinter({
               </div>
 
               {/* Mint Button */}
-              <button
+              <ActionButton
                 onClick={handleMint}
                 disabled={
                   isMinting ||
                   (!useLubDiscount && !mintPrices) ||
                   (useLubDiscount && !canAffordLubDiscount)
                 }
-                className={`w-full py-4 rounded-xl font-semibold text-white transition-all ${
-                  isMinting
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transform hover:scale-[1.02]"
-                }`}
+                loading={isMinting}
+                fullWidth
+                variant="gradient-purple"
+                size="lg"
               >
-                {isMinting ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Minting...
-                  </div>
-                ) : (
-                  `💎 Mint Heart NFT`
-                )}
-              </button>
+                Mint Heart NFT
+              </ActionButton>
 
               <p className="text-xs text-gray-500 text-center mt-3">
                 Your NFT will be minted on Arbitrum Sepolia testnet
