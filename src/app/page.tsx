@@ -34,7 +34,15 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false);
 
   // Dynamic Farcaster users for social experience - only on client
-  const { users, loading, getRandomPairs, error } = useFarcasterUsers({
+  const {
+    users,
+    loading,
+    getRandomPairs,
+    error,
+    hasApiKey,
+    apiCheckComplete,
+    refreshUsers,
+  } = useFarcasterUsers({
     count: 16,
     minFollowers: 50,
     enableAutoRefresh: false, // Disable auto-refresh to prevent hydration issues
@@ -180,7 +188,64 @@ export default function Home() {
             transition={{ duration: ANIM_DURATION }}
             className="w-full max-w-lg"
           >
-            {gameImages.length === 8 ? (
+            {!apiCheckComplete ? (
+              // Beautiful loading state while checking API
+              <div className="text-center p-8">
+                <motion.div
+                  animate={{
+                    scale: [1, 1.1, 1],
+                    rotate: [0, 180, 360],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="text-6xl mb-6"
+                >
+                  💝
+                </motion.div>
+                <h2 className="text-2xl font-bold text-white mb-4">
+                  Preparing Your Lub Experience
+                </h2>
+                <p className="text-purple-200 mb-6">
+                  Loading social features and setting up your personalized
+                  game...
+                </p>
+
+                {/* Progress bar */}
+                <div className="w-full max-w-xs mx-auto mb-4">
+                  <div className="bg-purple-800 bg-opacity-50 rounded-full h-2 overflow-hidden">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-pink-400 to-purple-400"
+                      initial={{ width: "0%" }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: 5, ease: "easeInOut" }}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-center items-center space-x-1 mb-4">
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      animate={{
+                        scale: [1, 1.5, 1],
+                        opacity: [0.5, 1, 0.5],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                      }}
+                      className="w-2 h-2 bg-pink-400 rounded-full"
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400">
+                  This usually takes just a few seconds...
+                </p>
+              </div>
+            ) : gameImages.length === 8 ? (
               <>
                 <PhotoPairGame
                   images={gameImages}
@@ -200,13 +265,22 @@ export default function Home() {
                 <p className="text-sm text-gray-400">
                   Please check your Neynar API configuration or try again later.
                 </p>
-                <div className="mt-6">
-                  <Link
-                    href="/create"
-                    className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"
+                <div className="mt-6 space-y-3">
+                  <button
+                    onClick={refreshUsers}
+                    disabled={loading}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full font-semibold shadow-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Create Custom Game Instead
-                  </Link>
+                    {loading ? "Retrying..." : "🔄 Try Again"}
+                  </button>
+                  <div>
+                    <Link
+                      href="/create"
+                      className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"
+                    >
+                      Create Custom Game Instead
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}
@@ -235,7 +309,7 @@ export default function Home() {
           paddingRight: `max(1rem, var(--safe-area-inset-right))`,
         }}
       >
-        {isClient && error && (
+        {isClient && apiCheckComplete && error && (
           <p className="text-orange-300 text-xs">
             ⚠️ Demo mode - add Neynar API key for social features
           </p>

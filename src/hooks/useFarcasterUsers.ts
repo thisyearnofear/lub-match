@@ -25,6 +25,8 @@ interface UseFarcasterUsersReturn {
   refreshUsers: () => Promise<void>;
   getRandomPairs: () => string[];
   isUsingMockData: boolean;
+  hasApiKey: boolean | null; // null = checking, true/false = determined
+  apiCheckComplete: boolean;
 }
 
 // API response interface
@@ -58,19 +60,36 @@ export function useFarcasterUsers(
   const [isUsingMockData, setIsUsingMockData] = useState(false);
 
   // Check if API features are available by testing the API endpoint
-  const [hasApiKey, setHasApiKey] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null); // null = checking, true/false = determined
+  const [apiCheckComplete, setApiCheckComplete] = useState(false);
 
-  // Check API availability on mount
+  // Check API availability on mount with timeout
   useEffect(() => {
     if (!isClient) return;
 
     const checkApiAvailability = async () => {
       try {
-        const response = await fetch('/api/farcaster-users?count=1');
+        // Give the API up to 5 seconds to respond
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch('/api/farcaster-users?count=1', {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         const data = await response.json();
         setHasApiKey(!data.error);
-      } catch {
-        setHasApiKey(false);
+      } catch (error) {
+        // Only set to false if it's not an abort error (timeout)
+        if (error instanceof Error && error.name !== 'AbortError') {
+          setHasApiKey(false);
+        } else {
+          // If timeout, assume API is not available
+          setHasApiKey(false);
+        }
+      } finally {
+        setApiCheckComplete(true);
       }
     };
 
@@ -91,8 +110,12 @@ export function useFarcasterUsers(
 
   // Fetch users from our API route
   const fetchUsersFromAPI = useCallback(async (): Promise<FarcasterUser[]> => {
-    if (!hasApiKey) {
+    if (hasApiKey === false) {
       throw new Error("NEYNAR_API_KEY not configured - Farcaster features unavailable");
+    }
+
+    if (hasApiKey === null) {
+      throw new Error("API availability check in progress");
     }
 
     try {
@@ -194,6 +217,8 @@ export function useFarcasterUsers(
     refreshUsers,
     getRandomPairs,
     isUsingMockData,
+    hasApiKey,
+    apiCheckComplete,
   };
 }
 
