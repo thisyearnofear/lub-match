@@ -10,6 +10,7 @@ import {
 } from "@/types/socialGames";
 import { gameStorage } from "@/utils/gameStorage";
 import { scoreCalculator } from "@/utils/scoreCalculator";
+import { SocialGameUsernameButton } from "@/components/shared/UsernameButton";
 
 interface UsernameGuessingGameProps {
   game: UsernameGuessingGame;
@@ -224,56 +225,29 @@ export default function UsernameGuessingGameComponent({
         </motion.div>
 
         {/* Answer Options */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-lg mx-auto">
           <AnimatePresence>
             {currentQuestion.options.map((option, index) => {
               const isSelected = selectedAnswer === option;
               const isCorrect = option === currentQuestion.user.username;
-              const showCorrect = showResult && isCorrect;
-              const showIncorrect = showResult && isSelected && !isCorrect;
 
               return (
-                <motion.button
+                <motion.div
                   key={option}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1 }}
-                  onClick={() => handleAnswerSelect(option)}
-                  disabled={selectedAnswer !== null}
-                  className={`
-                    p-4 rounded-xl font-semibold transition-all duration-300
-                    ${
-                      !showResult
-                        ? "bg-purple-700 hover:bg-purple-600 text-white hover:scale-105"
-                        : showCorrect
-                        ? "bg-green-500 text-white"
-                        : showIncorrect
-                        ? "bg-red-500 text-white"
-                        : "bg-purple-800 text-purple-300"
-                    }
-                    ${selectedAnswer && !showResult ? "opacity-50" : ""}
-                  `}
                 >
-                  @{option}
-                  {showResult && isCorrect && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="ml-2"
-                    >
-                      ✓
-                    </motion.span>
-                  )}
-                  {showResult && isSelected && !isCorrect && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="ml-2"
-                    >
-                      ✗
-                    </motion.span>
-                  )}
-                </motion.button>
+                  <SocialGameUsernameButton
+                    username={option}
+                    onClick={() => handleAnswerSelect(option)}
+                    disabled={selectedAnswer !== null}
+                    isCorrect={isCorrect}
+                    isSelected={isSelected}
+                    showResult={showResult}
+                    animate={false} // We handle animation with the wrapper
+                  />
+                </motion.div>
               );
             })}
           </AnimatePresence>

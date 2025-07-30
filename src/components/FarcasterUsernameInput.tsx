@@ -29,47 +29,55 @@ export default function FarcasterUsernameInput({
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const searchUsers = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/farcaster-users?search=${encodeURIComponent(query)}&limit=10`);
-      
-      if (!response.ok) {
-        throw new Error("Failed to search users");
+  const searchUsers = useCallback(
+    async (query: string) => {
+      if (!query.trim() || query.length < 2) {
+        setSearchResults([]);
+        return;
       }
 
-      const data = await response.json();
-      const users = data.users || [];
-      
-      // Filter out already selected users
-      const filteredUsers = users.filter(
-        (user: FarcasterUser) => !selectedUsers.some(selected => selected.fid === user.fid)
-      );
-      
-      setSearchResults(filteredUsers);
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Failed to search users");
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [selectedUsers]);
+      setIsSearching(true);
+      setError(null);
+
+      try {
+        const response = await fetch(
+          `/api/farcaster-users?search=${encodeURIComponent(query)}&limit=10`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to search users");
+        }
+
+        const data = await response.json();
+        const users = data.users || [];
+
+        // Filter out already selected users
+        const filteredUsers = users.filter(
+          (user: FarcasterUser) =>
+            !selectedUsers.some((selected) => selected.fid === user.fid)
+        );
+
+        setSearchResults(filteredUsers);
+      } catch (error: unknown) {
+        setError(
+          error instanceof Error ? error.message : "Failed to search users"
+        );
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [selectedUsers]
+  );
 
   const handleInputChange = (value: string) => {
     setInputValue(value);
-    
+
     // Clear previous timeout
     if (window.searchTimeout) {
       clearTimeout(window.searchTimeout);
     }
-    
+
     // Debounce search
     window.searchTimeout = setTimeout(() => {
       searchUsers(value);
@@ -78,7 +86,7 @@ export default function FarcasterUsernameInput({
 
   const addUser = (user: FarcasterUser) => {
     if (selectedUsers.length >= maxUsers) return;
-    
+
     const newSelectedUsers = [...selectedUsers, user];
     setSelectedUsers(newSelectedUsers);
     setSearchResults([]);
@@ -87,7 +95,7 @@ export default function FarcasterUsernameInput({
   };
 
   const removeUser = (fid: number) => {
-    const newSelectedUsers = selectedUsers.filter(user => user.fid !== fid);
+    const newSelectedUsers = selectedUsers.filter((user) => user.fid !== fid);
     setSelectedUsers(newSelectedUsers);
     onUsersSelected(newSelectedUsers);
   };
@@ -137,9 +145,13 @@ export default function FarcasterUsernameInput({
                     className="w-8 h-8 rounded-full object-cover"
                     unoptimized
                   />
-                  <div className="flex-1 text-left">
-                    <p className="font-medium text-gray-900">@{user.username}</p>
-                    <p className="text-sm text-gray-500">{user.display_name}</p>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-medium text-gray-900 truncate">
+                      @{user.username}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {user.display_name}
+                    </p>
                   </div>
                   <span className="text-xs text-gray-400">
                     {user.follower_count.toLocaleString()} followers
@@ -166,7 +178,7 @@ export default function FarcasterUsernameInput({
               Selected Users ({selectedUsers.length}/{maxUsers})
             </h4>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-3">
             {selectedUsers.map((user) => (
               <motion.div
@@ -185,8 +197,12 @@ export default function FarcasterUsernameInput({
                   unoptimized
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">@{user.username}</p>
-                  <p className="text-sm text-gray-500 truncate">{user.display_name}</p>
+                  <p className="font-medium text-gray-900 truncate">
+                    @{user.username}
+                  </p>
+                  <p className="text-sm text-gray-500 truncate">
+                    {user.display_name}
+                  </p>
                 </div>
                 <button
                   onClick={() => removeUser(user.fid)}
@@ -203,7 +219,8 @@ export default function FarcasterUsernameInput({
 
       {/* Helper Text */}
       <p className="text-xs text-gray-500">
-        💡 Search for Farcaster users to include their profile pictures in your game
+        💡 Search for Farcaster users to include their profile pictures in your
+        game
       </p>
     </div>
   );
