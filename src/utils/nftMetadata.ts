@@ -61,17 +61,17 @@ export async function uploadNFTMetadata(
 
     // Create comprehensive metadata
     const metadata: HeartNFTMetadata = {
-      name: `Heart Memory Game #${gameHash.substring(0, 8)}`,
-      description: `A completed heart-shaped memory game with ${gameData.imageHashes.length} unique images. Message: "${gameData.message}"`,
+      name: `Lub Match #${gameHash.substring(0, 8)}`,
+      description: `lub sent with ${gameData.imageHashes.length} trending Farcaster users. ${gameData.gameType === 'demo' ? 'Demo lub completed!' : `Lub message: "${gameData.message}"`}`,
       image: await generateHeartImage(gameData.imageHashes, gameHash),
       attributes: [
-        { trait_type: "Game Type", value: gameData.gameType },
-        { trait_type: "Images Count", value: gameData.imageHashes.length },
-        { trait_type: "Message Length", value: gameData.message.length },
-        { trait_type: "Completion Date", value: new Date(Number(gameData.completedAt) * 1000).toISOString().split('T')[0] },
-        { trait_type: "Creator", value: gameData.creator },
-        { trait_type: "Completer", value: gameData.completer },
-        { trait_type: "Same Player", value: gameData.creator === gameData.completer ? "Yes" : "No" }
+        { trait_type: "Lub Type", value: gameData.gameType === 'demo' ? 'Demo Lub' : 'Custom Lub' },
+        { trait_type: "Featured Users", value: gameData.imageHashes.length },
+        { trait_type: "Lub Length", value: gameData.message.length },
+        { trait_type: "Lub Sent", value: new Date(Number(gameData.completedAt) * 1000).toISOString().split('T')[0] },
+        { trait_type: "Lub Creator", value: gameData.creator },
+        { trait_type: "Lub Receiver", value: gameData.completer },
+        { trait_type: "Self Lub", value: gameData.creator === gameData.completer ? "Yes" : "No" }
       ],
       properties: {
         imageHashes: gameData.imageHashes,
@@ -99,20 +99,20 @@ export async function uploadNFTMetadata(
     // Create metadata file
     const metadataFile = new File(
       [JSON.stringify(metadata, null, 2)],
-      `heart-nft-${gameHash.substring(0, 8)}.json`,
+      `lub-match-${gameHash.substring(0, 8)}.json`,
       { type: "application/json" }
     );
 
     // Upload metadata
     const upload = await pinata.upload.public
       .file(metadataFile)
-      .name(`Heart NFT Metadata - ${gameHash.substring(0, 8)}`)
+      .name(`Lub Match NFT - ${gameHash.substring(0, 8)}`)
       .keyvalues({
-        type: "heart-nft-metadata",
+        type: "lub-match-nft-metadata",
         gameHash,
-        gameType: gameData.gameType,
-        creator: gameData.creator,
-        completer: gameData.completer,
+        lubType: gameData.gameType,
+        lubCreator: gameData.creator,
+        lubReceiver: gameData.completer,
         createdAt: new Date().toISOString()
       });
 
@@ -134,18 +134,19 @@ export async function uploadNFTMetadata(
 }
 
 /**
- * Generate a heart-shaped composite image from the game images
+ * Generate a heart-shaped lub composite image from the Farcaster user images
  * For now, returns a placeholder. In production, this would create an actual composite
  */
 async function generateHeartImage(imageHashes: string[], gameHash: string): Promise<string> {
   // Placeholder implementation
   // In production, this would:
-  // 1. Fetch all images from IPFS
-  // 2. Create a heart-shaped composite using Canvas API or similar
-  // 3. Upload the composite image to IPFS
-  // 4. Return the IPFS URI
-  
-  return `ipfs://placeholder-heart-composite-${gameHash.substring(0, 8)}`;
+  // 1. Fetch all Farcaster user images from IPFS
+  // 2. Create a heart-shaped lub composite using Canvas API or similar
+  // 3. Add "Lub Match" branding and completion timestamp
+  // 4. Upload the composite image to IPFS
+  // 5. Return the IPFS URI
+
+  return `ipfs://placeholder-lub-composite-${gameHash.substring(0, 8)}`;
 }
 
 /**
@@ -229,17 +230,17 @@ export function createNFTMetadataPreview(
   const gameHash = generateGameHash(hashData);
 
   return {
-    name: `Heart Memory Game #${gameHash.substring(0, 8)}`,
-    description: `A completed heart-shaped memory game with ${gameData.imageHashes.length} unique images. Message: "${gameData.message}"`,
-    image: `ipfs://placeholder-heart-composite-${gameHash.substring(0, 8)}`,
+    name: `Lub Match #${gameHash.substring(0, 8)}`,
+    description: `lub sent with ${gameData.imageHashes.length} trending Farcaster users. ${gameData.gameType === 'demo' ? 'Demo lub completed!' : `Lub message: "${gameData.message}"`}`,
+    image: `ipfs://placeholder-lub-composite-${gameHash.substring(0, 8)}`,
     attributes: [
-      { trait_type: "Game Type", value: gameData.gameType },
-      { trait_type: "Images Count", value: gameData.imageHashes.length },
-      { trait_type: "Message Length", value: gameData.message.length },
-      { trait_type: "Completion Date", value: new Date(Number(gameData.completedAt) * 1000).toISOString().split('T')[0] },
-      { trait_type: "Creator", value: gameData.creator },
-      { trait_type: "Completer", value: gameData.completer },
-      { trait_type: "Same Player", value: gameData.creator === gameData.completer ? "Yes" : "No" }
+      { trait_type: "Lub Type", value: gameData.gameType === 'demo' ? 'Demo Lub' : 'Custom Lub' },
+      { trait_type: "Featured Users", value: gameData.imageHashes.length },
+      { trait_type: "Lub Length", value: gameData.message.length },
+      { trait_type: "Lub Sent", value: new Date(Number(gameData.completedAt) * 1000).toISOString().split('T')[0] },
+      { trait_type: "Lub Creator", value: gameData.creator },
+      { trait_type: "Lub Receiver", value: gameData.completer },
+      { trait_type: "Self Lub", value: gameData.creator === gameData.completer ? "Yes" : "No" }
     ],
     properties: {
       imageHashes: gameData.imageHashes,

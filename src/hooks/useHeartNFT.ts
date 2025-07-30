@@ -197,24 +197,24 @@ export function useHeartNFT() {
     gameImages: string[]
   ) => {
     return {
-      name: `Completed Heart #${Date.now()}`,
-      description: `A completed heart memory game with the message: "${heartData.message}"`,
+      name: `Lub Match #${Date.now()}`,
+      description: `A completed lub ${heartData.gameType === 'demo' ? 'demo' : `with message: "${heartData.message}"`}`,
       image: gameImages[0], // Use first image as preview
       attributes: [
         {
-          trait_type: "Game Type",
-          value: heartData.gameType
+          trait_type: "Lub Type",
+          value: heartData.gameType === 'demo' ? 'Demo Lub' : 'Custom Lub'
         },
         {
-          trait_type: "Images Count",
+          trait_type: "Featured Users",
           value: heartData.imageHashes.length
         },
         {
-          trait_type: "Completed At",
+          trait_type: "Lub Sent",
           value: new Date(Number(heartData.completedAt) * 1000).toISOString()
         },
         {
-          trait_type: "Creator",
+          trait_type: "Lub Creator",
           value: heartData.creator
         }
       ],

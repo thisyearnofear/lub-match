@@ -8,6 +8,7 @@ import TextFooter from "@/components/TextFooter";
 import PhotoPairGame from "../components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
 import SocialGamesHub from "@/components/SocialGamesHub";
+import HeartNFTMinter from "@/components/HeartNFTMinter";
 
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useSocialGames } from "@/hooks/useSocialGames";
@@ -28,6 +29,7 @@ export default function Home() {
   } = useMiniAppReady();
 
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
+  const [showHeartNFTMinter, setShowHeartNFTMinter] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -73,19 +75,54 @@ export default function Home() {
   }, [isClient, refreshPlayerData]);
 
   const handleShowProposal = () => {
-    // For the home page demo, redirect to social games instead of proposal
+    // For the home page demo, show NFT minting option first
+    if (isClient && gameImages.length === 8) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setShowHeartNFTMinter(true);
+        setIsTransitioning(false);
+      }, ANIM_DURATION * 1000);
+    } else {
+      // Fallback to proposal if game images aren't available
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setShowValentinesProposal(true);
+        setIsTransitioning(false);
+      }, ANIM_DURATION * 1000);
+    }
+  };
+
+  const handleNFTMinterClose = () => {
+    setShowHeartNFTMinter(false);
+    // After closing NFT minter, proceed to social games if available
     if (isClient && canPlayGames(users)) {
       setIsTransitioning(true);
       setTimeout(() => {
         startSocialGames();
+        setIsTransitioning(false);
       }, ANIM_DURATION * 1000);
     } else {
       // Fallback to proposal if social games aren't available
       setIsTransitioning(true);
       setTimeout(() => {
         setShowValentinesProposal(true);
+        setIsTransitioning(false);
       }, ANIM_DURATION * 1000);
     }
+  };
+
+  const handleNFTMinted = (tokenId: string) => {
+    console.log("NFT minted with token ID:", tokenId);
+    // Continue to social games after successful minting
+    handleNFTMinterClose();
+  };
+
+  const handleSocialGamesClose = () => {
+    closeSocialGames();
+    // Reset all states to allow playing again
+    setIsTransitioning(false);
+    setShowHeartNFTMinter(false);
+    setShowValentinesProposal(false);
   };
 
   return (
@@ -136,7 +173,7 @@ export default function Home() {
           paddingBottom: `max(1rem, var(--safe-area-inset-bottom))`,
         }}
       >
-        {!showValentinesProposal ? (
+        {!showValentinesProposal && !showHeartNFTMinter ? (
           <motion.div
             initial={{ opacity: 1 }}
             animate={{ opacity: isTransitioning ? 0 : 1 }}
@@ -207,7 +244,20 @@ export default function Home() {
 
       {/* Social Games Modal */}
       {isGameActive && (
-        <SocialGamesHub users={users} onClose={closeSocialGames} />
+        <SocialGamesHub users={users} onClose={handleSocialGamesClose} />
+      )}
+
+      {/* Heart NFT Minter Modal */}
+      {showHeartNFTMinter && gameImages.length === 8 && (
+        <HeartNFTMinter
+          gameImages={gameImages}
+          gameLayout={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]}
+          message="Demo Lub Completed! 💝"
+          gameType="demo"
+          creator="0x0000000000000000000000000000000000000000"
+          onClose={handleNFTMinterClose}
+          onMinted={handleNFTMinted}
+        />
       )}
     </div>
   );

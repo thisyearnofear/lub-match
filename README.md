@@ -33,7 +33,7 @@ A romantic heart-shaped memory card game with Web3 token economics, NFT minting,
 ### **For Newcomers**
 
 ```
-Demo Game → Social Games → "First lub FREE!" → Create & Share
+Demo Game → Mint Heart NFT → Social Games → "First lub FREE!" → Create & Share
 ```
 
 ### **For Web3 Users**

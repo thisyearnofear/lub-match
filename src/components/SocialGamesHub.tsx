@@ -18,7 +18,7 @@ import { useLubToken } from "@/hooks/useLubToken";
 import { WEB3_CONFIG } from "@/config";
 import { useEarningNotifications } from "./EarningToast";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
-import { useHeartNFT } from "@/hooks/useHeartNFT";
+
 import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
@@ -69,14 +69,6 @@ export default function SocialGamesHub({
   const { earnLub, balanceFormatted, enabled: lubTokenEnabled } = useLubToken();
   const { showEarning, ToastContainer } = useEarningNotifications();
 
-  // NFT minting integration
-  const {
-    mintCompletedHeartWithMetadata,
-    isPending: isMintingNFT,
-    enabled: nftEnabled,
-    mintPrices,
-  } = useHeartNFT();
-  
   // Use shared success actions hook
   const { getSocialGameSuccessActions } = useSuccessActions();
 
@@ -551,68 +543,15 @@ export default function SocialGamesHub({
                 </div>
               )}
 
-              {/* NFT Minting Option */}
-              {isConnected && nftEnabled && gameResult && (
-                <div className="bg-blue-500 bg-opacity-20 border border-blue-400 rounded-xl p-6 mb-6">
-                  <div className="text-center">
-                    <div className="text-3xl mb-2">🎨</div>
-                    <h3 className="text-lg font-semibold text-blue-400 mb-2">
-                      Mint Your Achievement NFT!
-                    </h3>
-                    <p className="text-blue-200 text-sm mb-4">
-                      Immortalize your game score as an NFT on the blockchain
-                    </p>
-                    {mintPrices && (
-                      <p className="text-blue-300 text-xs mb-4">
-                        Mint Price: {mintPrices.eth.toString()} ETH
-                      </p>
-                    )}
-                    <button
-                      onClick={async () => {
-                        try {
-                          // Create heart data from game result
-                          const heartData = {
-                            imageHashes: [], // Would need actual image hashes
-                            layout: Array(8)
-                              .fill(0)
-                              .map((_, i) => i), // Simple layout
-                            message: `Social Game Score: ${gameResult.score}`,
-                            completedAt: BigInt(Math.floor(Date.now() / 1000)),
-                            creator:
-                              "0x0000000000000000000000000000000000000000" as `0x${string}`,
-                            completer:
-                              "0x0000000000000000000000000000000000000000" as `0x${string}`,
-                            gameType: "demo" as const,
-                          };
-
-                          await mintCompletedHeartWithMetadata(
-                            heartData,
-                            false
-                          );
-                          showEarning(BigInt(0), "NFT minted successfully! 🎨");
-                        } catch (error) {
-                          console.error("NFT minting failed:", error);
-                          showEarning(
-                            BigInt(0),
-                            "NFT minting failed. Try again! ❌"
-                          );
-                        }
-                      }}
-                      disabled={isMintingNFT}
-                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isMintingNFT ? "Minting..." : "Mint NFT"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
               <div className="mt-6">
                 <SuccessScreen
                   title="Game Complete!"
                   message="Here's how you did:"
                   celebrationIcon="🎉"
-                  actions={getSocialGameSuccessActions(backToMenu, showLeaderboard)}
+                  actions={getSocialGameSuccessActions(
+                    backToMenu,
+                    showLeaderboard
+                  )}
                   layout="two-column"
                   className="bg-transparent"
                 />

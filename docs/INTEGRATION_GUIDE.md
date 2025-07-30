@@ -9,16 +9,19 @@ This guide covers the cohesive integration of Web3 features into Lub Match, main
 ### Unified Systems
 
 1. **Game Hash System** (`src/utils/gameHash.ts`)
+
    - Centralized game identification
    - Prevents duplicate NFT mints
    - Consistent across IPFS and blockchain
 
 2. **IPFS Metadata System** (`src/utils/ipfs.ts` + `src/utils/nftMetadata.ts`)
+
    - Unified metadata creation for games and NFTs
    - Automatic IPFS upload with fallback handling
    - Consistent file naming and structure
 
 3. **Web3 Configuration** (`src/config.ts`)
+
    - Centralized contract addresses and settings
    - Feature flags for gradual rollout
    - Environment-based configuration
@@ -83,19 +86,23 @@ NEXT_PUBLIC_ENABLE_LUB_TOKEN=true
 ## 🎮 User Experience Flow
 
 ### Game Creation
+
 1. User uploads 8 photos
 2. IPFS metadata created with unified system
 3. Game stored with consistent hash generation
 4. Optional: LUB tokens spent for creation
 
 ### Game Completion
+
 1. Heart layout completed
-2. Proposal screen appears
-3. "Mint as NFT" option available (if Web3 enabled)
-4. Metadata automatically uploaded to IPFS
-5. NFT minted with proper game hash verification
+2. Heart NFT minting screen appears (if Web3 enabled)
+3. Metadata automatically uploaded to IPFS
+4. NFT minted with actual game images and layout
+5. Optional sharing/casting about the achievement
+6. Flow continues to social games for discovery
 
 ### Token Economics
+
 1. Users earn LUB when images are included in games
 2. LUB provides discounts on NFT minting
 3. Game creation costs increase over time
@@ -108,11 +115,11 @@ NEXT_PUBLIC_ENABLE_LUB_TOKEN=true
 ```typescript
 // Unified hash generation
 const gameHash = generateGameHash({
-  imageHashes: ['ipfs://...', 'ipfs://...'],
+  imageHashes: ["ipfs://...", "ipfs://..."],
   layout: convertHeartLayoutToContractFormat(),
   message: "Will you accept my lub?",
   creator: "0x...",
-  gameType: "custom"
+  gameType: "custom",
 });
 ```
 
@@ -127,13 +134,10 @@ const heartData = {
   completedAt: BigInt(Math.floor(Date.now() / 1000)),
   creator,
   completer: address,
-  gameType
+  gameType,
 };
 
-const txHash = await mintCompletedHeartWithMetadata(
-  heartData,
-  useLubDiscount
-);
+const txHash = await mintCompletedHeartWithMetadata(heartData, useLubDiscount);
 ```
 
 ### IPFS Integration
@@ -157,7 +161,7 @@ const WEB3_CONFIG = {
     onchainEnabled: process.env.NEXT_PUBLIC_ENABLE_ONCHAIN === "true",
     nftMintingEnabled: !!process.env.NEXT_PUBLIC_HEART_NFT_ADDRESS,
     lubTokenEnabled: !!process.env.NEXT_PUBLIC_LUB_TOKEN_ADDRESS,
-  }
+  },
 };
 ```
 
@@ -175,16 +179,19 @@ const contracts = {
 ## 🛡️ Security Considerations
 
 ### Game Hash Security
+
 - Deterministic hashing prevents duplicates
 - Excludes timestamp to allow legitimate re-mints
 - Includes creator address for ownership verification
 
 ### IPFS Security
+
 - Metadata validation before upload
 - Multiple gateway fallbacks for reliability
 - User-controlled vs app-controlled storage modes
 
 ### Smart Contract Security
+
 - Anti-duplicate minting mechanisms
 - Proper access controls
 - Gas optimization for Arbitrum
@@ -192,6 +199,7 @@ const contracts = {
 ## 🧪 Testing Strategy
 
 ### Unit Tests
+
 ```bash
 # Test game hash generation
 npm test -- gameHash.test.ts
@@ -204,6 +212,7 @@ npm test -- contracts.test.ts
 ```
 
 ### Integration Tests
+
 ```bash
 # Test full NFT minting flow
 npm test -- integration/nft-minting.test.ts
@@ -213,6 +222,7 @@ npm test -- integration/ipfs-upload.test.ts
 ```
 
 ### Manual Testing Checklist
+
 - [ ] Game creation with IPFS upload
 - [ ] Game completion and proposal flow
 - [ ] NFT minting with metadata
@@ -223,18 +233,21 @@ npm test -- integration/ipfs-upload.test.ts
 ## 🚀 Performance Optimizations
 
 ### IPFS Optimizations
+
 - Parallel file uploads
 - Compression for large images
 - Gateway selection based on performance
 - Caching of metadata
 
 ### Blockchain Optimizations
+
 - Batch operations where possible
 - Gas estimation before transactions
 - Optimized contract calls
 - Efficient data structures
 
 ### Frontend Optimizations
+
 - Lazy loading of Web3 components
 - Optimistic UI updates
 - Error boundary handling
@@ -243,6 +256,7 @@ npm test -- integration/ipfs-upload.test.ts
 ## 📈 Monitoring and Analytics
 
 ### Key Metrics
+
 - Game creation success rate
 - NFT minting completion rate
 - IPFS upload performance
@@ -250,6 +264,7 @@ npm test -- integration/ipfs-upload.test.ts
 - User engagement with Web3 features
 
 ### Error Tracking
+
 - IPFS upload failures
 - Transaction failures
 - Network connectivity issues
@@ -258,12 +273,14 @@ npm test -- integration/ipfs-upload.test.ts
 ## 🔄 Maintenance and Updates
 
 ### Regular Tasks
+
 - Monitor IPFS gateway performance
 - Update contract addresses if needed
 - Review and optimize gas costs
 - Update dependencies and security patches
 
 ### Scaling Considerations
+
 - IPFS pinning service management
 - Contract upgrade strategies
 - Database optimization for game metadata
