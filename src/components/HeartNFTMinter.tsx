@@ -232,7 +232,16 @@ export default function HeartNFTMinter({
 
           {/* Mint Interface */}
           {isConnected && !isCheckingMintability && canMint && !showSuccessActions && (
-            <>
+        <>
+          {/* Skip Button for modal UX */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 text-gray-400 hover:text-gray-700 text-2xl bg-white bg-opacity-80 rounded-full w-10 h-10 flex items-center justify-center shadow"
+            type="button"
+            aria-label="Skip NFT Minting"
+          >
+            ×
+          </button>
               {/* Game Preview */}
               <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200">
                 <h3 className="font-semibold text-gray-800 mb-2">
@@ -345,7 +354,15 @@ export default function HeartNFTMinter({
                 Mint Heart NFT
               </ActionButton>
 
-              <p className="text-xs text-gray-500 text-center mt-3">
+          <button
+            onClick={onClose}
+            className="w-full mt-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+            type="button"
+          >
+            Skip
+          </button>
+
+          <p className="text-xs text-gray-500 text-center mt-3">
                 Your NFT will be minted on Arbitrum Sepolia testnet
               </p>
             </>

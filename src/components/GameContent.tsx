@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 
 import PhotoPairGame from "@/components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
+import HeartNFTMinter from "@/components/HeartNFTMinter";
+import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { useUserProgression } from "@/utils/userProgression";
 import { ShareHelpers } from "@/utils/shareHelpers";
@@ -30,6 +32,10 @@ export default function GameContent({
   message,
   justCreated,
 }: GameContentProps) {
+  // --- NFT Minter Modal State ---
+  const [showHeartMinter, setShowHeartMinter] = useState(false);
+  const [demoGameFinished, setDemoGameFinished] = useState(false);
+  const { goToSocialGames } = useAppNavigation();
   useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -47,6 +53,12 @@ export default function GameContent({
       window.alert("Lub sent – link copied to clipboard!");
     }
   }, [justCreated, isClient]);
+
+  // Called when the demo game is finished
+  const handleDemoGameFinished = () => {
+    setDemoGameFinished(true);
+    setShowHeartMinter(true);
+  };
 
   const handleShowProposal = () => {
     // Check if running in Farcaster and send celebration event
@@ -114,11 +126,27 @@ export default function GameContent({
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
-      {!showValentinesProposal ? (
+      {/* Heart NFT Minter Modal (only after demo game) */}
+      {showHeartMinter && (
+        <HeartNFTMinter
+          gameImages={pairUrls}
+          gameLayout={[]}
+          message={message}
+          gameType="demo"
+          creator={"0x0000000000000000000000000000000000000000"}
+          onClose={() => {
+            setShowHeartMinter(false);
+            goToSocialGames();
+          }}
+        />
+      )}
+
+      {/* Main game/proposal content, hidden when NFT minter is open */}
+      {!showHeartMinter && !showValentinesProposal ? (
         <>
           <PhotoPairGame
             images={pairUrls}
-            handleShowProposalAction={handleShowProposal}
+            handleShowProposalAction={handleDemoGameFinished}
           />
           <div
             className="w-full flex justify-center mt-4"
@@ -136,7 +164,9 @@ export default function GameContent({
             </ActionButton>
           </div>
         </>
-      ) : (
+      ) : null}
+
+      {!showHeartMinter && showValentinesProposal && (
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
