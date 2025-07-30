@@ -1,25 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Web3Provider from "@/components/Web3Provider";
 import { motion } from "framer-motion";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { analytics } from "@/utils/analytics";
 import ActionButton from "@/components/shared/ActionButton";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 
-export default function AnalyticsPage() {
+function AnalyticsPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [password, setPassword] = useState("");
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState("24h");
-  
+
   // Use shared navigation hook
   const { goHome } = useAppNavigation();
 
   // Simple password protection for admin features
   const handleAuth = () => {
     // In production, use proper authentication
-    if (password === "lub-admin-2024" || process.env.NODE_ENV === "development") {
+    if (
+      password === "lub-admin-2024" ||
+      process.env.NODE_ENV === "development"
+    ) {
       setIsAuthorized(true);
     } else {
       alert("Invalid password");
@@ -36,7 +40,7 @@ export default function AnalyticsPage() {
     const now = new Date();
     const hoursAgo = timeRange === "24h" ? 24 : timeRange === "7d" ? 168 : 1;
     const startDate = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
-    
+
     const events = analytics.getEventsInRange(startDate, now);
     setRecentEvents(events.slice(-50)); // Last 50 events
   };
@@ -47,12 +51,14 @@ export default function AnalyticsPage() {
       recentEvents: recentEvents,
       exportedAt: new Date().toISOString(),
     };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `lub-analytics-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `lub-analytics-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -71,7 +77,7 @@ export default function AnalyticsPage() {
             Back to App
           </ActionButton>
         </div>
-        
+
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -118,7 +124,7 @@ export default function AnalyticsPage() {
             Back to App
           </ActionButton>
         </div>
-        
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -161,25 +167,40 @@ export default function AnalyticsPage() {
           <h2 className="text-xl font-bold text-gray-800 mb-4">
             🕒 Recent Events ({recentEvents.length})
           </h2>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 px-3 font-semibold text-gray-600">Time</th>
-                  <th className="text-left py-2 px-3 font-semibold text-gray-600">Event</th>
-                  <th className="text-left py-2 px-3 font-semibold text-gray-600">Session</th>
-                  <th className="text-left py-2 px-3 font-semibold text-gray-600">Data</th>
+                  <th className="text-left py-2 px-3 font-semibold text-gray-600">
+                    Time
+                  </th>
+                  <th className="text-left py-2 px-3 font-semibold text-gray-600">
+                    Event
+                  </th>
+                  <th className="text-left py-2 px-3 font-semibold text-gray-600">
+                    Session
+                  </th>
+                  <th className="text-left py-2 px-3 font-semibold text-gray-600">
+                    Data
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {recentEvents.map((event, index) => (
-                  <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr
+                    key={index}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
                     <td className="py-2 px-3 text-gray-600">
                       {new Date(event.timestamp).toLocaleTimeString()}
                     </td>
                     <td className="py-2 px-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEventColor(event.type)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getEventColor(
+                          event.type
+                        )}`}
+                      >
                         {event.type}
                       </span>
                     </td>
@@ -209,13 +230,19 @@ export default function AnalyticsPage() {
           transition={{ delay: 0.4 }}
           className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         >
-          {getEventTypeBreakdown(recentEvents).map(({ type, count, percentage }) => (
-            <div key={type} className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-gray-800 mb-2">{type}</h3>
-              <div className="text-2xl font-bold text-purple-600 mb-1">{count}</div>
-              <div className="text-sm text-gray-500">{percentage.toFixed(1)}% of events</div>
-            </div>
-          ))}
+          {getEventTypeBreakdown(recentEvents).map(
+            ({ type, count, percentage }) => (
+              <div key={type} className="bg-white rounded-lg shadow p-4">
+                <h3 className="font-semibold text-gray-800 mb-2">{type}</h3>
+                <div className="text-2xl font-bold text-purple-600 mb-1">
+                  {count}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {percentage.toFixed(1)}% of events
+                </div>
+              </div>
+            )
+          )}
         </motion.div>
       </div>
     </div>
@@ -235,9 +262,11 @@ function getEventColor(eventType: string): string {
   return colors[eventType] || "bg-gray-100 text-gray-800";
 }
 
-function getEventTypeBreakdown(events: any[]): Array<{ type: string; count: number; percentage: number }> {
+function getEventTypeBreakdown(
+  events: any[]
+): Array<{ type: string; count: number; percentage: number }> {
   const counts: Record<string, number> = {};
-  events.forEach(event => {
+  events.forEach((event) => {
     counts[event.type] = (counts[event.type] || 0) + 1;
   });
 
@@ -249,4 +278,13 @@ function getEventTypeBreakdown(events: any[]): Array<{ type: string; count: numb
       percentage: total > 0 ? (count / total) * 100 : 0,
     }))
     .sort((a, b) => b.count - a.count);
+}
+
+// Export the page with Web3Provider wrapper and disable SSR
+export default function AnalyticsPageWrapper() {
+  return (
+    <Web3Provider>
+      <AnalyticsPage />
+    </Web3Provider>
+  );
 }

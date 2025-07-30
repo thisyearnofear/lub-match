@@ -8,6 +8,13 @@ const Web3Provider = dynamic(() => import("@/components/Web3Provider"), {
   ssr: false,
 });
 
+const LubBalanceWidget = dynamic(
+  () => import("@/components/LubBalanceWidget"),
+  {
+    ssr: false,
+  }
+);
+
 export default function ClientLayoutWrapper({
   children,
 }: {
@@ -15,7 +22,10 @@ export default function ClientLayoutWrapper({
 }) {
   return (
     <ErrorBoundary>
-      <Web3Provider>{children}</Web3Provider>
+      <Web3Provider>
+        <LubBalanceWidget />
+        {children}
+      </Web3Provider>
     </ErrorBoundary>
   );
 }

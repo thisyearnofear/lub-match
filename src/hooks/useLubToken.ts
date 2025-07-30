@@ -21,12 +21,42 @@ const LUB_ABI = parseAbi([
   "event MintDiscount(address indexed user, uint256 lubSpent, uint256 ethSaved)"
 ]);
 
+// LUB transaction history type
+export interface LubHistoryItem {
+  reason: string;
+  amount: number; // positive for earn, negative for spend
+  timestamp: string;
+}
+
 export function useLubToken() {
   const { address } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
   const { progress, updateLubBalance, recordEvent } = useUserProgression();
 
   const enabled = !!LUB_TOKEN_ADDRESS && WEB3_CONFIG.features.lubTokenEnabled;
+
+  // --- LUB Transaction History (localStorage-backed) ---
+  const [history, setHistory] = React.useState<LubHistoryItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("lub_history");
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const addHistory = React.useCallback((item: LubHistoryItem) => {
+    setHistory((prev) => {
+      const updated = [item, ...prev].slice(0, 20); // keep last 20
+      if (typeof window !== "undefined") {
+        localStorage.setItem("lub_history", JSON.stringify(updated));
+      }
+      return updated;
+    });
+  }, []);
 
   // Read user's LUB balance with error handling
   const { data: balance = BigInt(0), error: balanceError } = useReadContract({
@@ -85,26 +115,36 @@ export function useLubToken() {
   // Spend LUB for game creation
   const spendForGameCreation = async () => {
     if (!LUB_TOKEN_ADDRESS) throw new Error("LUB token address not configured");
-
-    return writeContractAsync({
+    const tx = await writeContractAsync({
       address: LUB_TOKEN_ADDRESS,
       abi: LUB_ABI,
       functionName: "spendForGameCreation",
       chainId: arbitrum.id
     });
+    addHistory({
+      reason: "Game creation",
+      amount: -1, // or actual amount spent if available
+      timestamp: new Date().toISOString(),
+    });
+    return tx;
   };
 
   // Spend LUB for mint discount
   const spendForMintDiscount = async (lubAmount: bigint) => {
     if (!LUB_TOKEN_ADDRESS) throw new Error("LUB token address not configured");
-
-    return writeContractAsync({
+    const tx = await writeContractAsync({
       address: LUB_TOKEN_ADDRESS,
       abi: LUB_ABI,
       functionName: "spendForMintDiscount",
       args: [lubAmount],
       chainId: arbitrum.id
     });
+    addHistory({
+      reason: "NFT mint discount",
+      amount: -Number(lubAmount),
+      timestamp: new Date().toISOString(),
+    });
+    return tx;
   };
 
   // Earn LUB tokens for various actions
@@ -118,6 +158,12 @@ export function useLubToken() {
         type: 'lub_earned',
         timestamp: new Date().toISOString(),
         data: { action, amount: earnAmount.toString() }
+      });
+
+      addHistory({
+        reason: earning.description || action,
+        amount: Number(earnAmount),
+        timestamp: new Date().toISOString(),
       });
 
       console.log(`Earned ${earning.amountFormatted} for ${earning.description}`);
@@ -153,6 +199,9 @@ export function useLubToken() {
 
     // User progression
     progress,
+
+    // LUB transaction history
+    history,
 
     // Loading state
     isPending

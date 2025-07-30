@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import Confetti from "./Confetti";
 import { useState, useEffect } from "react";
 import { formatLubAmount } from "@/utils/pricingEngine";
 
@@ -25,30 +26,33 @@ export function EarningToast({ show, amount, reason, onClose }: EarningToastProp
   return (
     <AnimatePresence>
       {show && (
-        <motion.div
-          initial={{ opacity: 0, y: -50, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -50, scale: 0.9 }}
-          className="fixed top-4 right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg shadow-lg p-4 max-w-sm"
-        >
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">🎉</div>
-            <div className="flex-1">
-              <div className="font-semibold text-sm">
-                +{formatLubAmount(amount)} LUB Earned!
+        <>
+          <Confetti trigger={show} />
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className="fixed top-4 right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg shadow-lg p-4 max-w-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">🎉</div>
+              <div className="flex-1">
+                <div className="font-semibold text-sm">
+                  +{formatLubAmount(amount)} LUB Earned!
+                </div>
+                <div className="text-xs opacity-90">
+                  {reason}
+                </div>
               </div>
-              <div className="text-xs opacity-90">
-                {reason}
-              </div>
+              <button
+                onClick={onClose}
+                className="text-white/70 hover:text-white text-lg leading-none"
+              >
+                ×
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="text-white/70 hover:text-white text-lg leading-none"
-            >
-              ×
-            </button>
-          </div>
-        </motion.div>
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

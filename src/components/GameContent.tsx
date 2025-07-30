@@ -8,6 +8,7 @@ import ValentinesProposal from "@/components/ValentinesProposal";
 import HeartNFTMinter from "@/components/HeartNFTMinter";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
+import DismissibleBanner from "./onboarding/DismissibleBanner";
 import { useUserProgression } from "@/utils/userProgression";
 import { ShareHelpers } from "@/utils/shareHelpers";
 import ActionButton from "@/components/shared/ActionButton";
@@ -126,6 +127,25 @@ export default function GameContent({
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
+      {/* Farcaster/game info banner (minimal, contextual, only first visit) */}
+      <DismissibleBanner
+        message={
+          <>
+            You’re playing with trending Farcaster users’ photos.{' '}
+            <a
+              href="https://www.farcaster.xyz/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-purple-700"
+            >
+              What’s Farcaster?
+            </a>
+          </>
+        }
+        localStorageKey="onboarding_farcaster_info_seen"
+        className="max-w-2xl mx-auto mt-4"
+      />
+
       {/* Heart NFT Minter Modal (only after demo game) */}
       {showHeartMinter && (
         <HeartNFTMinter
