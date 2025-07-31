@@ -151,7 +151,7 @@ export default function HeartNFTMinter({
             NFT minting is not configured. Please check your environment settings.
           </p>
           <ActionButton onClick={onClose} fullWidth variant="secondary">
-            Close
+            Continue Without Minting
           </ActionButton>
         </div>
       </div>
@@ -173,6 +173,7 @@ export default function HeartNFTMinter({
             <button
               onClick={onClose}
               className="text-purple-200 hover:text-white text-2xl transition-colors"
+              aria-label="Skip NFT Minting"
             >
               ×
             </button>
@@ -188,6 +189,20 @@ export default function HeartNFTMinter({
             <div className="mb-6 text-center">
               <p className="text-gray-600 mb-4">Connect your wallet to mint</p>
               <ConnectButton />
+              
+              {/* Skip button for non-connected users */}
+              <div className="mt-4">
+                <button
+                  onClick={onClose}
+                  className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                  type="button"
+                >
+                  Skip for Now
+                </button>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  You can always mint later by connecting your wallet
+                </p>
+              </div>
             </div>
           )}
 
@@ -196,13 +211,38 @@ export default function HeartNFTMinter({
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
               <p className="text-gray-600">Checking mint eligibility...</p>
+              
+              {/* Skip button during loading */}
+              <div className="mt-6">
+                <button
+                  onClick={onClose}
+                  className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                  type="button"
+                >
+                  Skip
+                </button>
+              </div>
             </div>
           )}
 
           {/* Error State */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="mb-6">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+              
+              {/* Skip button for error states */}
+              <button
+                onClick={onClose}
+                className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                type="button"
+              >
+                Continue Without Minting
+              </button>
+              <p className="text-xs text-gray-500 text-center mt-2">
+                You can still enjoy your completed heart game
+              </p>
             </div>
           )}
 
@@ -230,18 +270,33 @@ export default function HeartNFTMinter({
             />
           )}
 
+          {/* Cannot Mint State */}
+          {isConnected && !isCheckingMintability && !canMint && !error && !showSuccessActions && (
+            <div className="text-center py-8">
+              <div className="mb-4">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">⚠️</span>
+                </div>
+                <p className="text-gray-600 mb-2">This heart cannot be minted</p>
+                <p className="text-sm text-gray-500">It may have already been minted as an NFT</p>
+              </div>
+              
+              <button
+                onClick={onClose}
+                className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                type="button"
+              >
+                Continue Without Minting
+              </button>
+              <p className="text-xs text-gray-500 text-center mt-2">
+                Your heart game is still complete and beautiful!
+              </p>
+            </div>
+          )}
+
           {/* Mint Interface */}
           {isConnected && !isCheckingMintability && canMint && !showSuccessActions && (
         <>
-          {/* Skip Button for modal UX */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 text-gray-400 hover:text-gray-700 text-2xl bg-white bg-opacity-80 rounded-full w-10 h-10 flex items-center justify-center shadow"
-            type="button"
-            aria-label="Skip NFT Minting"
-          >
-            ×
-          </button>
               {/* Game Preview */}
               <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200">
                 <h3 className="font-semibold text-gray-800 mb-2">
@@ -359,7 +414,7 @@ export default function HeartNFTMinter({
             className="w-full mt-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
             type="button"
           >
-            Skip
+            Skip for Now
           </button>
 
           <p className="text-xs text-gray-500 text-center mt-3">

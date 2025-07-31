@@ -311,7 +311,20 @@ export default function ValentinesProposal({
           message={heading}
           gameType={gameType}
           creator={creator}
-          onClose={() => setShowNFTMinter(false)}
+          onClose={() => {
+            setShowNFTMinter(false);
+            // Record that user skipped NFT minting
+            recordEvent({
+              type: "nft_minting_skipped",
+              timestamp: new Date().toISOString(),
+              data: {
+                gameType,
+                creator,
+                messageLength: heading.length,
+                reason: "user_skipped",
+              },
+            });
+          }}
           onMinted={(tokenId) => {
             console.log("NFT minted with token ID:", tokenId);
 
@@ -327,7 +340,7 @@ export default function ValentinesProposal({
               },
             });
 
-            // Could show success message here
+            setShowNFTMinter(false);
           }}
         />
       )}

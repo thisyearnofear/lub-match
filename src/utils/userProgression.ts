@@ -36,7 +36,7 @@ export interface UserProgress {
 }
 
 export interface ProgressionEvent {
-  type: 'game_complete' | 'social_game' | 'lub_created' | 'nft_minted' | 'wallet_connected' | 'lub_earned' | 'game_shared' | 'referral_sent';
+  type: 'game_complete' | 'social_game' | 'lub_created' | 'nft_minted' | 'nft_minting_skipped' | 'wallet_connected' | 'lub_earned' | 'game_shared' | 'referral_sent';
   timestamp: string;
   data?: Record<string, any>;
 }
