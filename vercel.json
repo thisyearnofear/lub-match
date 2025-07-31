@@ -3,6 +3,14 @@
   "devCommand": "pnpm run dev",
   "installCommand": "pnpm install",
   "framework": "nextjs",
+  "functions": {
+    "src/app/api/createGame/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/uploadDirect/route.ts": {
+      "maxDuration": 60
+    }
+  },
   "build": {
     "env": {
       "NEXT_TELEMETRY_DISABLED": "1"
