@@ -212,6 +212,17 @@ export async function GET(req: NextRequest) {
       type
     });
 
+    // Early return for API availability check
+    if (count === 1 && !NEYNAR_API_KEY) {
+      return NextResponse.json(
+        { 
+          error: "NEYNAR_API_KEY not configured",
+          available: false 
+        },
+        { status: 200 } // Return 200 so the client can distinguish between network errors and config issues
+      );
+    }
+
     let users: FarcasterUser[] = [];
 
     if (type === "trending") {

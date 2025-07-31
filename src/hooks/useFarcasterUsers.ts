@@ -63,34 +63,65 @@ export function useFarcasterUsers(
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null); // null = checking, true/false = determined
   const [apiCheckComplete, setApiCheckComplete] = useState(false);
 
-  // Check API availability on mount with timeout
+  // Check API availability on mount with improved timing and retry logic
   useEffect(() => {
     if (!isClient) return;
 
     const checkApiAvailability = async () => {
-      try {
-        // Give the API up to 5 seconds to respond
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const startTime = Date.now();
+      const MIN_LOADING_TIME = 2500; // Minimum 2.5 seconds for smooth UX
+      const MAX_RETRIES = 3;
+      const RETRY_DELAY = 1000; // 1 second between retries
 
-        const response = await fetch('/api/farcaster-users?count=1', {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+      let lastError: Error | null = null;
 
-        const data = await response.json();
-        setHasApiKey(!data.error);
-      } catch (error) {
-        // Only set to false if it's not an abort error (timeout)
-        if (error instanceof Error && error.name !== 'AbortError') {
-          setHasApiKey(false);
-        } else {
-          // If timeout, assume API is not available
-          setHasApiKey(false);
+      // Try multiple times with exponential backoff
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // Longer timeout per attempt
+
+          const response = await fetch('/api/farcaster-users?count=1', {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          const data = await response.json();
+          
+          // If we get a successful response without error, API is available
+          if (!data.error) {
+            setHasApiKey(true);
+            break;
+          } else {
+            // API responded but with an error (likely missing key)
+            lastError = new Error(data.error);
+            if (attempt === MAX_RETRIES) {
+              setHasApiKey(false);
+            }
+          }
+        } catch (error) {
+          lastError = error instanceof Error ? error : new Error('Unknown error');
+          console.log(`API check attempt ${attempt}/${MAX_RETRIES} failed:`, lastError.message);
+          
+          // If this is the last attempt, mark as unavailable
+          if (attempt === MAX_RETRIES) {
+            setHasApiKey(false);
+          } else {
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
+          }
         }
-      } finally {
-        setApiCheckComplete(true);
       }
+
+      // Ensure minimum loading time for smooth UX
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+
+      setApiCheckComplete(true);
     };
 
     checkApiAvailability();
@@ -161,16 +192,30 @@ export function useFarcasterUsers(
 
   // Main function to refresh users
   const refreshUsers = useCallback(async () => {
+    // Don't try to refresh if API check hasn't completed yet
+    if (!apiCheckComplete) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const fetchedUsers = await fetchUsersFromAPI();
       setUsers(fetchedUsers);
+      // Clear any previous errors on successful fetch
+      setError(null);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to fetch users";
-      setError(errorMessage);
+      
+      // Only set error if API check is complete and we know the API should work
+      if (hasApiKey === true) {
+        setError(errorMessage);
+      } else if (hasApiKey === false) {
+        // Set a more user-friendly error message for missing API key
+        setError("Neynar API key not configured - social features unavailable");
+      }
 
       // Don't fallback to mock data - let the app handle the error state
       setUsers([]);
@@ -178,7 +223,7 @@ export function useFarcasterUsers(
     } finally {
       setLoading(false);
     }
-  }, [fetchUsersFromAPI]);
+  }, [fetchUsersFromAPI, apiCheckComplete, hasApiKey]);
 
   // Generate random pairs from users for the memory game
   const getRandomPairs = useCallback((): string[] => {
@@ -196,12 +241,12 @@ export function useFarcasterUsers(
     setIsClient(true);
   }, []);
 
-  // Auto-refresh effect - only run on client
+  // Auto-refresh effect - only run on client after API check is complete
   useEffect(() => {
-    if (isClient) {
+    if (isClient && apiCheckComplete && hasApiKey === true) {
       refreshUsers();
     }
-  }, [refreshUsers, isClient]);
+  }, [refreshUsers, isClient, apiCheckComplete, hasApiKey]);
 
   useEffect(() => {
     if (!enableAutoRefresh || !isClient) return;
