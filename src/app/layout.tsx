@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { playfairDisplay } from "@/styles/fonts";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -72,7 +73,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={playfairDisplay.variable}>
       <head>
         <meta
           name="viewport"

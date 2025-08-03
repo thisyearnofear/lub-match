@@ -33,20 +33,20 @@ export default function OnboardingTooltip({
       {children}
       {show && (
         <div
-          className={`absolute z-50 bg-white border border-purple-200 rounded-lg shadow-lg px-4 py-3 text-sm text-purple-900 animate-fade-in ${
+          className={`absolute z-50 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-300 rounded-xl shadow-xl px-4 py-3 text-sm text-purple-900 animate-fade-in ${
             placement === "bottom"
               ? "left-1/2 -translate-x-1/2 top-full mt-2"
               : placement === "top"
               ? "left-1/2 -translate-x-1/2 bottom-full mb-2"
               : placement === "left"
-              ? "right-full mr-2 top-1/2 -translate-y-1/2"
-              : "left-full ml-2 top-1/2 -translate-y-1/2"
+              ? "right-full mr-3 top-1/2 -translate-y-1/2"
+              : "left-full ml-3 top-1/2 -translate-y-1/2"
           }`}
-          style={{ minWidth: 220, maxWidth: 320 }}
+          style={{ minWidth: 240, maxWidth: 320 }}
         >
-          <div className="mb-2">{message}</div>
+          <div className="mb-3 font-medium">{message}</div>
           <button
-            className="text-xs text-purple-600 hover:underline mt-1"
+            className="text-xs text-purple-700 hover:text-purple-900 font-semibold hover:underline mt-1"
             onClick={handleClose}
           >
             Got it!

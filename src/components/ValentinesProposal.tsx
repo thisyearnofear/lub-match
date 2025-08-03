@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { Playfair_Display } from "next/font/google";
 import { motion, AnimatePresence } from "framer-motion";
 import Fireworks from "@fireworks-js/react";
 import Image from "next/image";
@@ -28,13 +27,6 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   }
   return array;
 };
-
-const playfairDisplay = Playfair_Display({
-  display: "swap",
-  subsets: ["latin"],
-  fallback: ["serif"],
-  preload: false,
-});
 
 export default function ValentinesProposal({
   revealImages,
@@ -121,9 +113,7 @@ export default function ValentinesProposal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <h2
-              className={`text-4xl font-semibold text-white text-shadow-md ${playfairDisplay.className}`}
-            >
+            <h2 className="text-4xl font-semibold text-white text-shadow-md font-playfair">
               Darling! Your are my heart!
             </h2>
           </motion.div>
@@ -137,9 +127,7 @@ export default function ValentinesProposal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <h2
-              className={`text-4xl font-semibold text-white text-shadow-md ${playfairDisplay.className}`}
-            >
+            <h2 className="text-4xl font-semibold text-white text-shadow-md font-playfair">
               I have a question to ask you!
             </h2>
           </motion.div>
@@ -171,7 +159,7 @@ export default function ValentinesProposal({
 
             <div className="relative z-10 flex flex-col items-center bg-black bg-opacity-50 p-8 rounded-lg">
               <h2
-                className={`text-5xl font-semibold mb-8 text-white text-shadow-lg ${playfairDisplay.className}`}
+                className={`text-5xl font-semibold mb-8 text-white text-shadow-lg font-playfair`}
               >
                 {heading}
               </h2>
@@ -221,7 +209,7 @@ export default function ValentinesProposal({
           >
             <div className="bg-black bg-opacity-50 p-8 rounded-lg text-center mb-6">
               <h2
-                className={`text-4xl font-semibold text-white text-shadow-lg mb-4 ${playfairDisplay.className}`}
+                className={`text-4xl font-semibold text-white text-shadow-lg mb-4 font-playfair`}
               >
                 You are as brave as you are beautiful <br />
                 Asante sana for accepting my lub! 💕

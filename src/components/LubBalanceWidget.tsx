@@ -14,8 +14,11 @@ export default function LubBalanceWidget() {
   return (
     <>
       <OnboardingTooltip
-        message={"💎 LUB is your in-game social token! Earn it by playing, sharing, and inviting friends. Spend it for creative unlocks and NFT discounts!"}
-        placement="bottom"
+        message={
+          "💎 LUB is your in-game social token! Earn it by playing, sharing, and inviting friends. Spend it for creative unlocks and NFT discounts!"
+        }
+        placement="left"
+        localStorageKey="lub_balance_tooltip_seen"
       >
         <button
           className="fixed top-4 right-4 z-50 bg-gradient-to-r from-purple-600 to-pink-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:scale-105 transition-transform"

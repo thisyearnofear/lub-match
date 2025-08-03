@@ -9,6 +9,7 @@ import PhotoPairGame from "../components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
 import SocialGamesHub from "@/components/SocialGamesHub";
 import HeartNFTMinter from "@/components/HeartNFTMinter";
+import DismissibleBanner from "@/components/onboarding/DismissibleBanner";
 
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useSocialGames } from "@/hooks/useSocialGames";
@@ -251,6 +252,24 @@ export default function Home() {
               </div>
             ) : gameImages.length === 8 ? (
               <>
+                {/* Farcaster demo info banner - only for trending users demo */}
+                <DismissibleBanner
+                  message={
+                    <>
+                      You're playing with trending Farcaster users' photos.{' '}
+                      <a
+                        href="https://www.farcaster.xyz/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-purple-700"
+                      >
+                        What's Farcaster?
+                      </a>
+                    </>
+                  }
+                  localStorageKey="onboarding_farcaster_info_seen"
+                  className="max-w-2xl mx-auto mb-4"
+                />
                 <PhotoPairGame
                   images={gameImages}
                   handleShowProposalAction={handleShowProposal}
