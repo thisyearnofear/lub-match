@@ -19,6 +19,7 @@ interface GameContentProps {
   revealUrls: string[];
   message: string;
   justCreated: boolean;
+  users?: any[]; // Optional: Farcaster user data for enhanced social features
 }
 
 interface FarcasterWindow extends Window {
@@ -33,6 +34,7 @@ export default function GameContent({
   revealUrls,
   message,
   justCreated,
+  users,
 }: GameContentProps) {
   // --- NFT Minter Modal State ---
   const [showHeartMinter, setShowHeartMinter] = useState(false);
@@ -155,6 +157,7 @@ export default function GameContent({
         <>
           <PhotoPairGame
             images={pairUrls}
+            users={users}
             handleShowProposalAction={handleDemoGameFinished}
           />
           <div

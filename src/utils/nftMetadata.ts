@@ -1,9 +1,7 @@
 // Unified NFT metadata system for Heart NFTs
-// Integrates with existing IPFS infrastructure and game data
+// Uses server-side API route to maintain clean architecture
 
-import { PinataSDK } from "pinata";
-import { PINATA_JWT, IPFS_CONFIG } from "@/config";
-import { createNFTMetadata } from "./ipfs";
+import { IPFS_CONFIG } from "@/config";
 import { generateGameHash, GameHashData } from "./gameHash";
 
 export interface HeartNFTMetadata {
@@ -34,7 +32,8 @@ export interface NFTUploadResult {
 }
 
 /**
- * Upload NFT metadata to IPFS using existing Pinata infrastructure
+ * Upload NFT metadata to IPFS using server-side API route
+ * Maintains clean architecture by keeping API keys server-side
  */
 export async function uploadNFTMetadata(
   gameData: {
@@ -46,81 +45,39 @@ export async function uploadNFTMetadata(
     completer: string;
     gameType: "custom" | "demo";
   },
-  userApiKey?: string
+  userApiKey?: string // Currently unused, but kept for API compatibility
 ): Promise<NFTUploadResult> {
   try {
-    // Generate game hash for uniqueness
-    const hashData: GameHashData = {
+    // Convert bigint to ISO string for API
+    const requestData = {
       imageHashes: gameData.imageHashes,
       layout: gameData.layout,
       message: gameData.message,
+      completedAt: new Date(Number(gameData.completedAt) * 1000).toISOString(),
       creator: gameData.creator,
+      completer: gameData.completer,
       gameType: gameData.gameType
     };
-    const gameHash = generateGameHash(hashData);
 
-    // Create comprehensive metadata
-    const metadata: HeartNFTMetadata = {
-      name: `Lub Match #${gameHash.substring(0, 8)}`,
-      description: `lub sent with ${gameData.imageHashes.length} trending Farcaster users. ${gameData.gameType === 'demo' ? 'Demo lub completed!' : `Lub message: "${gameData.message}"`}`,
-      image: await generateHeartImage(gameData.imageHashes, gameHash),
-      attributes: [
-        { trait_type: "Lub Type", value: gameData.gameType === 'demo' ? 'Demo Lub' : 'Custom Lub' },
-        { trait_type: "Featured Users", value: gameData.imageHashes.length },
-        { trait_type: "Lub Length", value: gameData.message.length },
-        { trait_type: "Lub Sent", value: new Date(Number(gameData.completedAt) * 1000).toISOString().split('T')[0] },
-        { trait_type: "Lub Creator", value: gameData.creator },
-        { trait_type: "Lub Receiver", value: gameData.completer },
-        { trait_type: "Self Lub", value: gameData.creator === gameData.completer ? "Yes" : "No" }
-      ],
-      properties: {
-        imageHashes: gameData.imageHashes,
-        layout: gameData.layout,
-        message: gameData.message,
-        completedAt: gameData.completedAt.toString(),
-        creator: gameData.creator,
-        completer: gameData.completer,
-        gameType: gameData.gameType,
-        gameHash
-      }
-    };
-
-    // Upload to IPFS
-    const apiKey = userApiKey || PINATA_JWT;
-    if (!apiKey) {
-      throw new Error("No Pinata API key available for metadata upload");
-    }
-
-    const pinata = new PinataSDK({
-      pinataJwt: apiKey,
-      pinataGateway: IPFS_CONFIG.gateways.primary.replace('https://', '')
+    // Use server-side API route (maintains clean architecture)
+    const response = await fetch('/api/uploadNFTMetadata', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestData)
     });
 
-    // Create metadata file
-    const metadataFile = new File(
-      [JSON.stringify(metadata, null, 2)],
-      `lub-match-${gameHash.substring(0, 8)}.json`,
-      { type: "application/json" }
-    );
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
 
-    // Upload metadata
-    const upload = await pinata.upload.public
-      .file(metadataFile)
-      .name(`Lub Match NFT - ${gameHash.substring(0, 8)}`)
-      .keyvalues({
-        type: "lub-match-nft-metadata",
-        gameHash,
-        lubType: gameData.gameType,
-        lubCreator: gameData.creator,
-        lubReceiver: gameData.completer,
-        createdAt: new Date().toISOString()
-      });
-
-    const metadataURI = `ipfs://${upload.cid}`;
-
+    const result = await response.json();
+    
     return {
-      metadataURI,
-      success: true
+      metadataURI: result.metadataURI,
+      success: result.success
     };
 
   } catch (error) {
@@ -133,21 +90,7 @@ export async function uploadNFTMetadata(
   }
 }
 
-/**
- * Generate a heart-shaped lub composite image from the Farcaster user images
- * For now, returns a placeholder. In production, this would create an actual composite
- */
-async function generateHeartImage(imageHashes: string[], gameHash: string): Promise<string> {
-  // Placeholder implementation
-  // In production, this would:
-  // 1. Fetch all Farcaster user images from IPFS
-  // 2. Create a heart-shaped lub composite using Canvas API or similar
-  // 3. Add "Lub Match" branding and completion timestamp
-  // 4. Upload the composite image to IPFS
-  // 5. Return the IPFS URI
-
-  return `ipfs://placeholder-lub-composite-${gameHash.substring(0, 8)}`;
-}
+// Removed generateHeartImage - now handled server-side in API route
 
 /**
  * Retrieve NFT metadata from IPFS

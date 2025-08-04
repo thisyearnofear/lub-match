@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useState, useEffect, useMemo } from "react";
 import { useGameZoom, useAutoZoom } from "@/hooks/useGameZoom";
 import { SimpleMobileZoomControls } from "./MobileZoomControls";
+import MatchNotification from "./shared/MatchNotification";
+import { FarcasterUser } from "@/types/socialGames";
 
 const shuffleArray = (array: string[]) => {
   for (let i = array.length - 1; i > 0; i--) {
@@ -27,11 +29,13 @@ const heartLayout: CellType[][] = [
 
 type PhotoPairGameProps = {
   images: string[]; // requires exactly 8 IPFS image URLs
+  users?: FarcasterUser[]; // Optional: Farcaster user data for enhanced social features
   handleShowProposalAction: () => void;
 };
 
 export default function PhotoPairGame({
   images: imagesProp,
+  users: usersProp,
   handleShowProposalAction,
 }: PhotoPairGameProps) {
   // Debug logging
@@ -51,13 +55,15 @@ export default function PhotoPairGame({
     );
   }
 
-  const imagesFinal = imagesProp;
-
   // More debug logging
-  console.log("Using Farcaster profile images:", imagesFinal);
+  console.log("Using Farcaster profile images:", imagesProp);
+
+  // Create a stable key for the images to prevent infinite re-renders
+  const imagesKey = useMemo(() => imagesProp.join(","), [imagesProp]);
+
   const imagePairs = useMemo(
-    () => imagesFinal.flatMap((img) => [img, img]),
-    [imagesFinal.join(",")]
+    () => imagesProp.flatMap((img) => [img, img]),
+    [imagesKey]
   );
 
   const [shuffledPairs, setShuffledPairs] = useState<string[]>([]);
@@ -65,6 +71,8 @@ export default function PhotoPairGame({
   const [matched, setMatched] = useState<number[]>([]);
   const [incorrect, setIncorrect] = useState<number[]>([]);
   const [justMatched, setJustMatched] = useState<number[]>([]);
+  const [matchedUser, setMatchedUser] = useState<FarcasterUser | null>(null);
+  const [showMatchNotification, setShowMatchNotification] = useState(false);
 
   const [isComplete, setIsComplete] = useState(false);
 
@@ -79,15 +87,18 @@ export default function PhotoPairGame({
   // Auto-zoom behavior
   useAutoZoom(selected, matched, zoomControls, 1500);
 
+  // Initialize game when images change
   useEffect(() => {
-    if (imagePairs.length > 0) {
+    if (imagePairs.length === 16) {
+      // 8 images * 2 = 16 pairs
       setShuffledPairs(shuffleArray([...imagePairs]));
       setSelected([]);
       setMatched([]);
       setIncorrect([]);
       setJustMatched([]);
+      setIsComplete(false);
     }
-  }, [imagePairs]);
+  }, [imagesKey]); // Use stable key instead of imagePairs
 
   const handleClick = async (index: number) => {
     if (
@@ -103,6 +114,17 @@ export default function PhotoPairGame({
       const firstIndex = selected[0];
       if (shuffledPairs[firstIndex] === shuffledPairs[index]) {
         setJustMatched([firstIndex, index]);
+
+        // Show match notification with user profile if available
+        if (usersProp && usersProp.length > 0) {
+          const matchedImageUrl = shuffledPairs[firstIndex];
+          const user = usersProp.find((u) => u.pfp_url === matchedImageUrl);
+          if (user) {
+            setMatchedUser(user);
+            setShowMatchNotification(true);
+          }
+        }
+
         setTimeout(() => {
           setMatched((prev) => [...prev, firstIndex, index]);
           setJustMatched([]);
@@ -114,6 +136,11 @@ export default function PhotoPairGame({
       }
       setTimeout(() => setSelected([]), 1000);
     }
+  };
+
+  const handleCloseMatchNotification = () => {
+    setShowMatchNotification(false);
+    setMatchedUser(null);
   };
 
   useEffect(() => {
@@ -254,6 +281,17 @@ export default function PhotoPairGame({
         zoomControls={zoomControls}
         disabled={matched.length === imagePairs.length}
       />
+
+      {/* Match Notification */}
+      {matchedUser && (
+        <MatchNotification
+          user={matchedUser}
+          isVisible={showMatchNotification}
+          onClose={handleCloseMatchNotification}
+          position="bottom"
+          autoCloseDelay={4000}
+        />
+      )}
     </div>
   );
 }

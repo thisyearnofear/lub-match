@@ -44,6 +44,11 @@ export default function ValentinesProposal({
 
   // Create a 36-image grid by repeating and shuffling the source images
   const imageGrid = useMemo(() => {
+    // Ensure we have valid source images
+    if (!sourceImages || sourceImages.length === 0) {
+      return [];
+    }
+
     const repeated = Array(Math.ceil(36 / sourceImages.length))
       .fill(sourceImages)
       .flat()
@@ -142,20 +147,22 @@ export default function ValentinesProposal({
             className="flex flex-col items-center"
           >
             {/* Image Grid Background */}
-            <div className="absolute inset-0 grid grid-cols-6">
-              {imageGrid.map((src, index) => (
-                <div key={index} className="relative h-full">
-                  <Image
-                    src={src}
-                    alt={`Memory ${index + 1}`}
-                    fill
-                    sizes="16.67vw"
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            {imageGrid.length > 0 && (
+              <div className="absolute inset-0 grid grid-cols-6">
+                {imageGrid.map((src, index) => (
+                  <div key={index} className="relative h-full">
+                    <Image
+                      src={src}
+                      alt={`Memory ${index + 1}`}
+                      fill
+                      sizes="16.67vw"
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="relative z-10 flex flex-col items-center bg-black bg-opacity-50 p-8 rounded-lg">
               <h2

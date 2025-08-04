@@ -157,9 +157,9 @@ export function useFarcasterUsers(
         return cached;
       }
 
-      // Fetch from our server-side API route
+      // Fetch from our server-side API route - use 'active' type for better user quality
       const response = await fetch(
-        `/api/farcaster-users?count=${count}&minFollowers=${minFollowers}&type=trending`,
+        `/api/farcaster-users?count=${count}&minFollowers=${minFollowers}&type=active`,
         {
           method: "GET",
           headers: {

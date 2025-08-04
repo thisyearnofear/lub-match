@@ -11,6 +11,7 @@ import {
 import { gameStorage } from "@/utils/gameStorage";
 import { scoreCalculator } from "@/utils/scoreCalculator";
 import { SocialGameUsernameButton } from "@/components/shared/UsernameButton";
+import { SocialGameProfileLink } from "@/components/shared/ProfileLinkButton";
 
 interface UsernameGuessingGameProps {
   game: UsernameGuessingGame;
@@ -35,6 +36,7 @@ export default function UsernameGuessingGameComponent({
   const [questions, setQuestions] = useState<QuestionData[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [waitingForNext, setWaitingForNext] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [gameStartTime] = useState(Date.now());
   const [score, setScore] = useState(0);
@@ -90,14 +92,8 @@ export default function UsernameGuessingGameComponent({
 
       setShowResult(true);
 
-      // Auto-advance after showing result
-      setTimeout(() => {
-        if (isLastQuestion) {
-          completeGame(updatedQuestions);
-        } else {
-          nextQuestion();
-        }
-      }, 1500);
+      // Wait for user to decide to continue instead of auto-advancing
+      setWaitingForNext(true);
     },
     [
       selectedAnswer,
@@ -113,7 +109,16 @@ export default function UsernameGuessingGameComponent({
     setCurrentQuestionIndex((prev) => prev + 1);
     setSelectedAnswer(null);
     setShowResult(false);
+    setWaitingForNext(false);
     setQuestionStartTime(Date.now());
+  };
+
+  const handleNextClick = () => {
+    if (isLastQuestion) {
+      completeGame(questions);
+    } else {
+      nextQuestion();
+    }
   };
 
   const completeGame = async (finalQuestions: QuestionData[]) => {
@@ -253,22 +258,62 @@ export default function UsernameGuessingGameComponent({
           </AnimatePresence>
         </div>
 
-        {/* Result Feedback */}
+        {/* Result Feedback with Profile Connection */}
         <AnimatePresence>
           {showResult && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6"
+              className="mt-6 space-y-4"
             >
               {selectedAnswer === currentQuestion.user.username ? (
-                <div className="text-green-400 font-semibold">
-                  🎉 Correct! Great job!
+                <div className="text-center">
+                  <div className="text-green-400 font-semibold mb-3">
+                    🎉 Correct! Great job!
+                  </div>
+                  <div className="text-purple-200 text-sm mb-3">
+                    Want to connect with this user?
+                  </div>
+                  <div className="flex justify-center">
+                    <SocialGameProfileLink
+                      user={currentQuestion.user}
+                      isCorrectAnswer={true}
+                    />
+                  </div>
                 </div>
               ) : (
-                <div className="text-red-400 font-semibold">
-                  ❌ Incorrect. The answer was @{currentQuestion.user.username}
+                <div className="text-center">
+                  <div className="text-red-400 font-semibold mb-3">
+                    ❌ Incorrect. The answer was @
+                    {currentQuestion.user.username}
+                  </div>
+                  <div className="text-purple-200 text-sm mb-3">
+                    Learn more about this user:
+                  </div>
+                  <div className="flex justify-center">
+                    <SocialGameProfileLink
+                      user={currentQuestion.user}
+                      isCorrectAnswer={false}
+                    />
+                  </div>
                 </div>
+              )}
+
+              {/* Next/Finish Button */}
+              {waitingForNext && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex justify-center mt-4"
+                >
+                  <button
+                    onClick={handleNextClick}
+                    className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 hover:scale-105"
+                  >
+                    {isLastQuestion ? "Finish Game 🏁" : "Next Question →"}
+                  </button>
+                </motion.div>
               )}
             </motion.div>
           )}

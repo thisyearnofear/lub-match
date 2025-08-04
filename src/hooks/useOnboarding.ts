@@ -19,8 +19,8 @@ interface OnboardingMessage {
 // Centralized onboarding messages and logic
 export const ONBOARDING_MESSAGES: Record<string, OnboardingMessage> = {
   FARCASTER_INTRO: {
-    title: "🎮 Playing with Real Farcaster Users!",
-    message: "These profile photos belong to trending users on Farcaster, a decentralized social network. Match the pairs to complete the game!",
+    title: "🎮 Trending Farcaster Users!",
+    message: "These photos belong to trending users on Farcaster, a decentralized social network. Match pairs to complete the game!",
     icon: "👥",
     duration: 8000,
     storageKey: "onboarding_farcaster_toast_seen",

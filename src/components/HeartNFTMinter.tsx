@@ -11,6 +11,7 @@ import { convertHeartLayoutToContractFormat } from "@/utils/gameHash";
 import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
+import { InfoTooltip } from "./shared/InfoTooltip";
 
 interface HeartNFTMinterProps {
   gameImages: string[];
@@ -55,7 +56,7 @@ export default function HeartNFTMinter({
   const [error, setError] = useState<string | null>(null);
   const [showSuccessActions, setShowSuccessActions] = useState(false);
   const [mintedTokenId, setMintedTokenId] = useState<string | null>(null);
-  
+
   // Use shared success actions hook
   const { getNFTMintSuccessActions } = useSuccessActions();
 
@@ -148,7 +149,8 @@ export default function HeartNFTMinter({
             NFT Minting Unavailable
           </h2>
           <p className="text-gray-600 mb-6">
-            NFT minting is not configured. Please check your environment settings.
+            NFT minting is not configured. Please check your environment
+            settings.
           </p>
           <ActionButton onClick={onClose} fullWidth variant="secondary">
             Continue Without Minting
@@ -169,7 +171,19 @@ export default function HeartNFTMinter({
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Mint Your Heart</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold">Mint Your Heart</h2>
+              <InfoTooltip
+                title="NFT"
+                content="A unique digital collectible of your completed game that you own forever"
+                placement="bottom"
+                maxWidth="200px"
+              >
+                <div className="w-5 h-5 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center text-xs font-bold hover:bg-opacity-30 transition-colors cursor-help">
+                  ?
+                </div>
+              </InfoTooltip>
+            </div>
             <button
               onClick={onClose}
               className="text-purple-200 hover:text-white text-2xl transition-colors"
@@ -178,18 +192,53 @@ export default function HeartNFTMinter({
               ×
             </button>
           </div>
-          <p className="text-purple-100 text-sm mt-2">
-            Immortalize your completed heart on Arbitrum
-          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <p className="text-purple-100 text-sm">
+              Immortalize your completed heart on Arbitrum
+            </p>
+            <InfoTooltip
+              title="Arbitrum"
+              content="Fast, low-cost blockchain network on Ethereum"
+              placement="bottom"
+              maxWidth="180px"
+            >
+              <div className="w-4 h-4 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center text-xs font-bold hover:bg-opacity-30 transition-colors cursor-help">
+                i
+              </div>
+            </InfoTooltip>
+          </div>
         </div>
 
         <div className="p-6">
           {/* Connection Status */}
           {!isConnected && (
             <div className="mb-6 text-center">
-              <p className="text-gray-600 mb-4">Connect your wallet to mint</p>
-              <ConnectButton />
-              
+              <p className="text-gray-600 mb-4">Connect wallet to mint</p>
+
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <ConnectButton />
+
+                <div className="flex items-center gap-1">
+                  <div className="relative">
+                    <button
+                      onClick={() => console.log("Social login - Coming Soon!")}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                    >
+                      <span>Email/Social Login</span>
+                    </button>
+                    <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                      Coming Soon
+                    </span>
+                  </div>
+                  <InfoTooltip
+                    title="Walletless"
+                    content="We create a wallet for you automatically!"
+                    placement="left"
+                    maxWidth="180px"
+                  />
+                </div>
+              </div>
+
               {/* Skip button for non-connected users */}
               <div className="mt-4">
                 <button
@@ -211,7 +260,7 @@ export default function HeartNFTMinter({
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
               <p className="text-gray-600">Checking mint eligibility...</p>
-              
+
               {/* Skip button during loading */}
               <div className="mt-6">
                 <button
@@ -231,7 +280,7 @@ export default function HeartNFTMinter({
               <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
                 <p className="text-red-700 text-sm">{error}</p>
               </div>
-              
+
               {/* Skip button for error states */}
               <button
                 onClick={onClose}
@@ -253,7 +302,7 @@ export default function HeartNFTMinter({
               message="Your heart has been immortalized on the blockchain"
               actions={getNFTMintSuccessActions(
                 mintedTokenId,
-                { cid: gameHash, type: 'heart' },
+                { cid: gameHash, type: "heart" },
                 onClose
               )}
               additionalContent={
@@ -271,157 +320,213 @@ export default function HeartNFTMinter({
           )}
 
           {/* Cannot Mint State */}
-          {isConnected && !isCheckingMintability && !canMint && !error && !showSuccessActions && (
-            <div className="text-center py-8">
-              <div className="mb-4">
-                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">⚠️</span>
+          {isConnected &&
+            !isCheckingMintability &&
+            !canMint &&
+            !error &&
+            !showSuccessActions && (
+              <div className="text-center py-8">
+                <div className="mb-4">
+                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">⚠️</span>
+                  </div>
+                  <p className="text-gray-600 mb-2">
+                    This heart cannot be minted
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    It may have already been minted as an NFT
+                  </p>
                 </div>
-                <p className="text-gray-600 mb-2">This heart cannot be minted</p>
-                <p className="text-sm text-gray-500">It may have already been minted as an NFT</p>
+
+                <button
+                  onClick={onClose}
+                  className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                  type="button"
+                >
+                  Continue Without Minting
+                </button>
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Your heart game is still complete and beautiful!
+                </p>
               </div>
-              
-              <button
-                onClick={onClose}
-                className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
-                type="button"
-              >
-                Continue Without Minting
-              </button>
-              <p className="text-xs text-gray-500 text-center mt-2">
-                Your heart game is still complete and beautiful!
-              </p>
-            </div>
-          )}
+            )}
 
           {/* Mint Interface */}
-          {isConnected && !isCheckingMintability && canMint && !showSuccessActions && (
-        <>
-              {/* Game Preview */}
-              <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200">
-                <h3 className="font-semibold text-gray-800 mb-2">
-                  Your Completed Heart
-                </h3>
-                <div className="grid grid-cols-4 gap-1 mb-3">
-                  {gameImages.slice(0, 8).map((image, index) => (
-                    <img
-                      key={index}
-                      src={image}
-                      alt={`Heart image ${index + 1}`}
-                      className="w-full aspect-square object-cover rounded"
-                    />
-                  ))}
-                </div>
-                <p className="text-sm text-gray-600 italic">"{message}"</p>
-                <p className="text-xs text-gray-500 mt-1">Type: {gameType}</p>
-              </div>
-
-              {/* Pricing Options */}
-              <div className="mb-6">
-                <h3 className="font-semibold text-gray-800 mb-3">
-                  Choose Payment Method
-                </h3>
-
-                {/* ETH Option */}
-                <div
-                  className={`p-4 border-2 rounded-xl cursor-pointer transition-all mb-3 ${
-                    !useLubDiscount
-                      ? "border-purple-500 bg-purple-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                  onClick={() => setUseLubDiscount(false)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          checked={!useLubDiscount}
-                          onChange={() => setUseLubDiscount(false)}
-                          className="text-purple-600"
-                        />
-                        <span className="font-medium">Pay with ETH</span>
-                      </div>
-                      <p className="text-sm text-gray-600 ml-6">
-                        {mintPrices ? formatEther(mintPrices.eth) : "0.001"} ETH
-                      </p>
-                    </div>
+          {isConnected &&
+            !isCheckingMintability &&
+            canMint &&
+            !showSuccessActions && (
+              <>
+                {/* Game Preview */}
+                <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200">
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    Your Completed Heart
+                  </h3>
+                  <div className="grid grid-cols-4 gap-1 mb-3">
+                    {gameImages.slice(0, 8).map((image, index) => (
+                      <img
+                        key={index}
+                        src={image}
+                        alt={`Heart image ${index + 1}`}
+                        className="w-full aspect-square object-cover rounded"
+                      />
+                    ))}
                   </div>
+                  <p className="text-sm text-gray-600 italic">"{message}"</p>
+                  <p className="text-xs text-gray-500 mt-1">Type: {gameType}</p>
                 </div>
 
-                {/* LUB Discount Option */}
-                {lubEnabled && discountedMintPrices && (
+                {/* Pricing Options */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="font-semibold text-gray-800">
+                      Choose Payment Method
+                    </h3>
+                    <InfoTooltip
+                      title="Payment Options"
+                      content={
+                        <div>
+                          <p className="mb-2">
+                            You can pay for minting in two ways:
+                          </p>
+                          <ul className="list-disc list-inside space-y-1 text-xs">
+                            <li>
+                              <strong>ETH:</strong> Standard blockchain currency
+                            </li>
+                            <li>
+                              <strong>LUB + ETH:</strong> Use game tokens for
+                              50% discount
+                            </li>
+                          </ul>
+                          <p className="mt-2 text-blue-300">
+                            LUB tokens are earned by playing games!
+                          </p>
+                        </div>
+                      }
+                    />
+                  </div>
+
+                  {/* ETH Option */}
                   <div
-                    className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                      useLubDiscount
+                    className={`p-4 border-2 rounded-xl cursor-pointer transition-all mb-3 ${
+                      !useLubDiscount
                         ? "border-purple-500 bg-purple-50"
                         : "border-gray-200 hover:border-gray-300"
-                    } ${!canAffordLubDiscount ? "opacity-50" : ""}`}
-                    onClick={() =>
-                      canAffordLubDiscount && setUseLubDiscount(true)
-                    }
+                    }`}
+                    onClick={() => setUseLubDiscount(false)}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
                           <input
                             type="radio"
-                            checked={useLubDiscount}
-                            onChange={() => setUseLubDiscount(true)}
-                            disabled={!canAffordLubDiscount}
+                            checked={!useLubDiscount}
+                            onChange={() => setUseLubDiscount(false)}
                             className="text-purple-600"
                           />
-                          <span className="font-medium">
-                            Pay with LUB + ETH
-                          </span>
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                            50% OFF
-                          </span>
+                          <span className="font-medium">Pay with ETH</span>
+                          <InfoTooltip
+                            content="ETH is the native currency of Ethereum and Arbitrum networks"
+                            placement="top"
+                          />
                         </div>
                         <p className="text-sm text-gray-600 ml-6">
-                          {formatEther(discountedMintPrices.lub)} LUB +{" "}
-                          {formatEther(discountedMintPrices.eth)} ETH
+                          {mintPrices ? formatEther(mintPrices.eth) : "0.001"}{" "}
+                          ETH
                         </p>
-                        {!canAffordLubDiscount && (
-                          <p className="text-xs text-red-600 ml-6">
-                            Insufficient LUB (have {lubBalanceFormatted})
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Mint Button */}
-              <ActionButton
-                onClick={handleMint}
-                disabled={
-                  isMinting ||
-                  (!useLubDiscount && !mintPrices) ||
-                  (useLubDiscount && !canAffordLubDiscount)
-                }
-                loading={isMinting}
-                fullWidth
-                variant="gradient-purple"
-                size="lg"
-              >
-                Mint Heart NFT
-              </ActionButton>
+                  {/* LUB Discount Option */}
+                  {lubEnabled && discountedMintPrices && (
+                    <div
+                      className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                        useLubDiscount
+                          ? "border-purple-500 bg-purple-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      } ${!canAffordLubDiscount ? "opacity-50" : ""}`}
+                      onClick={() =>
+                        canAffordLubDiscount && setUseLubDiscount(true)
+                      }
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              checked={useLubDiscount}
+                              onChange={() => setUseLubDiscount(true)}
+                              disabled={!canAffordLubDiscount}
+                              className="text-purple-600"
+                            />
+                            <span className="font-medium">
+                              Pay with LUB + ETH
+                            </span>
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                              50% OFF
+                            </span>
+                            <InfoTooltip
+                              content="LUB tokens are earned by playing games. Use them to get a 50% discount on minting!"
+                              placement="top"
+                            />
+                          </div>
+                          <p className="text-sm text-gray-600 ml-6">
+                            {formatEther(discountedMintPrices.lub)} LUB +{" "}
+                            {formatEther(discountedMintPrices.eth)} ETH
+                          </p>
+                          {!canAffordLubDiscount && (
+                            <p className="text-xs text-red-600 ml-6">
+                              Insufficient LUB (have {lubBalanceFormatted})
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-          <button
-            onClick={onClose}
-            className="w-full mt-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
-            type="button"
-          >
-            Skip for Now
-          </button>
+                {/* Mint Button */}
+                <ActionButton
+                  onClick={handleMint}
+                  disabled={
+                    isMinting ||
+                    (!useLubDiscount && !mintPrices) ||
+                    (useLubDiscount && !canAffordLubDiscount)
+                  }
+                  loading={isMinting}
+                  fullWidth
+                  variant="gradient-purple"
+                  size="lg"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <span>Mint Heart NFT</span>
+                    <InfoTooltip
+                      title="Minting"
+                      content="Creates your unique digital trophy stored permanently on blockchain"
+                      placement="left"
+                      maxWidth="160px"
+                    >
+                      <div className="w-4 h-4 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center text-xs font-bold hover:bg-opacity-30 transition-colors cursor-help">
+                        ?
+                      </div>
+                    </InfoTooltip>
+                  </div>
+                </ActionButton>
 
-          <p className="text-xs text-gray-500 text-center mt-3">
-                Your NFT will be minted on Arbitrum Sepolia testnet
-              </p>
-            </>
-          )}
+                <button
+                  onClick={onClose}
+                  className="w-full mt-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                  type="button"
+                >
+                  Skip for Now
+                </button>
+
+                <p className="text-xs text-gray-500 text-center mt-3">
+                  Your NFT will be minted on Arbitrum Sepolia testnet
+                </p>
+              </>
+            )}
         </div>
       </motion.div>
     </div>
