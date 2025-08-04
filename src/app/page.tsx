@@ -386,6 +386,12 @@ export default function Home() {
           creator="0x0000000000000000000000000000000000000000"
           onClose={handleNFTMinterClose}
           onMinted={handleNFTMinted}
+          users={users}
+          gameStats={{
+            completionTime: 120, // Default completion time
+            accuracy: 100, // Perfect accuracy for demo
+            socialDiscoveries: users.length, // All users are discoveries in demo
+          }}
         />
       )}
     </div>

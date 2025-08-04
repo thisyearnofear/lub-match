@@ -149,6 +149,12 @@ export default function GameContent({
             setShowHeartMinter(false);
             goToSocialGames();
           }}
+          users={users}
+          gameStats={{
+            completionTime: 90, // Default completion time for custom games
+            accuracy: 100, // Perfect accuracy assumption
+            socialDiscoveries: users?.length || 0, // Number of users discovered
+          }}
         />
       )}
 

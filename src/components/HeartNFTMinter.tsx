@@ -21,6 +21,12 @@ interface HeartNFTMinterProps {
   creator: `0x${string}`;
   onClose: () => void;
   onMinted?: (tokenId: string) => void;
+  users?: any[]; // Farcaster user data for enhanced collectability
+  gameStats?: {
+    completionTime: number; // seconds
+    accuracy: number; // percentage
+    socialDiscoveries: number; // new profiles discovered
+  };
 }
 
 export default function HeartNFTMinter({
@@ -31,6 +37,8 @@ export default function HeartNFTMinter({
   creator,
   onClose,
   onMinted,
+  users,
+  gameStats,
 }: HeartNFTMinterProps) {
   const { address, isConnected } = useAccount();
   const {
@@ -114,7 +122,7 @@ export default function HeartNFTMinter({
     try {
       setError(null);
 
-      const heartData: Omit<HeartData, "metadataURI"> = {
+      const heartData = {
         imageHashes: gameImages,
         layout: convertHeartLayoutToContractFormat(),
         message,
@@ -122,7 +130,9 @@ export default function HeartNFTMinter({
         creator,
         completer: address,
         gameType,
-      };
+        users,
+        gameStats,
+      } as any;
 
       const txHash = await mintCompletedHeartWithMetadata(
         heartData,
@@ -137,7 +147,24 @@ export default function HeartNFTMinter({
       setShowSuccessActions(true);
     } catch (err: any) {
       console.error("Minting error:", err);
-      setError(err.message || "Failed to mint NFT");
+
+      // Handle user rejection more gracefully
+      if (
+        err.message?.includes("User rejected") ||
+        err.message?.includes("user rejected")
+      ) {
+        setError(
+          "Transaction cancelled. No worries - you can try again anytime!"
+        );
+      } else if (err.message?.includes("insufficient funds")) {
+        setError(
+          "Insufficient funds. Please add more ETH to your wallet and try again."
+        );
+      } else if (err.message?.includes("network")) {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError(err.message || "Failed to mint NFT. Please try again.");
+      }
     }
   };
 

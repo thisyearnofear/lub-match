@@ -3,6 +3,7 @@
 
 import { IPFS_CONFIG } from "@/config";
 import { generateGameHash, GameHashData } from "./gameHash";
+import { FarcasterUser } from "@/types/socialGames";
 
 export interface HeartNFTMetadata {
   name: string;
@@ -44,6 +45,12 @@ export async function uploadNFTMetadata(
     creator: string;
     completer: string;
     gameType: "custom" | "demo";
+    users?: FarcasterUser[]; // Rich user data for enhanced collectability
+    gameStats?: {
+      completionTime: number; // seconds
+      accuracy: number; // percentage
+      socialDiscoveries: number; // new profiles discovered
+    };
   },
   userApiKey?: string // Currently unused, but kept for API compatibility
 ): Promise<NFTUploadResult> {
@@ -56,7 +63,9 @@ export async function uploadNFTMetadata(
       completedAt: new Date(Number(gameData.completedAt) * 1000).toISOString(),
       creator: gameData.creator,
       completer: gameData.completer,
-      gameType: gameData.gameType
+      gameType: gameData.gameType,
+      users: gameData.users || [],
+      gameStats: gameData.gameStats
     };
 
     // Use server-side API route (maintains clean architecture)

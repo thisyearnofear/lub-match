@@ -144,7 +144,14 @@ export function useHeartNFT() {
 
   // Upload metadata to IPFS
   const uploadHeartMetadata = async (
-    heartData: Omit<HeartData, "metadataURI">,
+    heartData: Omit<HeartData, "metadataURI"> & {
+      users?: any[];
+      gameStats?: {
+        completionTime: number;
+        accuracy: number;
+        socialDiscoveries: number;
+      };
+    },
     userApiKey?: string
   ) => {
     return uploadNFTMetadata({
@@ -154,13 +161,22 @@ export function useHeartNFT() {
       completedAt: heartData.completedAt,
       creator: heartData.creator,
       completer: heartData.completer,
-      gameType: heartData.gameType
+      gameType: heartData.gameType,
+      users: heartData.users,
+      gameStats: heartData.gameStats
     }, userApiKey);
   };
 
   // Enhanced mint function with proper metadata upload
   const mintCompletedHeartWithMetadata = async (
-    heartData: Omit<HeartData, "metadataURI">,
+    heartData: Omit<HeartData, "metadataURI"> & {
+      users?: any[];
+      gameStats?: {
+        completionTime: number;
+        accuracy: number;
+        socialDiscoveries: number;
+      };
+    },
     useLubDiscount: boolean = false,
     userApiKey?: string
   ) => {

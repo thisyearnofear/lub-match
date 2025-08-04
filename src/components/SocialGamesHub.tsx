@@ -260,24 +260,13 @@ export default function SocialGamesHub({
                       </div>
                     )}
 
-                    {/* Add to Favorites Button */}
-                    {isInFarcaster && !farcasterContext?.client?.added && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            const result = await addFrame();
-                            if (result) {
-                              showEarning(BigInt(0), "Added to favorites! 🌟");
-                            }
-                          } catch (error) {
-                            console.error("Failed to add frame:", error);
-                          }
-                        }}
-                        className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-sm font-medium hover:from-green-600 hover:to-emerald-600 transition-all"
-                      >
-                        ⭐ Add to Favorites
-                      </button>
-                    )}
+                    {/* Skip to Proposal Button */}
+                    <button
+                      onClick={onClose}
+                      className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all"
+                    >
+                      💝 Skip to Proposal
+                    </button>
                   </div>
                 </div>
 
