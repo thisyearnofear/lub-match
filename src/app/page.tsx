@@ -10,6 +10,7 @@ import ValentinesProposal from "@/components/ValentinesProposal";
 import SocialGamesHub from "@/components/SocialGamesHub";
 import HeartNFTMinter from "@/components/HeartNFTMinter";
 import DismissibleBanner from "@/components/onboarding/DismissibleBanner";
+import { useOnboarding } from "@/hooks/useOnboarding";
 
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useSocialGames } from "@/hooks/useSocialGames";
@@ -33,6 +34,9 @@ export default function Home() {
   const [showHeartNFTMinter, setShowHeartNFTMinter] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isClient, setIsClient] = useState(false);
+
+  // Onboarding system
+  const { showOnboardingMessage } = useOnboarding();
 
   // Dynamic Farcaster users for social experience - only on client
   const {
@@ -71,9 +75,19 @@ export default function Home() {
       const farcasterPairs = getRandomPairs();
       if (farcasterPairs.length === 8) {
         setGameImages(farcasterPairs);
+
+        // Show onboarding message for first-time users
+        showOnboardingMessage("FARCASTER_INTRO", { delay: 1000 });
       }
     }
-  }, [isClient, apiCheckComplete, users, loading, getRandomPairs]);
+  }, [
+    isClient,
+    apiCheckComplete,
+    users,
+    loading,
+    getRandomPairs,
+    showOnboardingMessage,
+  ]);
 
   // Refresh player data when component mounts
   useEffect(() => {
@@ -188,7 +202,8 @@ export default function Home() {
             transition={{ duration: ANIM_DURATION }}
             className="w-full max-w-lg"
           >
-            {!apiCheckComplete || (apiCheckComplete && hasApiKey === true && loading) ? (
+            {!apiCheckComplete ||
+            (apiCheckComplete && hasApiKey === true && loading) ? (
               // Beautiful loading state while checking API or loading users
               <div className="text-center p-8">
                 <motion.div
@@ -209,10 +224,9 @@ export default function Home() {
                   Preparing Your Lub Experience
                 </h2>
                 <p className="text-purple-200 mb-6">
-                  {!apiCheckComplete 
+                  {!apiCheckComplete
                     ? "Checking social features and setting up your personalized game..."
-                    : "Loading Farcaster users for your social experience..."
-                  }
+                    : "Loading Farcaster users for your social experience..."}
                 </p>
 
                 {/* Progress bar */}
@@ -244,10 +258,9 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="text-xs text-gray-400">
-                  {!apiCheckComplete 
+                  {!apiCheckComplete
                     ? "Setting up your social experience..."
-                    : "Almost ready..."
-                  }
+                    : "Almost ready..."}
                 </p>
               </div>
             ) : gameImages.length === 8 ? (
@@ -256,18 +269,19 @@ export default function Home() {
                 <DismissibleBanner
                   message={
                     <>
-                      You're playing with trending Farcaster users' photos.{' '}
+                      🎮 You're playing with trending Farcaster users' photos!
+                      These are real people from the Farcaster social network.{" "}
                       <a
                         href="https://www.farcaster.xyz/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="underline hover:text-purple-700"
+                        className="underline hover:text-purple-700 font-semibold"
                       >
-                        What's Farcaster?
+                        Learn about Farcaster →
                       </a>
                     </>
                   }
-                  localStorageKey="onboarding_farcaster_info_seen"
+                  localStorageKey="onboarding_farcaster_trending_v2"
                   className="max-w-2xl mx-auto mb-4"
                 />
                 <PhotoPairGame
@@ -288,17 +302,19 @@ export default function Home() {
                   🎮
                 </motion.div>
                 <h2 className="text-2xl font-bold text-white mb-4">
-                  {hasApiKey === false ? "Demo Mode Active" : "Loading Social Features"}
+                  {hasApiKey === false
+                    ? "Demo Mode Active"
+                    : "Loading Social Features"}
                 </h2>
                 <p className="text-purple-200 mb-4">
-                  {hasApiKey === false 
+                  {hasApiKey === false
                     ? "Social features are currently unavailable, but you can still create and play custom games!"
-                    : "Setting up your personalized social experience..."
-                  }
+                    : "Setting up your personalized social experience..."}
                 </p>
                 {hasApiKey === false && (
                   <p className="text-sm text-gray-400 mb-6">
-                    Add a Neynar API key to enable Farcaster integration and social games.
+                    Add a Neynar API key to enable Farcaster integration and
+                    social games.
                   </p>
                 )}
                 <div className="mt-6 space-y-3">

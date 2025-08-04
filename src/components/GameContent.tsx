@@ -12,6 +12,7 @@ import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { useUserProgression } from "@/utils/userProgression";
 import { ShareHelpers } from "@/utils/shareHelpers";
 import ActionButton from "@/components/shared/ActionButton";
+import { useOnboarding } from "@/hooks/useOnboarding";
 
 interface GameContentProps {
   pairUrls: string[];
@@ -44,6 +45,9 @@ export default function GameContent({
   // User progression integration
   const { recordEvent } = useUserProgression();
 
+  // Onboarding system
+  const { showGameCompletionFlow } = useOnboarding();
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -58,6 +62,10 @@ export default function GameContent({
   // Called when the demo game is finished
   const handleDemoGameFinished = () => {
     setDemoGameFinished(true);
+
+    // Show game completion flow
+    showGameCompletionFlow();
+
     setShowHeartMinter(true);
   };
 

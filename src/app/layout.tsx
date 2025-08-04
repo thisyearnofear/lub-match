@@ -66,6 +66,7 @@ export const metadata: Metadata = {
 };
 
 import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
+import { OnboardingProvider } from "@/components/onboarding/OnboardingProvider";
 
 export default function RootLayout({
   children,
@@ -113,7 +114,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
+        <OnboardingProvider>
+          <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
+        </OnboardingProvider>
       </body>
     </html>
   );

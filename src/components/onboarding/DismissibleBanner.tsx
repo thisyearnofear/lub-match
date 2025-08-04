@@ -32,12 +32,15 @@ export default function DismissibleBanner({
 
   return (
     <div
-      className={`w-full flex items-center justify-between px-4 py-2 bg-purple-50 border border-purple-200 text-purple-900 text-sm rounded-lg shadow-sm mt-2 ${className}`}
+      className={`w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 text-purple-900 text-sm rounded-xl shadow-lg mt-2 animate-fade-in ${className}`}
       style={{ zIndex: 100 }}
     >
-      <div className="flex items-center gap-2">{message}{children}</div>
+      <div className="flex items-center gap-2 flex-1">
+        {message}
+        {children}
+      </div>
       <button
-        className="ml-4 text-purple-400 hover:text-purple-700 text-lg font-bold"
+        className="ml-4 text-purple-500 hover:text-purple-700 text-xl font-bold flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-purple-100 transition-colors"
         onClick={handleClose}
         aria-label="Dismiss info banner"
       >

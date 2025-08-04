@@ -57,7 +57,7 @@ export default function PhotoPairGame({
   console.log("Using Farcaster profile images:", imagesFinal);
   const imagePairs = useMemo(
     () => imagesFinal.flatMap((img) => [img, img]),
-    [imagesFinal]
+    [imagesFinal.join(",")]
   );
 
   const [shuffledPairs, setShuffledPairs] = useState<string[]>([]);
@@ -80,13 +80,14 @@ export default function PhotoPairGame({
   useAutoZoom(selected, matched, zoomControls, 1500);
 
   useEffect(() => {
-    setShuffledPairs(shuffleArray([...imagePairs]));
-    setSelected([]);
-    setMatched([]);
-    setIncorrect([]);
-    setJustMatched([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imagePairs.join(",")]);
+    if (imagePairs.length > 0) {
+      setShuffledPairs(shuffleArray([...imagePairs]));
+      setSelected([]);
+      setMatched([]);
+      setIncorrect([]);
+      setJustMatched([]);
+    }
+  }, [imagePairs]);
 
   const handleClick = async (index: number) => {
     if (
