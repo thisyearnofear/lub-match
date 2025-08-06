@@ -90,21 +90,41 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
     icon: "🏆"
   }), []);
 
+  const createViewCollectionAction = useCallback((onViewCollection: () => void): SuccessAction => ({
+    label: "View in Collection",
+    onClick: onViewCollection,
+    variant: "gradient-purple",
+    icon: "🖼️"
+  }), []);
+
   // Preset action combinations for common scenarios
   const getNFTMintSuccessActions = useCallback((
     txHash: string, 
     gameData: GameShareData, 
-    onClose: () => void
-  ): SuccessAction[] => [
-    createViewTransactionAction(txHash),
-    createShareAchievementAction({
-      type: 'nft_minted',
-      details: 'Check out my heart NFT!',
-      url: `${typeof window !== 'undefined' ? window.location.origin : ''}/game/${gameData.cid}`
-    }),
-    createCreateAnotherAction(),
-    createBackToGameAction(onClose)
-  ], [createViewTransactionAction, createShareAchievementAction, createCreateAnotherAction, createBackToGameAction]);
+    onClose: () => void,
+    onViewCollection?: () => void
+  ): SuccessAction[] => {
+    const actions = [
+      createViewTransactionAction(txHash),
+      createShareAchievementAction({
+        type: 'nft_minted',
+        details: 'Check out my heart NFT!',
+        url: `${typeof window !== 'undefined' ? window.location.origin : ''}/game/${gameData.cid}`
+      })
+    ];
+    
+    // Add "View in Collection" action if callback is provided
+    if (onViewCollection) {
+      actions.push(createViewCollectionAction(onViewCollection));
+    }
+    
+    actions.push(
+      createCreateAnotherAction(),
+      createBackToGameAction(onClose)
+    );
+    
+    return actions;
+  }, [createViewTransactionAction, createShareAchievementAction, createViewCollectionAction, createCreateAnotherAction, createBackToGameAction]);
 
   const getGameCreationSuccessActions = useCallback((
     cid: string,
@@ -157,6 +177,7 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
     createViewTransactionAction,
     createPlaySocialGamesAction,
     createViewLeaderboardAction,
+    createViewCollectionAction,
     
     // Preset combinations
     getNFTMintSuccessActions,

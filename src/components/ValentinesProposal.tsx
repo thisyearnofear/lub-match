@@ -337,6 +337,7 @@ export default function ValentinesProposal({
 
             setShowNFTMinter(false);
           }}
+          onViewCollection={undefined}
         />
       )}
     </div>

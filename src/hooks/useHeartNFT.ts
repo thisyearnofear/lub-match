@@ -65,6 +65,73 @@ export function useHeartNFT() {
     query: { enabled: enabled && !!address }
   });
 
+  // Get user's NFT collection
+  const getUserNFTCollection = async (): Promise<{ tokenId: bigint; heartData: HeartData }[]> => {
+    if (!HEART_NFT_ADDRESS || !enabled || !address || nftBalance === BigInt(0)) {
+      return [];
+    }
+
+    try {
+      const client = getClient(config);
+      if (!client) throw new Error("No client available");
+
+      const collection = [];
+      const balance = Number(nftBalance);
+
+      // Get all token IDs owned by the user
+      for (let i = 0; i < balance; i++) {
+        try {
+          const tokenId = await readContract(client, {
+            address: HEART_NFT_ADDRESS,
+            abi: HEART_NFT_ABI,
+            functionName: "tokenOfOwnerByIndex",
+            args: [address, BigInt(i)]
+          }) as bigint;
+
+          // Get heart data for each token
+          const heartData = await readContract(client, {
+            address: HEART_NFT_ADDRESS,
+            abi: HEART_NFT_ABI,
+            functionName: "getHeartData",
+            args: [tokenId]
+          }) as HeartData;
+
+          collection.push({ tokenId, heartData });
+        } catch (error) {
+          console.error(`Error fetching NFT at index ${i}:`, error);
+          // Continue with other NFTs even if one fails
+        }
+      }
+
+      return collection;
+    } catch (error) {
+      console.error("Error fetching NFT collection:", error);
+      return [];
+    }
+  };
+
+  // Get individual NFT data
+  const getNFTData = async (tokenId: bigint): Promise<{ tokenId: bigint; heartData: HeartData } | null> => {
+    if (!HEART_NFT_ADDRESS || !enabled) return null;
+
+    try {
+      const client = getClient(config);
+      if (!client) throw new Error("No client available");
+
+      const heartData = await readContract(client, {
+        address: HEART_NFT_ADDRESS,
+        abi: HEART_NFT_ABI,
+        functionName: "getHeartData",
+        args: [tokenId]
+      }) as HeartData;
+
+      return { tokenId, heartData };
+    } catch (error) {
+      console.error("Error fetching NFT data:", error);
+      return null;
+    }
+  };
+
   // Check if a game can be minted
   const canMintGame = async (gameHash: string): Promise<boolean> => {
     if (!HEART_NFT_ADDRESS || !enabled) return false;
@@ -257,6 +324,10 @@ export function useHeartNFT() {
     generateGameHash: generateGameHashForNFT,
     createHeartMetadata,
     uploadHeartMetadata,
+
+    // NFT Collection
+    getUserNFTCollection,
+    getNFTData,
 
     // Loading state
     isPending

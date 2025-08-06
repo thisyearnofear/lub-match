@@ -12,6 +12,8 @@ import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
 import { InfoTooltip } from "./shared/InfoTooltip";
+import { ConnectionIncentive } from "./shared/ConnectionIncentive";
+import { useUserProgression } from "@/utils/userProgression";
 
 interface HeartNFTMinterProps {
   gameImages: string[];
@@ -21,6 +23,7 @@ interface HeartNFTMinterProps {
   creator: `0x${string}`;
   onClose: () => void;
   onMinted?: (tokenId: string) => void;
+  onViewCollection?: () => void;
   users?: any[]; // Farcaster user data for enhanced collectability
   gameStats?: {
     completionTime: number; // seconds
@@ -37,10 +40,12 @@ export default function HeartNFTMinter({
   creator,
   onClose,
   onMinted,
+  onViewCollection,
   users,
   gameStats,
 }: HeartNFTMinterProps) {
   const { address, isConnected } = useAccount();
+  const { progress } = useUserProgression();
   const {
     mintCompletedHeartWithMetadata,
     generateGameHash,
@@ -239,33 +244,13 @@ export default function HeartNFTMinter({
         <div className="p-6">
           {/* Connection Status */}
           {!isConnected && (
-            <div className="mb-6 text-center">
-              <p className="text-gray-600 mb-4">Connect wallet to mint</p>
-
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <ConnectButton />
-
-                <div className="flex items-center gap-1">
-                  <div className="relative">
-                    <button
-                      onClick={() => console.log("Social login - Coming Soon!")}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
-                    >
-                      <span>Email/Social Login</span>
-                    </button>
-                    <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                      Coming Soon
-                    </span>
-                  </div>
-                  <InfoTooltip
-                    title="Walletless"
-                    content="We create a wallet for you automatically!"
-                    placement="left"
-                    maxWidth="180px"
-                  />
-                </div>
-              </div>
-
+            <div className="mb-6">
+              <ConnectionIncentive 
+                tier={progress.tier} 
+                context="nft-mint" 
+                compact={false}
+              />
+              
               {/* Skip button for non-connected users */}
               <div className="mt-4">
                 <button
@@ -330,7 +315,8 @@ export default function HeartNFTMinter({
               actions={getNFTMintSuccessActions(
                 mintedTokenId,
                 { cid: gameHash, type: "heart" },
-                onClose
+                onClose,
+                onViewCollection
               )}
               additionalContent={
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">

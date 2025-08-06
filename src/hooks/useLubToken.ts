@@ -28,6 +28,19 @@ export interface LubHistoryItem {
   timestamp: string;
 }
 
+// Portfolio data interface
+export interface PortfolioData {
+  totalValue: bigint;
+  totalEarned: bigint;
+  totalSpent: bigint;
+  gamesCreated: number;
+  nftsMinted: number;
+  referralEarnings: bigint;
+  streakBonus: bigint;
+  tier: string;
+  nextTierProgress: number;
+}
+
 export function useLubToken() {
   const { address } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
@@ -174,10 +187,52 @@ export function useLubToken() {
     }
   };
 
+  // Portfolio data calculation
+  const getPortfolioData = (): PortfolioData => {
+    const totalSpent = history.reduce((sum, item) => {
+      return sum + (item.amount < 0 ? Math.abs(item.amount) : 0);
+    }, 0);
+    
+    const totalEarned = progress.totalLubEarned;
+    const referralEarnings = BigInt(0); // TODO: Calculate from referral events
+    const streakBonus = BigInt(0); // TODO: Calculate from streak events
+    
+    // Calculate next tier progress
+    const tierThresholds = {
+      'newcomer': 0,
+      'engaged': 3,
+      'web3-ready': 10,
+      'power-user': 25
+    };
+    
+    const currentThreshold = tierThresholds[progress.tier as keyof typeof tierThresholds] || 0;
+    const nextTierKey = Object.keys(tierThresholds).find(tier => 
+      tierThresholds[tier as keyof typeof tierThresholds] > currentThreshold
+    );
+    const nextThreshold = nextTierKey ? tierThresholds[nextTierKey as keyof typeof tierThresholds] : currentThreshold;
+    
+    const nextTierProgress = nextThreshold > currentThreshold 
+      ? Math.min(100, (progress.gamesCompleted / nextThreshold) * 100)
+      : 100;
+    
+    return {
+      totalValue: balance,
+      totalEarned,
+      totalSpent: BigInt(Math.floor(totalSpent * 1e18)),
+      gamesCreated: progress.totalLubsCreated,
+      nftsMinted: progress.nftsMinted,
+      referralEarnings,
+      streakBonus,
+      tier: progress.tier,
+      nextTierProgress
+    };
+  };
+
   // Helper functions
   const balanceFormatted = formatEther(balance);
   const holdRequirement = WEB3_CONFIG.pricing.farcasterHoldRequirement;
   const holdRequirementFormatted = formatEther(holdRequirement);
+  const portfolioData = getPortfolioData();
 
   return {
     // Contract state
@@ -202,6 +257,10 @@ export function useLubToken() {
 
     // LUB transaction history
     history,
+
+    // Portfolio data
+    portfolioData,
+    getPortfolioData,
 
     // Loading state
     isPending

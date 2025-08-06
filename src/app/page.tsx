@@ -11,8 +11,10 @@ import SocialGamesHub from "@/components/SocialGamesHub";
 import HeartNFTMinter from "@/components/HeartNFTMinter";
 import { useOnboarding } from "@/hooks/useOnboarding";
 
+
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useSocialGames } from "@/hooks/useSocialGames";
+import { useAccount } from "wagmi";
 import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
 
 const ANIM_DURATION = 2;
@@ -60,8 +62,13 @@ export default function Home() {
     refreshPlayerData,
   } = useSocialGames();
 
+  const { isConnected } = useAccount();
+
   // Game images - only use Farcaster profile images, no fallbacks
   const [gameImages, setGameImages] = useState<string[]>([]);
+  
+  // Get current Farcaster user from context
+  const farcasterUser = farcasterContext?.user;
 
   // Set client flag
   useEffect(() => {
@@ -148,43 +155,51 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-black relative overflow-hidden">
-      {/* Mobile-friendly header with safe area */}
-      <div
-        className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-4 py-4 bg-black bg-opacity-80 backdrop-blur-sm"
-        style={{
-          paddingTop: `max(1rem, var(--safe-area-inset-top))`,
-          paddingLeft: `max(1rem, var(--safe-area-inset-left))`,
-          paddingRight: `max(1rem, var(--safe-area-inset-right))`,
-        }}
-      >
-        <div className="text-white text-lg font-bold">
-          💝 Lub Match
-          {isInFarcaster && farcasterContext?.user && (
-            <div className="text-xs text-purple-300 font-normal">
-              Hey{" "}
-              {farcasterContext.user.displayName ||
-                farcasterContext.user.username}
-              ! 👋
-            </div>
-          )}
+      {/* Subtle dark header that blends with the aesthetic */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/80 via-black/60 to-transparent backdrop-blur-sm">
+        <div className="flex items-center justify-between p-4" style={{
+          paddingTop: 'max(1rem, var(--safe-area-inset-top))',
+          paddingLeft: 'max(1rem, var(--safe-area-inset-left))',
+          paddingRight: 'max(1rem, var(--safe-area-inset-right))'
+        }}>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent">
+              💝 Lub Match
+            </h1>
+            {farcasterUser && (
+              <div className="text-sm text-gray-300">
+                Welcome, {farcasterUser.display_name || farcasterUser.username}!
+              </div>
+            )}
+            {isConnected && (
+              <div className="flex items-center gap-1 text-xs text-green-400">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                <span className="hidden sm:inline">Portfolio</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {canPlayGames(users) && (
+              <button
+                onClick={startSocialGames}
+                className="px-3 py-1.5 bg-blue-500/80 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-all backdrop-blur-sm border border-blue-400/20"
+              >
+                Hab Fun
+              </button>
+            )}
+            
+            {gameImages && gameImages.length >= 8 && (
+              <Link
+                href="/create"
+                className="px-3 py-1.5 bg-gradient-to-r from-pink-500/80 to-purple-600/80 text-white rounded-lg text-sm font-medium hover:from-pink-500 hover:to-purple-600 transition-all backdrop-blur-sm border border-pink-400/20"
+              >
+                Make Lub
+              </Link>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          {isClient && canPlayGames(users) && (
-            <button
-              onClick={startSocialGames}
-              className="px-3 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-full text-sm font-semibold shadow-lg hover:from-purple-600 hover:to-blue-600 transition-all duration-300 transform active:scale-95 touch-manipulation"
-            >
-              🎮 Hab Fun
-            </button>
-          )}
-          <Link
-            href="/create"
-            className="px-3 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full text-sm font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform active:scale-95 touch-manipulation"
-          >
-            Make Lub
-          </Link>
-        </div>
-      </div>
+      </header>
 
       {/* Main game area */}
       <div
@@ -386,6 +401,7 @@ export default function Home() {
           creator="0x0000000000000000000000000000000000000000"
           onClose={handleNFTMinterClose}
           onMinted={handleNFTMinted}
+          onViewCollection={undefined}
           users={users}
           gameStats={{
             completionTime: 120, // Default completion time

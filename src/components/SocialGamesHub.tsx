@@ -22,6 +22,7 @@ import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
+import { ConnectionIncentive } from "./shared/ConnectionIncentive";
 
 interface SocialGamesHubProps {
   users: FarcasterUser[];
@@ -65,7 +66,7 @@ export default function SocialGamesHub({
   );
 
   // User progression integration
-  const { features, recordEvent } = useUserProgression();
+  const { features, recordEvent, progress } = useUserProgression();
   const { earnLub, balanceFormatted, enabled: lubTokenEnabled } = useLubToken();
   const { showEarning, ToastContainer } = useEarningNotifications();
 
@@ -492,28 +493,12 @@ export default function SocialGamesHub({
 
               {/* Wallet Connection Prompt for Rewards */}
               {!isConnected && WEB3_CONFIG.features.socialEarning && (
-                <div className="bg-yellow-500 bg-opacity-20 border border-yellow-400 rounded-xl p-6 mb-6">
-                  <div className="text-center">
-                    <div className="text-3xl mb-2">💰</div>
-                    <h3 className="text-lg font-semibold text-yellow-400 mb-2">
-                      Missed LUB Rewards!
-                    </h3>
-                    <p className="text-yellow-200 text-sm mb-4">
-                      Connect your wallet to earn{" "}
-                      {WEB3_CONFIG.earning.socialGameWin.toString()} LUB tokens
-                      for completing games
-                    </p>
-                    <ConnectButton.Custom>
-                      {({ openConnectModal }) => (
-                        <button
-                          onClick={openConnectModal}
-                          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg font-medium hover:from-yellow-600 hover:to-orange-600 transition-all"
-                        >
-                          Connect Wallet for Rewards
-                        </button>
-                      )}
-                    </ConnectButton.Custom>
-                  </div>
+                <div className="mb-6">
+                  <ConnectionIncentive 
+                    tier={progress.tier} 
+                    context="game-complete" 
+                    compact={false}
+                  />
                 </div>
               )}
 
