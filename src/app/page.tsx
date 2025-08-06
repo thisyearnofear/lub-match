@@ -9,8 +9,8 @@ import PhotoPairGame from "../components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
 import SocialGamesHub from "@/components/SocialGamesHub";
 import HeartNFTMinter from "@/components/HeartNFTMinter";
-import WalletModal from "@/components/WalletModal";
-import NavigationFooter from "@/components/NavigationFooter";
+import FloatingActionButton from "@/components/shared/FloatingActionButton";
+import WalletDrawer from "@/components/shared/WalletDrawer";
 import { useOnboarding } from "@/hooks/useOnboarding";
 
 
@@ -35,7 +35,7 @@ export default function Home() {
 
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [showHeartNFTMinter, setShowHeartNFTMinter] = useState(false);
-  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showWalletDrawer, setShowWalletDrawer] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -406,7 +406,7 @@ export default function Home() {
           onMinted={handleNFTMinted}
           onViewCollection={() => {
             setShowHeartNFTMinter(false);
-            setShowWalletModal(true);
+            setShowWalletDrawer(true);
           }}
           users={users}
           gameStats={{
@@ -417,18 +417,16 @@ export default function Home() {
         />
       )}
 
-      {/* Navigation Footer - only show when not in modals */}
-      {!showValentinesProposal && !showHeartNFTMinter && !isGameActive && (
-        <NavigationFooter 
-          currentPage="home"
-          onWalletClick={() => setShowWalletModal(true)}
-        />
+      {/* Floating Action Button - always visible except during modals */}
+      {!showValentinesProposal && !showHeartNFTMinter && (
+        <FloatingActionButton onClick={() => setShowWalletDrawer(true)} />
       )}
 
-      {/* Wallet Modal */}
-      {showWalletModal && (
-        <WalletModal onClose={() => setShowWalletModal(false)} />
-      )}
+      {/* Wallet Drawer */}
+      <WalletDrawer 
+        isOpen={showWalletDrawer} 
+        onClose={() => setShowWalletDrawer(false)} 
+      />
     </div>
   );
 }

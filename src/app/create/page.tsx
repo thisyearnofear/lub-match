@@ -21,8 +21,8 @@ import { LoadingState, NetworkError } from "@/components/ErrorBoundary";
 import { WEB3_CONFIG } from "@/config";
 import SuccessScreen from "@/components/shared/SuccessScreen";
 import ActionButton from "@/components/shared/ActionButton";
-import NavigationFooter from "@/components/NavigationFooter";
-import WalletModal from "@/components/WalletModal";
+import FloatingActionButton from "@/components/shared/FloatingActionButton";
+import WalletDrawer from "@/components/shared/WalletDrawer";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { isImageFile } from "@/utils/imageCompression";
@@ -235,7 +235,7 @@ function CreateGameContent() {
   const [onchainError, setOnchainError] = useState<string | null>(null);
   const [showOnchain, setShowOnchain] = useState(false);
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
-  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showWalletDrawer, setShowWalletDrawer] = useState(false);
 
   const { goToGame } = useAppNavigation();
   const { publish, isPending, data: txHash, enabled } = usePublishGame();
@@ -899,18 +899,16 @@ function CreateGameContent() {
         )}
       </div>
 
-      {/* Navigation Footer - only show when not in success celebration */}
+      {/* Floating Action Button - always visible except during success celebration */}
       {!showSuccessCelebration && (
-        <NavigationFooter 
-          currentPage="create"
-          onWalletClick={() => setShowWalletModal(true)}
-        />
+        <FloatingActionButton onClick={() => setShowWalletDrawer(true)} />
       )}
 
-      {/* Wallet Modal */}
-      {showWalletModal && (
-        <WalletModal onClose={() => setShowWalletModal(false)} />
-      )}
+      {/* Wallet Drawer */}
+      <WalletDrawer 
+        isOpen={showWalletDrawer} 
+        onClose={() => setShowWalletDrawer(false)} 
+      />
     </main>
   );
 }
