@@ -4,16 +4,20 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ShareHelpers } from "@/utils/shareHelpers";
 import ActionButton from "./shared/ActionButton";
+import { useAccount } from "wagmi";
 
 interface NavigationFooterProps {
   currentPage?: "home" | "create" | "game" | "social" | "analytics";
   className?: string;
+  onWalletClick?: () => void;
 }
 
 export default function NavigationFooter({ 
   currentPage = "home", 
-  className = "" 
+  className = "",
+  onWalletClick
 }: NavigationFooterProps) {
+  const { address, isConnected } = useAccount();
   const navItems = [
     {
       key: "home",
@@ -74,9 +78,24 @@ export default function NavigationFooter({
               onClick={() => ShareHelpers.shareApp()}
               className="text-purple-600 hover:text-purple-700 font-medium"
             >
-              💝 Share App
+              💝 Share
             </button>
             <span className="text-gray-300">•</span>
+            {onWalletClick && (
+              <>
+                <button
+                  onClick={onWalletClick}
+                  className={`font-medium transition-colors ${
+                    isConnected 
+                      ? "text-green-600 hover:text-green-700" 
+                      : "text-blue-600 hover:text-blue-700"
+                  }`}
+                >
+                  {isConnected ? "👤 Wallet" : "🔗 Connect"}
+                </button>
+                <span className="text-gray-300">•</span>
+              </>
+            )}
             <Link 
               href="/analytics" 
               className="text-gray-500 hover:text-gray-600"

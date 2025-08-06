@@ -9,6 +9,8 @@ import PhotoPairGame from "../components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
 import SocialGamesHub from "@/components/SocialGamesHub";
 import HeartNFTMinter from "@/components/HeartNFTMinter";
+import WalletModal from "@/components/WalletModal";
+import NavigationFooter from "@/components/NavigationFooter";
 import { useOnboarding } from "@/hooks/useOnboarding";
 
 
@@ -33,6 +35,7 @@ export default function Home() {
 
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [showHeartNFTMinter, setShowHeartNFTMinter] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -401,7 +404,10 @@ export default function Home() {
           creator="0x0000000000000000000000000000000000000000"
           onClose={handleNFTMinterClose}
           onMinted={handleNFTMinted}
-          onViewCollection={undefined}
+          onViewCollection={() => {
+            setShowHeartNFTMinter(false);
+            setShowWalletModal(true);
+          }}
           users={users}
           gameStats={{
             completionTime: 120, // Default completion time
@@ -409,6 +415,19 @@ export default function Home() {
             socialDiscoveries: users.length, // All users are discoveries in demo
           }}
         />
+      )}
+
+      {/* Navigation Footer - only show when not in modals */}
+      {!showValentinesProposal && !showHeartNFTMinter && !isGameActive && (
+        <NavigationFooter 
+          currentPage="home"
+          onWalletClick={() => setShowWalletModal(true)}
+        />
+      )}
+
+      {/* Wallet Modal */}
+      {showWalletModal && (
+        <WalletModal onClose={() => setShowWalletModal(false)} />
       )}
     </div>
   );

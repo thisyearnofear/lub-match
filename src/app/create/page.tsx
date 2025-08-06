@@ -21,6 +21,8 @@ import { LoadingState, NetworkError } from "@/components/ErrorBoundary";
 import { WEB3_CONFIG } from "@/config";
 import SuccessScreen from "@/components/shared/SuccessScreen";
 import ActionButton from "@/components/shared/ActionButton";
+import NavigationFooter from "@/components/NavigationFooter";
+import WalletModal from "@/components/WalletModal";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { isImageFile } from "@/utils/imageCompression";
@@ -233,6 +235,7 @@ function CreateGameContent() {
   const [onchainError, setOnchainError] = useState<string | null>(null);
   const [showOnchain, setShowOnchain] = useState(false);
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   const { goToGame } = useAppNavigation();
   const { publish, isPending, data: txHash, enabled } = usePublishGame();
@@ -895,6 +898,19 @@ function CreateGameContent() {
           </>
         )}
       </div>
+
+      {/* Navigation Footer - only show when not in success celebration */}
+      {!showSuccessCelebration && (
+        <NavigationFooter 
+          currentPage="create"
+          onWalletClick={() => setShowWalletModal(true)}
+        />
+      )}
+
+      {/* Wallet Modal */}
+      {showWalletModal && (
+        <WalletModal onClose={() => setShowWalletModal(false)} />
+      )}
     </main>
   );
 }
