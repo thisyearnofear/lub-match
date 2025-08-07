@@ -37,10 +37,10 @@ export default function WalletDrawer({
   } | null>(null);
 
   const tabs = [
-    { id: "overview" as TabType, label: "💎 Overview", icon: "💎" },
-    { id: "activity" as TabType, label: "📊 Activity", icon: "📊" },
+    { id: "overview" as TabType, label: "💝 Overview", icon: "💝" },
+    { id: "activity" as TabType, label: "💕 Activity", icon: "💕" },
     ...(isConnected
-      ? [{ id: "portfolio" as TabType, label: "🎯 Portfolio", icon: "🎯" }]
+      ? [{ id: "portfolio" as TabType, label: "💖 Portfolio", icon: "💖" }]
       : []),
   ];
 
@@ -49,24 +49,22 @@ export default function WalletDrawer({
       case "overview":
         return (
           <>
-            <div className="mb-6 text-center">
-              <div className="text-4xl mb-2">💎</div>
+            <div className="mb-4 text-center">
+              <div className="text-3xl mb-2">💝</div>
               <div className="text-lg font-bold text-white">
                 {balanceFormatted} LUB
               </div>
-              <div className="text-xs text-gray-400 mt-1">
-                Your current balance
-              </div>
+              <div className="text-xs text-gray-400 mt-1">Your love tokens</div>
               {isConnected && (
-                <div className="text-xs text-green-400 mt-1 flex items-center justify-center gap-1">
-                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                <div className="text-xs text-pink-400 mt-1 flex items-center justify-center gap-1">
+                  <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></span>
                   Wallet Connected
                 </div>
               )}
             </div>
 
             {/* User Stats Section */}
-            <div className="mb-6">
+            <div className="mb-4">
               <UserStatsSection
                 showTierProgress={true}
                 onNFTClick={() => setActiveTab("portfolio")}
@@ -75,26 +73,34 @@ export default function WalletDrawer({
 
             {/* Connection Incentive for unconnected users */}
             {!isConnected && (
-              <div className="mb-4">
+              <div className="mb-3">
                 <ConnectionIncentive
                   tier={progress.tier}
                   context="modal"
-                  compact={false}
+                  compact={true}
                 />
               </div>
             )}
 
-            {/* Earning Tips */}
-            <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-500/30 text-purple-200 text-sm">
-              <div className="font-semibold mb-1 text-purple-300">
-                How to earn LUB:
+            {/* Earning Tips - More compact */}
+            <div className="bg-pink-900/20 rounded-lg p-3 border border-pink-500/30 text-pink-200 text-sm">
+              <div className="font-semibold mb-2 text-pink-300 flex items-center gap-1">
+                <span>💕</span> How to earn LUB:
               </div>
-              <ul className="list-disc pl-5">
-                <li>Complete memory games</li>
-                <li>Create new LUB games</li>
-                <li>Connect your wallet</li>
-                <li>Share with friends</li>
-              </ul>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <div className="flex items-center gap-1">
+                  <span>💘</span> Complete games
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>💌</span> Create LUBs
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>💖</span> Connect wallet
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>💞</span> Share with friends
+                </div>
+              </div>
             </div>
           </>
         );
@@ -128,25 +134,27 @@ export default function WalletDrawer({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-400">
-                  <div className="text-4xl mb-2">📊</div>
+                <div className="text-center py-6 text-gray-400">
+                  <div className="text-3xl mb-2">💕</div>
                   <p>No activity yet. Start playing to earn LUB!</p>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="bg-blue-900/30 rounded-lg p-3 border border-blue-500/30">
-                <div className="font-bold text-blue-300">
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div className="bg-pink-900/30 rounded-lg p-3 border border-pink-500/30">
+                <div className="text-lg mb-1">💘</div>
+                <div className="font-bold text-pink-300">
                   {progress.gamesCompleted}
                 </div>
-                <div className="text-blue-400">Games Played</div>
+                <div className="text-pink-400 text-xs">Hearts Matched</div>
               </div>
-              <div className="bg-green-900/30 rounded-lg p-3 border border-green-500/30">
-                <div className="font-bold text-green-300">
+              <div className="bg-rose-900/30 rounded-lg p-3 border border-rose-500/30">
+                <div className="text-lg mb-1">💌</div>
+                <div className="font-bold text-rose-300">
                   {progress.totalLubsCreated}
                 </div>
-                <div className="text-green-400">LUBs Created</div>
+                <div className="text-rose-400 text-xs">Love Letters</div>
               </div>
             </div>
           </>
@@ -197,7 +205,7 @@ export default function WalletDrawer({
                 fullWidth
                 size="sm"
               >
-                🎨 Create New LUB
+                💌 Create New LUB
               </ActionButton>
               <ActionButton
                 onClick={onClose}
@@ -205,7 +213,7 @@ export default function WalletDrawer({
                 fullWidth
                 size="sm"
               >
-                🖼️ Mint NFT
+                💖 Mint Heart NFT
               </ActionButton>
             </div>
           </>
@@ -236,7 +244,7 @@ export default function WalletDrawer({
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-b from-gray-900 to-black rounded-t-2xl shadow-2xl max-h-[70vh] overflow-hidden border-t border-purple-500/20"
+              className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-b from-gray-900 to-black rounded-t-2xl shadow-2xl max-h-[60vh] flex flex-col border-t border-purple-500/20"
               style={{
                 paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
               }}
@@ -247,9 +255,9 @@ export default function WalletDrawer({
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-purple-500/20">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/20 flex-shrink-0">
                 <h2 className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-                  💎 LUB Wallet
+                  💝 LUB Wallet
                 </h2>
                 <button
                   className="text-gray-400 hover:text-purple-400 text-2xl p-1 transition-colors"
@@ -261,7 +269,7 @@ export default function WalletDrawer({
               </div>
 
               {/* Tab Navigation */}
-              <div className="flex border-b border-purple-500/20">
+              <div className="flex border-b border-purple-500/20 flex-shrink-0">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -282,12 +290,12 @@ export default function WalletDrawer({
               </div>
 
               {/* Tab Content */}
-              <div className="p-6 overflow-y-auto flex-1">
+              <div className="p-4 overflow-y-auto flex-1 min-h-0">
                 {renderTabContent()}
               </div>
 
               {/* Quick Actions Footer */}
-              <div className="px-6 py-4 border-t border-purple-500/20 bg-gradient-to-t from-black/60 to-gray-900/30">
+              <div className="px-4 py-3 border-t border-purple-500/20 bg-gradient-to-t from-black/60 to-gray-900/30 flex-shrink-0">
                 <div className="flex justify-center gap-6 text-sm">
                   <button
                     onClick={() => {
@@ -296,21 +304,21 @@ export default function WalletDrawer({
                     }}
                     className="text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1 transition-colors"
                   >
-                    💝 Share
+                    💞 Share
                   </button>
                   <Link
                     href="/create"
                     onClick={onClose}
                     className="text-pink-400 hover:text-pink-300 font-medium flex items-center gap-1 transition-colors"
                   >
-                    🎨 Create
+                    💌 Create
                   </Link>
                   <Link
                     href="/analytics"
                     onClick={onClose}
                     className="text-gray-400 hover:text-gray-300 font-medium flex items-center gap-1 transition-colors"
                   >
-                    📊 Stats
+                    💕 Stats
                   </Link>
                 </div>
               </div>
