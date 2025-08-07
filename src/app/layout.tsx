@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     // Mini App embed metadata (new format)
     "fc:miniapp": JSON.stringify({
       version: "1",
-      imageUrl: "/game-photos/lubmatch.png",
+      imageUrl: "/game-photos/lub.png",
       button: {
         title: "💝 Play Lub Match!",
         action: {
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     // Backward compatibility
     "fc:frame": JSON.stringify({
       version: "1",
-      imageUrl: "/game-photos/lubmatch.png",
+      imageUrl: "/game-photos/lub.png",
       button: {
         title: "💝 Play Lub Match!",
         action: {
