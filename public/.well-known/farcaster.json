@@ -1,0 +1,27 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjUyNTQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhkODY1Q2Q3Y2NjOTFGODM2OTJhQjMzMDk4MWMzRTNlOWQ3QTA1MjZBIn0",
+    "payload": "eyJkb21haW4iOiJsdWItbWF0Y2gudmVyY2VsLmFwcCJ9",
+    "signature": "RiSNn0HOBigF3wopKfwAxqu71+U7eHiCExWZY80rZ1FMyDyEEiaDVmYDAw1QgPUytUiyrr9RASyhnVtmIQgRTRw="
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Lub Match",
+    "iconUrl": "https://lub-match.vercel.app/game-photos/lub.png",
+    "homeUrl": "https://lub-match.vercel.app",
+    "splashImageUrl": "https://lub-match.vercel.app/game-photos/lub.png",
+    "splashBackgroundColor": "#ec4899",
+    "subtitle": "Send lub and feel da lub!",
+    "description": "A romantic heart-shaped memory game to send lub to your special someone! Play with Farcaster friends, mint NFTs, and share the love.",
+    "screenshotUrls": ["https://lub-match.vercel.app/github-demo.gif"],
+    "primaryCategory": "games",
+    "tags": ["games", "social", "romance", "memory", "nft"],
+    "heroImageUrl": "https://lub-match.vercel.app/game-photos/lubmatch.png",
+    "tagline": "Send lub and feel da lub!",
+    "ogTitle": "Lub Match",
+    "ogDescription": "A romantic heart-shaped memory game to send lub to your special someone!",
+    "ogImageUrl": "https://lub-match.vercel.app/github-demo.gif",
+    "requiredChains": ["eip155:8453", "eip155:42161"],
+    "requiredCapabilities": ["actions.ready", "wallet.getEthereumProvider"]
+  }
+}
