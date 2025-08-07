@@ -10,7 +10,10 @@ interface FloatingActionButtonProps {
   className?: string;
 }
 
-export default function FloatingActionButton({ onClick, className = "" }: FloatingActionButtonProps) {
+export default function FloatingActionButton({
+  onClick,
+  className = "",
+}: FloatingActionButtonProps) {
   const { balanceFormatted } = useLubToken();
   const { progress } = useUserProgression();
   const { isConnected } = useAccount();
@@ -21,14 +24,14 @@ export default function FloatingActionButton({ onClick, className = "" }: Floati
   return (
     <motion.button
       onClick={onClick}
-      className={`fixed bottom-6 right-6 z-30 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group ${className}`}
+      className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group ${className}`}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       initial={{ opacity: 0, y: 100 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", damping: 20, stiffness: 300 }}
       style={{
-        paddingBottom: 'max(0px, env(safe-area-inset-bottom))'
+        paddingBottom: "max(0px, env(safe-area-inset-bottom))",
       }}
       aria-label="Open wallet"
     >
@@ -40,16 +43,18 @@ export default function FloatingActionButton({ onClick, className = "" }: Floati
           className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"
         />
       )}
-      
+
       {/* Button Content */}
       <div className="flex items-center gap-2 px-4 py-3">
         <span className="text-lg">💎</span>
         <div className="flex flex-col items-start">
           <span className="text-xs font-medium opacity-90">LUB</span>
-          <span className="text-sm font-bold leading-none">{balanceFormatted}</span>
+          <span className="text-sm font-bold leading-none">
+            {balanceFormatted}
+          </span>
         </div>
       </div>
-      
+
       {/* Hover Effect */}
       <div className="absolute inset-0 bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </motion.button>

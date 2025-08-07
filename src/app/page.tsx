@@ -13,7 +13,6 @@ import FloatingActionButton from "@/components/shared/FloatingActionButton";
 import WalletDrawer from "@/components/shared/WalletDrawer";
 import { useOnboarding } from "@/hooks/useOnboarding";
 
-
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useSocialGames } from "@/hooks/useSocialGames";
 import { useAccount } from "wagmi";
@@ -69,7 +68,7 @@ export default function Home() {
 
   // Game images - only use Farcaster profile images, no fallbacks
   const [gameImages, setGameImages] = useState<string[]>([]);
-  
+
   // Get current Farcaster user from context
   const farcasterUser = farcasterContext?.user;
 
@@ -160,11 +159,14 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-black relative overflow-hidden">
       {/* Subtle dark header that blends with the aesthetic */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/80 via-black/60 to-transparent backdrop-blur-sm">
-        <div className="flex items-center justify-between p-4" style={{
-          paddingTop: 'max(1rem, var(--safe-area-inset-top))',
-          paddingLeft: 'max(1rem, var(--safe-area-inset-left))',
-          paddingRight: 'max(1rem, var(--safe-area-inset-right))'
-        }}>
+        <div
+          className="flex items-center justify-between p-4"
+          style={{
+            paddingTop: "max(1rem, var(--safe-area-inset-top))",
+            paddingLeft: "max(1rem, var(--safe-area-inset-left))",
+            paddingRight: "max(1rem, var(--safe-area-inset-right))",
+          }}
+        >
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent">
               💝 Lub Match
@@ -174,14 +176,8 @@ export default function Home() {
                 Welcome, {farcasterUser.display_name || farcasterUser.username}!
               </div>
             )}
-            {isConnected && (
-              <div className="flex items-center gap-1 text-xs text-green-400">
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                <span className="hidden sm:inline">Portfolio</span>
-              </div>
-            )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             {canPlayGames(users) && (
               <button
@@ -191,7 +187,7 @@ export default function Home() {
                 Hab Fun
               </button>
             )}
-            
+
             {gameImages && gameImages.length >= 8 && (
               <Link
                 href="/create"
@@ -423,9 +419,9 @@ export default function Home() {
       )}
 
       {/* Wallet Drawer */}
-      <WalletDrawer 
-        isOpen={showWalletDrawer} 
-        onClose={() => setShowWalletDrawer(false)} 
+      <WalletDrawer
+        isOpen={showWalletDrawer}
+        onClose={() => setShowWalletDrawer(false)}
       />
     </div>
   );
