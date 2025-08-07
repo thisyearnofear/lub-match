@@ -2,10 +2,17 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { playfairDisplay } from "@/styles/fonts";
 
+// Helper function to get the base URL
+function getBaseUrl() {
+  return process.env.NODE_ENV === "production"
+    ? "https://lub-match.vercel.app"
+    : "http://localhost:3000";
+}
+
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
+    process.env.NODE_ENV === "production"
+      ? "https://lub-match.vercel.app"
       : "http://localhost:3000"
   ),
   title: "Lub Match",
@@ -45,14 +52,14 @@ export const metadata: Metadata = {
     // Mini App embed metadata (new format)
     "fc:miniapp": JSON.stringify({
       version: "1",
-      imageUrl: "/game-photos/lub.png",
+      imageUrl: `${getBaseUrl()}/game-photos/lub.png`,
       button: {
         title: "💝 Play Lub Match!",
         action: {
           type: "launch_miniapp",
           name: "Lub Match",
-          url: "/",
-          splashImageUrl: "/game-photos/lub.png",
+          url: getBaseUrl(),
+          splashImageUrl: `${getBaseUrl()}/game-photos/lub.png`,
           splashBackgroundColor: "#ec4899",
         },
       },
@@ -60,14 +67,14 @@ export const metadata: Metadata = {
     // Backward compatibility
     "fc:frame": JSON.stringify({
       version: "1",
-      imageUrl: "/game-photos/lub.png",
+      imageUrl: `${getBaseUrl()}/game-photos/lub.png`,
       button: {
         title: "💝 Play Lub Match!",
         action: {
           type: "launch_frame",
           name: "Lub Match",
-          url: "/",
-          splashImageUrl: "/game-photos/lub.png",
+          url: getBaseUrl(),
+          splashImageUrl: `${getBaseUrl()}/game-photos/lub.png`,
           splashBackgroundColor: "#ec4899",
         },
       },
