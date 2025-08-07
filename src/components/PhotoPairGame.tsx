@@ -148,7 +148,7 @@ export default function PhotoPairGame({
       setIsComplete(true);
       setTimeout(() => {
         handleShowProposalAction();
-      }, 1500); // Wait for animations to finish
+      }, 3500); // Give users time to process their success
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matched, isComplete]);
