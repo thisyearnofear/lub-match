@@ -13,6 +13,8 @@ import { ConnectionIncentive } from "./ConnectionIncentive";
 import { NFTGallery } from "./NFTGallery";
 import { NFTDetailModal } from "./NFTDetailModal";
 import { HeartData } from "@/hooks/useHeartNFT";
+import { UserDisplayFormatter } from "@/utils/userDisplay";
+import { useUserIdentity } from "@/contexts/UserContext";
 
 type TabType = "overview" | "activity" | "portfolio";
 
@@ -35,6 +37,12 @@ export default function WalletDrawer({
     tokenId: bigint;
     heartData: HeartData;
   } | null>(null);
+
+  // NEW: Get user identity for personalized display
+  const { farcasterUser } = useUserIdentity();
+
+  // NEW: Dynamic wallet title
+  const walletTitle = UserDisplayFormatter.getWalletTitle(farcasterUser);
 
   const tabs = [
     { id: "overview" as TabType, label: "💝 Overview", icon: "💝" },
@@ -257,7 +265,7 @@ export default function WalletDrawer({
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/20 flex-shrink-0">
                 <h2 className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-                  💝 LUB Wallet
+                  {walletTitle}
                 </h2>
                 <button
                   className="text-gray-400 hover:text-purple-400 text-2xl p-1 transition-colors"

@@ -12,6 +12,11 @@ import HeartNFTMinter from "@/components/HeartNFTMinter";
 import FloatingActionButton from "@/components/shared/FloatingActionButton";
 import WalletDrawer from "@/components/shared/WalletDrawer";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import {
+  AnimatedTile,
+  AnimatedTileContainer,
+  FloatingHearts,
+} from "@/components/shared/AnimatedTile";
 
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useSocialGames } from "@/hooks/useSocialGames";
@@ -157,6 +162,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-black relative overflow-hidden">
+      {/* Enhanced floating hearts background */}
+      <FloatingHearts count={6} className="opacity-20" />
       {/* Subtle dark header that blends with the aesthetic */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/80 via-black/60 to-transparent backdrop-blur-sm">
         <div
@@ -312,24 +319,39 @@ export default function Home() {
                     social games.
                   </p>
                 )}
-                <div className="mt-6 space-y-3">
+                <AnimatedTileContainer className="mt-6 space-y-3">
                   {hasApiKey === false ? (
                     <>
-                      <button
+                      <AnimatedTile
+                        index={0}
                         onClick={refreshUsers}
                         disabled={loading}
-                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full font-semibold shadow-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                        ariaLabel={
+                          loading
+                            ? "Checking API connection..."
+                            : "Check API connection again"
+                        }
                       >
-                        {loading ? "Checking..." : "🔄 Check Again"}
-                      </button>
-                      <div>
+                        <button
+                          disabled={loading}
+                          className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loading ? "Checking..." : "🔄 Check Again"}
+                        </button>
+                      </AnimatedTile>
+
+                      <AnimatedTile
+                        index={1}
+                        isPrimary={true}
+                        ariaLabel="Create a custom memory game"
+                      >
                         <Link
                           href="/create"
-                          className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-105"
+                          className="block w-full px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold shadow-lg text-center"
                         >
                           ✨ Create Custom Game
                         </Link>
-                      </div>
+                      </AnimatedTile>
                     </>
                   ) : (
                     <div className="flex justify-center items-center space-x-1">
@@ -350,7 +372,7 @@ export default function Home() {
                       ))}
                     </div>
                   )}
-                </div>
+                </AnimatedTileContainer>
               </div>
             )}
           </motion.div>
