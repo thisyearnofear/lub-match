@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+  // Use explicit production domain if set, otherwise fall back to current host
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://lub-match.vercel.app'
+      : `${req.nextUrl.protocol}//${req.nextUrl.host}`);
 
   const manifest = {
     miniapp: {
@@ -13,7 +15,7 @@ export async function GET(req: NextRequest) {
       homeUrl: baseUrl,
       splashImageUrl: `${baseUrl}/hamster_jumping.gif`,
       splashBackgroundColor: "#ec4899",
-      subtitle: "Send lub & feel da lub!",
+      subtitle: "Send lub and feel da lub!",
       description: "A romantic heart-shaped memory game to send lub to your special someone! Play with Farcaster friends, mint NFTs, and share the love.",
       screenshotUrls: [
         `${baseUrl}/github-demo.gif`
@@ -27,8 +29,8 @@ export async function GET(req: NextRequest) {
         "nft"
       ],
       heroImageUrl: `${baseUrl}/github-demo.gif`,
-      tagline: "Send lub & feel da lub!",
-      ogTitle: "Lub Match 💝",
+      tagline: "Send lub and feel da lub!",
+      ogTitle: "Lub Match",
       ogDescription: "A romantic heart-shaped memory game to send lub to your special someone!",
       ogImageUrl: `${baseUrl}/github-demo.gif`,
       requiredChains: [
