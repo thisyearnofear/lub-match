@@ -26,10 +26,10 @@ export const metadata: Metadata = {
       "A romantic heart-shaped memory game to send lub to your special someone!",
     images: [
       {
-        url: "/github-demo.gif",
+        url: "/game-photos/lubmatch.png",
         width: 1200,
         height: 630,
-        alt: "Valentine Memory Game Demo",
+        alt: "Lub Match - Romantic Memory Game",
       },
     ],
     type: "website",
@@ -39,29 +39,39 @@ export const metadata: Metadata = {
     title: "lub match 💝",
     description:
       "A romantic heart-shaped memory game to send lub to your special someone!",
-    images: ["/github-demo.gif"],
+    images: ["/game-photos/lubmatch.png"],
   },
   other: {
-    // Frames v2 (Mini Apps) metadata
+    // Mini App embed metadata (new format)
+    "fc:miniapp": JSON.stringify({
+      version: "1",
+      imageUrl: "/game-photos/lubmatch.png",
+      button: {
+        title: "💝 Play Lub Match!",
+        action: {
+          type: "launch_miniapp",
+          name: "Lub Match",
+          url: "/",
+          splashImageUrl: "/game-photos/lub.png",
+          splashBackgroundColor: "#ec4899",
+        },
+      },
+    }),
+    // Backward compatibility
     "fc:frame": JSON.stringify({
-      version: "next",
-      imageUrl: "/github-demo.gif",
+      version: "1",
+      imageUrl: "/game-photos/lubmatch.png",
       button: {
         title: "💝 Play Lub Match!",
         action: {
           type: "launch_frame",
           name: "Lub Match",
           url: "/",
-          splashImageUrl: "/hamster_jumping.gif",
-          splashBackgroundColor: "#000000",
+          splashImageUrl: "/game-photos/lub.png",
+          splashBackgroundColor: "#ec4899",
         },
       },
     }),
-    // Legacy v1 frame support
-    "fc:frame:image": "/github-demo.gif",
-    "fc:frame:button:1": "💝 Play Game",
-    "fc:frame:button:1:action": "link",
-    "fc:frame:button:1:target": "/",
   },
 };
 
