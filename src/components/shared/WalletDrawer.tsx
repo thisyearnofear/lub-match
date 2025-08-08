@@ -57,26 +57,36 @@ export default function WalletDrawer({
       case "overview":
         return (
           <>
-            <div className="mb-4 text-center">
-              <div className="text-3xl mb-2">💝</div>
+            {/* Compact Balance Display */}
+            <div className="mb-3 text-center">
+              <div className="text-2xl mb-1">💝</div>
               <div className="text-lg font-bold text-white">
                 {balanceFormatted} LUB
               </div>
-              <div className="text-xs text-gray-400 mt-1">Your love tokens</div>
               {isConnected && (
                 <div className="text-xs text-pink-400 mt-1 flex items-center justify-center gap-1">
-                  <span className="w-2 h-2 bg-pink-400 rounded-full animate-pulse"></span>
-                  Wallet Connected
+                  <span className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-pulse"></span>
+                  Connected
                 </div>
               )}
             </div>
 
-            {/* User Stats Section */}
-            <div className="mb-4">
-              <UserStatsSection
-                showTierProgress={true}
-                onNFTClick={() => setActiveTab("portfolio")}
-              />
+            {/* Compact Stats Grid */}
+            <div className="mb-3 grid grid-cols-2 gap-2 text-center text-xs">
+              <div className="bg-purple-900/30 rounded-lg p-2 border border-purple-500/30">
+                <div className="text-sm mb-1">💘</div>
+                <div className="font-bold text-purple-300">
+                  {progress.gamesCompleted}
+                </div>
+                <div className="text-purple-400">Games</div>
+              </div>
+              <div className="bg-rose-900/30 rounded-lg p-2 border border-rose-500/30">
+                <div className="text-sm mb-1">💌</div>
+                <div className="font-bold text-rose-300">
+                  {progress.totalLubsCreated}
+                </div>
+                <div className="text-rose-400">LUBs</div>
+              </div>
             </div>
 
             {/* Connection Incentive for unconnected users */}
@@ -90,24 +100,16 @@ export default function WalletDrawer({
               </div>
             )}
 
-            {/* Earning Tips - More compact */}
-            <div className="bg-pink-900/20 rounded-lg p-3 border border-pink-500/30 text-pink-200 text-sm">
-              <div className="font-semibold mb-2 text-pink-300 flex items-center gap-1">
-                <span>💕</span> How to earn LUB:
+            {/* Compact Earning Tips */}
+            <div className="bg-pink-900/20 rounded-lg p-2 border border-pink-500/30 text-pink-200 text-xs">
+              <div className="font-semibold mb-1 text-pink-300 text-center">
+                💕 Earn More LUB
               </div>
-              <div className="grid grid-cols-2 gap-1 text-xs">
-                <div className="flex items-center gap-1">
-                  <span>💘</span> Complete games
-                </div>
-                <div className="flex items-center gap-1">
-                  <span>💌</span> Create LUBs
-                </div>
-                <div className="flex items-center gap-1">
-                  <span>💖</span> Connect wallet
-                </div>
-                <div className="flex items-center gap-1">
-                  <span>💞</span> Share with friends
-                </div>
+              <div className="flex justify-center gap-3 text-xs">
+                <span>💘 Play</span>
+                <span>💌 Create</span>
+                <span>💖 Connect</span>
+                <span>💞 Share</span>
               </div>
             </div>
           </>
@@ -263,12 +265,12 @@ export default function WalletDrawer({
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/20 flex-shrink-0">
-                <h2 className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+              <div className="flex items-center justify-center px-4 py-3 border-b border-purple-500/20 flex-shrink-0 relative">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent text-center">
                   {walletTitle}
                 </h2>
                 <button
-                  className="text-gray-400 hover:text-purple-400 text-2xl p-1 transition-colors"
+                  className="absolute right-4 text-gray-400 hover:text-purple-400 text-2xl p-1 transition-colors"
                   onClick={onClose}
                   aria-label="Close wallet drawer"
                 >

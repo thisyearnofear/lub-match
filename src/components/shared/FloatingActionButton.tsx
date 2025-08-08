@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { useAccount } from "wagmi";
 import { useLubToken } from "@/hooks/useLubToken";
 import { useUserProgression } from "@/utils/userProgression";
+import { useUserIdentity } from "@/contexts/UserContext";
+import { UserDisplayFormatter } from "@/utils/userDisplay";
 
 interface FloatingActionButtonProps {
   onClick: () => void;
@@ -17,9 +19,18 @@ export default function FloatingActionButton({
   const { balanceFormatted } = useLubToken();
   const { progress } = useUserProgression();
   const { isConnected } = useAccount();
+  const { farcasterUser, avatarUrl } = useUserIdentity();
 
   // Show notification dot for new achievements or milestones
   const hasNotification = progress.gamesCompleted > 0 && !isConnected;
+
+  // Get display name for connected users
+  const displayName = UserDisplayFormatter.getDisplayName(
+    farcasterUser,
+    undefined,
+    undefined,
+    "compact"
+  );
 
   return (
     <motion.button
@@ -46,9 +57,22 @@ export default function FloatingActionButton({
 
       {/* Button Content */}
       <div className="flex items-center gap-2 px-4 py-3">
-        <span className="text-lg">💎</span>
+        {/* Show avatar if connected and available */}
+        {isConnected && avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt="Profile"
+            className="w-6 h-6 rounded-full border border-white/20"
+          />
+        ) : (
+          <span className="text-lg">💎</span>
+        )}
+
         <div className="flex flex-col items-start">
-          <span className="text-xs font-medium opacity-90">LUB</span>
+          {/* Show username if connected, otherwise show LUB label */}
+          <span className="text-xs font-medium opacity-90">
+            {isConnected && farcasterUser?.username ? displayName : "LUB"}
+          </span>
           <span className="text-sm font-bold leading-none">
             {balanceFormatted}
           </span>

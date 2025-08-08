@@ -154,6 +154,71 @@ export class UserDisplayFormatter {
 
     return "Anonymous";
   }
+
+  /**
+   * Get connection display for wallet components
+   * Handles the "Connected: username" vs "Connected: 0x123..." logic
+   */
+  static getConnectionDisplay(
+    farcasterUser?: FarcasterUser,
+    walletAddress?: string,
+    isConnected: boolean = false
+  ): string {
+    if (!isConnected) return "Not connected";
+    
+    if (farcasterUser?.username) {
+      return `Connected: @${farcasterUser.username}`;
+    }
+    
+    if (farcasterUser?.displayName) {
+      return `Connected: ${farcasterUser.displayName}`;
+    }
+    
+    if (walletAddress) {
+      return `Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    }
+    
+    return "Connected";
+  }
+
+  /**
+   * Get display name with consistent fallback hierarchy
+   * Centralizes the username > displayName > address > tier logic
+   */
+  static getDisplayName(
+    farcasterUser?: FarcasterUser,
+    walletAddress?: string,
+    tier?: string,
+    context: 'full' | 'compact' | 'button' = 'full'
+  ): string {
+    // Priority 1: Farcaster username (most recognizable)
+    if (farcasterUser?.username) {
+      const username = context === 'button' && farcasterUser.username.length > 12
+        ? `${farcasterUser.username.slice(0, 12)}...`
+        : farcasterUser.username;
+      return context === 'compact' ? `@${username}` : username;
+    }
+    
+    // Priority 2: Farcaster display name
+    if (farcasterUser?.displayName) {
+      const displayName = context === 'button' && farcasterUser.displayName.length > 15
+        ? `${farcasterUser.displayName.slice(0, 15)}...`
+        : farcasterUser.displayName;
+      return displayName;
+    }
+    
+    // Priority 3: Wallet address (truncated)
+    if (walletAddress) {
+      return `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    }
+    
+    // Priority 4: Tier-based fallback
+    if (tier) {
+      return getTierDisplayName(tier as any);
+    }
+    
+    return context === 'compact' ? 'Anonymous' : 'Player';
+  }
 }
 
 /**
@@ -171,6 +236,21 @@ export function useUserDisplay(config: Partial<UserDisplayConfig> = {}) {
     getUserGreeting: (farcasterUser?: FarcasterUser, context?: 'welcome' | 'wallet' | 'game') =>
       UserDisplayFormatter.getUserGreeting(farcasterUser, context),
     getCompactIdentity: (farcasterUser?: FarcasterUser, walletAddress?: string) =>
-      UserDisplayFormatter.getCompactIdentity(farcasterUser, walletAddress, config.maxUsernameLength)
+      UserDisplayFormatter.getCompactIdentity(farcasterUser, walletAddress, config.maxUsernameLength),
+    getConnectionDisplay: (farcasterUser?: FarcasterUser, walletAddress?: string, isConnected?: boolean) =>
+      UserDisplayFormatter.getConnectionDisplay(farcasterUser, walletAddress, isConnected),
+    getDisplayName: (farcasterUser?: FarcasterUser, walletAddress?: string, tier?: string, context?: 'full' | 'compact' | 'button') =>
+      UserDisplayFormatter.getDisplayName(farcasterUser, walletAddress, tier, context)
   };
+}
+
+// Helper function to get tier display name (moved from UserContext for reusability)
+function getTierDisplayName(tier: string): string {
+  switch (tier) {
+    case 'newcomer': return 'New Player';
+    case 'engaged': return 'Engaged Player';
+    case 'web3-ready': return 'Web3 Ready';
+    case 'power-user': return 'Power User';
+    default: return 'Player';
+  }
 }

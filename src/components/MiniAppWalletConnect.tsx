@@ -3,6 +3,8 @@
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
+import { useUserIdentity } from "@/contexts/UserContext";
+import { UserDisplayFormatter } from "@/utils/userDisplay";
 import ActionButton from "./shared/ActionButton";
 
 interface MiniAppWalletConnectProps {
@@ -19,13 +21,30 @@ export default function MiniAppWalletConnect({
   const { disconnect } = useDisconnect();
   const { isInFarcaster } = useMiniAppReady();
 
+  // Get unified user identity for consistent display
+  const { farcasterUser, displayName, avatarUrl } = useUserIdentity();
+
   // In Farcaster mini app, use custom connect button
   if (isInFarcaster) {
     if (isConnected && address) {
+      // Use unified display formatter instead of duplicate address truncation
+      const connectionDisplay = UserDisplayFormatter.getConnectionDisplay(
+        farcasterUser,
+        address,
+        isConnected
+      );
+
       return (
         <div className="flex flex-col items-center gap-3">
-          <div className="text-sm text-gray-600">
-            Connected: {address.slice(0, 6)}...{address.slice(-4)}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            {avatarUrl && (
+              <img
+                src={avatarUrl}
+                alt="Profile"
+                className="w-6 h-6 rounded-full border border-gray-200"
+              />
+            )}
+            <span>{connectionDisplay}</span>
           </div>
           {children}
           {showDisconnect && (
