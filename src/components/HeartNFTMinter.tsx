@@ -12,6 +12,8 @@ import ActionButton from "./shared/ActionButton";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
 import { InfoTooltip } from "./shared/InfoTooltip";
 import MiniAppWalletConnect from "./MiniAppWalletConnect";
+import NFTPreview from "./shared/NFTPreview";
+import { WEB3_CONFIG } from "@/config";
 
 interface HeartNFTMinterProps {
   gameImages: string[];
@@ -302,25 +304,89 @@ export default function HeartNFTMinter({
             </div>
           )}
 
-          {/* Success Screen */}
+          {/* Enhanced Success Screen with NFT Celebration */}
           {showSuccessActions && mintedTokenId && (
             <SuccessScreen
-              title="NFT Minted Successfully!"
-              message="Your heart has been immortalized on the blockchain"
+              title="🎉 NFT Minted Successfully!"
+              message="Your heart has been immortalized on the blockchain forever!"
+              celebrationIcon="💎"
+              showConfetti={true}
+              celebrationLevel="epic"
+              nftPreview={
+                <NFTPreview
+                  images={gameImages}
+                  message={message}
+                  users={users}
+                  gameStats={gameStats}
+                  tokenId={mintedTokenId}
+                  showSocialContext={true}
+                />
+              }
               actions={getNFTMintSuccessActions(
                 mintedTokenId,
                 { cid: gameHash, type: "heart" },
                 onClose,
-                onViewCollection
+                onViewCollection,
+                mintedTokenId,
+                WEB3_CONFIG.contracts.heartNFT
               )}
               additionalContent={
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                  <p className="text-sm text-green-700">
-                    <strong>Transaction Hash:</strong>
-                  </p>
-                  <p className="text-xs text-green-600 font-mono break-all">
-                    {mintedTokenId}
-                  </p>
+                <div className="space-y-4">
+                  {/* Transaction Details */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-green-600 text-lg">✅</span>
+                      <p className="text-sm font-semibold text-green-800">
+                        Minting Complete
+                      </p>
+                    </div>
+                    <p className="text-xs text-green-700 mb-2">
+                      <strong>Transaction Hash:</strong>
+                    </p>
+                    <p className="text-xs text-green-600 font-mono break-all bg-white rounded px-2 py-1">
+                      {mintedTokenId}
+                    </p>
+                  </div>
+
+                  {/* Value Proposition */}
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-purple-600 text-lg">🏆</span>
+                      <p className="text-sm font-semibold text-purple-800">
+                        Your Unique Achievement
+                      </p>
+                    </div>
+                    <ul className="text-xs text-purple-700 space-y-1">
+                      <li>• Permanently stored on Arbitrum blockchain</li>
+                      <li>
+                        • Features {gameImages.length} unique profile pictures
+                      </li>
+                      <li>
+                        • Includes {users?.length || 0} Farcaster users you
+                        discovered
+                      </li>
+                      <li>
+                        • One-of-a-kind digital collectible you own forever
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Social Context */}
+                  {users && users.length > 0 && (
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-blue-600 text-lg">👥</span>
+                        <p className="text-sm font-semibold text-blue-800">
+                          Social Discovery
+                        </p>
+                      </div>
+                      <p className="text-xs text-blue-700">
+                        Your NFT immortalizes connections with {users.length}{" "}
+                        amazing people from the Farcaster community. Share it to
+                        celebrate these social discoveries!
+                      </p>
+                    </div>
+                  )}
                 </div>
               }
               layout="single-column"
