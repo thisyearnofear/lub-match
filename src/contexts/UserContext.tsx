@@ -92,6 +92,7 @@ interface UserContextValue {
   actions: UserActions;
   isLoading: boolean;
   error?: string;
+  ensName?: string;
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
@@ -105,6 +106,7 @@ export function UserProvider({ children }: UserProviderProps) {
   const [error, setError] = useState<string>();
   const [lubTransactionCount, setLubTransactionCount] = useState(0);
   const [totalLubEarned, setTotalLubEarned] = useState("0");
+  const [ensName, setEnsName] = useState<string>();
 
   // Core hooks
   const { address, isConnected } = useAccount();
@@ -116,10 +118,13 @@ export function UserProvider({ children }: UserProviderProps) {
   // Extract tier from progress
   const tier = progress.tier;
 
-  // Prioritize mini-app context user over API users for consistent identity
-  const primaryFarcasterUser = useMemo(() => {
-    // Priority 1: Mini-app context user (most reliable and current)
-    if (farcasterContext?.user) {
+  // Verified Farcaster user - only show if actually linked to connected wallet
+  const verifiedFarcasterUser = useMemo(() => {
+    if (!address) return undefined;
+
+    // Priority 1: Mini-app context user (most reliable when in Farcaster)
+    // In mini-app context, the user is authenticated and their wallet connection is verified by Farcaster
+    if (farcasterContext?.user && isConnected) {
       return {
         username: farcasterContext.user.username,
         displayName: farcasterContext.user.display_name,
@@ -128,18 +133,32 @@ export function UserProvider({ children }: UserProviderProps) {
       };
     }
 
-    // Priority 2: API users (fallback for web context)
+    // Priority 2: API users with verified addresses (for web context)
     if (farcasterUsers.length > 0) {
-      return {
-        username: farcasterUsers[0].username,
-        displayName: farcasterUsers[0].display_name,
-        pfpUrl: farcasterUsers[0].pfp_url,
-        bio: farcasterUsers[0].bio,
-      };
+      // Find a Farcaster user whose verified addresses include the connected wallet
+      const verifiedUser = farcasterUsers.find((user) => {
+        if (!user.verified_addresses?.eth_addresses) return false;
+
+        // Check if any of their verified addresses match the connected wallet (case-insensitive)
+        return user.verified_addresses.eth_addresses.some(
+          (verifiedAddress) =>
+            verifiedAddress.toLowerCase() === address.toLowerCase()
+        );
+      });
+
+      if (verifiedUser) {
+        return {
+          username: verifiedUser.username,
+          displayName: verifiedUser.display_name,
+          pfpUrl: verifiedUser.pfp_url,
+          bio: verifiedUser.bio,
+        };
+      }
     }
 
+    // No verified Farcaster user found for this wallet
     return undefined;
-  }, [farcasterContext, farcasterUsers]);
+  }, [farcasterContext, farcasterUsers, address, isConnected]);
 
   // Calculate tier progress
   const calculateTierProgress = useCallback(
@@ -246,7 +265,7 @@ export function UserProvider({ children }: UserProviderProps) {
       // Identity
       isConnected,
       walletAddress: address,
-      farcasterUser: primaryFarcasterUser, // Use prioritized user data
+      farcasterUser: verifiedFarcasterUser, // Use verified user data only
 
       // Stats
       stats: buildUserStats(),
@@ -264,7 +283,7 @@ export function UserProvider({ children }: UserProviderProps) {
   }, [
     isConnected,
     address,
-    primaryFarcasterUser,
+    verifiedFarcasterUser,
     buildUserStats,
     progress,
     tier,
@@ -386,11 +405,47 @@ export function UserProvider({ children }: UserProviderProps) {
     };
   }, []);
 
+  // ENS Resolution Effect
+  useEffect(() => {
+    if (!address || !isConnected || verifiedFarcasterUser) return;
+
+    const resolveENS = async () => {
+      try {
+        // Use a public ENS resolver
+        const response = await fetch(
+          `https://api.ensideas.com/ens/resolve/${address}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data.name) {
+            setEnsName(data.name);
+          }
+        }
+      } catch (error) {
+        console.log("ENS resolution failed:", error);
+        // Fallback: try direct RPC call if available
+        try {
+          if (typeof window !== "undefined" && (window as any).ethereum) {
+            const provider = (window as any).ethereum;
+            // This is a simplified approach - in production you'd use ethers.js
+            // For now, we'll just log that ENS resolution could be implemented
+            console.log("ENS resolution could be implemented with ethers.js");
+          }
+        } catch (rpcError) {
+          console.log("RPC ENS resolution failed:", rpcError);
+        }
+      }
+    };
+
+    resolveENS();
+  }, [address, isConnected, verifiedFarcasterUser]);
+
   const contextValue: UserContextValue = {
     profile: buildUserProfile(),
     actions,
     isLoading,
     error,
+    ensName,
   };
 
   return (
@@ -444,12 +499,14 @@ export function useUserIdentity(): {
   farcasterUser?: UserProfile["farcasterUser"];
   displayName: string;
   avatarUrl?: string;
+  ensName?: string;
 } {
-  const { profile } = useUser();
+  const { profile, ensName } = useUser();
 
   const displayName =
     profile.farcasterUser?.displayName ||
     profile.farcasterUser?.username ||
+    ensName ||
     (profile.walletAddress
       ? `${profile.walletAddress.slice(0, 6)}...${profile.walletAddress.slice(
           -4
@@ -465,6 +522,7 @@ export function useUserIdentity(): {
     farcasterUser: profile.farcasterUser,
     displayName,
     avatarUrl,
+    ensName,
   };
 }
 
