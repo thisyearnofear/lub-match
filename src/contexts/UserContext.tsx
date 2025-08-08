@@ -16,7 +16,6 @@ import {
   UserTier,
 } from "@/utils/userProgression";
 import { useLubToken } from "@/hooks/useLubToken";
-import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { formatLubAmount } from "@/utils/pricingEngine";
 
@@ -92,7 +91,6 @@ interface UserContextValue {
   actions: UserActions;
   isLoading: boolean;
   error?: string;
-  ensName?: string;
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
@@ -106,59 +104,99 @@ export function UserProvider({ children }: UserProviderProps) {
   const [error, setError] = useState<string>();
   const [lubTransactionCount, setLubTransactionCount] = useState(0);
   const [totalLubEarned, setTotalLubEarned] = useState("0");
-  const [ensName, setEnsName] = useState<string>();
 
   // Core hooks
   const { address, isConnected } = useAccount();
   const { progress, features, recordEvent } = useUserProgression();
   const { balance, isPending: lubLoading } = useLubToken();
-  const { users: farcasterUsers } = useFarcasterUsers();
   const { context: farcasterContext } = useMiniAppReady();
 
   // Extract tier from progress
   const tier = progress.tier;
 
-  // Verified Farcaster user - only show if actually linked to connected wallet
-  const verifiedFarcasterUser = useMemo(() => {
-    if (!address) return undefined;
+  // Web3.bio Universal Profile - resolves wallet to verified identity across platforms
+  const [web3Profile, setWeb3Profile] = useState<{
+    username: string;
+    displayName: string;
+    pfpUrl: string;
+    bio?: string;
+    platform: string;
+  }>();
 
-    // Priority 1: Mini-app context user (most reliable when in Farcaster)
-    // In mini-app context, the user is authenticated and their wallet connection is verified by Farcaster
-    if (farcasterContext?.user && isConnected) {
-      return {
-        username: farcasterContext.user.username,
-        displayName: farcasterContext.user.display_name,
-        pfpUrl: farcasterContext.user.pfp_url,
-        bio: farcasterContext.user.bio,
-      };
+  // Resolve universal profile using Web3.bio
+  useEffect(() => {
+    if (!address || !isConnected) {
+      setWeb3Profile(undefined);
+      return;
     }
 
-    // Priority 2: API users with verified addresses (for web context)
-    if (farcasterUsers.length > 0) {
-      // Find a Farcaster user whose verified addresses include the connected wallet
-      const verifiedUser = farcasterUsers.find((user) => {
-        if (!user.verified_addresses?.eth_addresses) return false;
+    const resolveWeb3Profile = async () => {
+      try {
+        // Use Web3.bio universal profile API
+        const response = await fetch(`https://api.web3.bio/profile/${address}`);
 
-        // Check if any of their verified addresses match the connected wallet (case-insensitive)
-        return user.verified_addresses.eth_addresses.some(
-          (verifiedAddress) =>
-            verifiedAddress.toLowerCase() === address.toLowerCase()
-        );
-      });
+        if (response.ok) {
+          const profiles = await response.json();
 
-      if (verifiedUser) {
-        return {
-          username: verifiedUser.username,
-          displayName: verifiedUser.display_name,
-          pfpUrl: verifiedUser.pfp_url,
-          bio: verifiedUser.bio,
-        };
+          if (profiles && profiles.length > 0) {
+            // Priority order: Farcaster > ENS > Lens > Basenames > others
+            const priorityOrder = ["farcaster", "ens", "lens", "basenames"];
+
+            let selectedProfile = profiles[0]; // Default to first profile
+
+            // Find highest priority profile
+            for (const platform of priorityOrder) {
+              const profile = profiles.find(
+                (p: any) => p.platform === platform
+              );
+              if (profile) {
+                selectedProfile = profile;
+                break;
+              }
+            }
+
+            if (selectedProfile) {
+              setWeb3Profile({
+                username: selectedProfile.identity,
+                displayName:
+                  selectedProfile.displayName || selectedProfile.identity,
+                pfpUrl: selectedProfile.avatar || "",
+                bio: selectedProfile.description,
+                platform: selectedProfile.platform,
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.log("Web3.bio profile resolution failed:", error);
+
+        // Fallback: Mini-app context user (most reliable when in Farcaster)
+        if (farcasterContext?.user) {
+          setWeb3Profile({
+            username: farcasterContext.user.username,
+            displayName: farcasterContext.user.display_name,
+            pfpUrl: farcasterContext.user.pfp_url,
+            bio: farcasterContext.user.bio,
+            platform: "farcaster",
+          });
+        }
       }
-    }
+    };
 
-    // No verified Farcaster user found for this wallet
-    return undefined;
-  }, [farcasterContext, farcasterUsers, address, isConnected]);
+    resolveWeb3Profile();
+  }, [address, isConnected, farcasterContext]);
+
+  // Convert Web3.bio profile to our format
+  const verifiedFarcasterUser = useMemo(() => {
+    if (!web3Profile) return undefined;
+
+    return {
+      username: web3Profile.username,
+      displayName: web3Profile.displayName,
+      pfpUrl: web3Profile.pfpUrl,
+      bio: web3Profile.bio,
+    };
+  }, [web3Profile]);
 
   // Calculate tier progress
   const calculateTierProgress = useCallback(
@@ -405,47 +443,13 @@ export function UserProvider({ children }: UserProviderProps) {
     };
   }, []);
 
-  // ENS Resolution Effect
-  useEffect(() => {
-    if (!address || !isConnected || verifiedFarcasterUser) return;
-
-    const resolveENS = async () => {
-      try {
-        // Use a public ENS resolver
-        const response = await fetch(
-          `https://api.ensideas.com/ens/resolve/${address}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data.name) {
-            setEnsName(data.name);
-          }
-        }
-      } catch (error) {
-        console.log("ENS resolution failed:", error);
-        // Fallback: try direct RPC call if available
-        try {
-          if (typeof window !== "undefined" && (window as any).ethereum) {
-            const provider = (window as any).ethereum;
-            // This is a simplified approach - in production you'd use ethers.js
-            // For now, we'll just log that ENS resolution could be implemented
-            console.log("ENS resolution could be implemented with ethers.js");
-          }
-        } catch (rpcError) {
-          console.log("RPC ENS resolution failed:", rpcError);
-        }
-      }
-    };
-
-    resolveENS();
-  }, [address, isConnected, verifiedFarcasterUser]);
+  // Web3.bio handles ENS resolution automatically, so we don't need separate ENS logic
 
   const contextValue: UserContextValue = {
     profile: buildUserProfile(),
     actions,
     isLoading,
     error,
-    ensName,
   };
 
   return (
@@ -499,14 +503,12 @@ export function useUserIdentity(): {
   farcasterUser?: UserProfile["farcasterUser"];
   displayName: string;
   avatarUrl?: string;
-  ensName?: string;
 } {
-  const { profile, ensName } = useUser();
+  const { profile } = useUser();
 
   const displayName =
     profile.farcasterUser?.displayName ||
     profile.farcasterUser?.username ||
-    ensName ||
     (profile.walletAddress
       ? `${profile.walletAddress.slice(0, 6)}...${profile.walletAddress.slice(
           -4
@@ -522,7 +524,6 @@ export function useUserIdentity(): {
     farcasterUser: profile.farcasterUser,
     displayName,
     avatarUrl,
-    ensName,
   };
 }
 
