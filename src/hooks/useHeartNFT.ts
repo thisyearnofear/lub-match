@@ -143,26 +143,17 @@ export function useHeartNFT() {
       if (!client) throw new Error("No client available");
 
       // Get HeartMinted events for this user as completer
-       const logs = await getLogs(client, {
-         address: HEART_NFT_ADDRESS,
-         event: {
-           type: 'event',
-           name: 'HeartMinted',
-           inputs: [
-             { type: 'uint256', name: 'tokenId', indexed: true },
-             { type: 'address', name: 'creator', indexed: true },
-             { type: 'address', name: 'completer', indexed: true },
-             { type: 'string', name: 'gameType' },
-             { type: 'uint256', name: 'pricePaid' },
-             { type: 'bool', name: 'usedLubDiscount' }
-           ]
-         },
-         args: {
-           completer: address
-         },
-         fromBlock: 'earliest',
-         toBlock: 'latest'
-       });
+      const logs = await getLogs(client, {
+        address: HEART_NFT_ADDRESS,
+        event: parseAbi([
+          'event HeartMinted(uint256 indexed tokenId, address indexed creator, address indexed completer, string gameType, uint256 pricePaid, bool usedLubDiscount)'
+        ])[0],
+        args: {
+          completer: address
+        },
+        fromBlock: 'earliest',
+        toBlock: 'latest'
+      });
 
       const collection = [];
       for (const log of logs) {
