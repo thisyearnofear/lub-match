@@ -20,10 +20,13 @@ export default function Web3Provider({ children }: Web3ProviderProps) {
     createConfig({
       chains: [base, arbitrum, baseSepolia, arbitrumSepolia],
       transports: {
-        [base.id]: http(),
-        [arbitrum.id]: http(),
-        [baseSepolia.id]: http(),
-        [arbitrumSepolia.id]: http(),
+        [base.id]: http("https://mainnet.base.org"),
+        [arbitrum.id]: http(
+          process.env.NEXT_PUBLIC_ARBITRUM_RPC ||
+            "https://arb-mainnet.g.alchemy.com/v2/oVv496K7Ex-vGv5pvulFuDj3RuKBCGFc"
+        ),
+        [baseSepolia.id]: http("https://sepolia.base.org"),
+        [arbitrumSepolia.id]: http("https://sepolia-rollup.arbitrum.io/rpc"),
       },
       connectors: [farcasterMiniApp()],
       ssr: false,
@@ -37,6 +40,15 @@ export default function Web3Provider({ children }: Web3ProviderProps) {
         process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
         "valentine-memory-game",
       chains: [arbitrum, base, baseSepolia, arbitrumSepolia],
+      transports: {
+        [base.id]: http("https://mainnet.base.org"),
+        [arbitrum.id]: http(
+          process.env.NEXT_PUBLIC_ARBITRUM_RPC ||
+            "https://arb-mainnet.g.alchemy.com/v2/oVv496K7Ex-vGv5pvulFuDj3RuKBCGFc"
+        ),
+        [baseSepolia.id]: http("https://sepolia.base.org"),
+        [arbitrumSepolia.id]: http("https://sepolia-rollup.arbitrum.io/rpc"),
+      },
       ssr: false,
     })
   );

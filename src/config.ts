@@ -41,7 +41,7 @@ export const WEB3_CONFIG = {
     arbitrum: {
       chainId: 42161,
       name: "Arbitrum One",
-      rpcUrl: process.env.ARBITRUM_RPC || "https://arb1.arbitrum.io/rpc",
+      rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_RPC || "https://arb-mainnet.g.alchemy.com/v2/oVv496K7Ex-vGv5pvulFuDj3RuKBCGFc",
     },
     arbitrumSepolia: {
       chainId: 421614,
@@ -51,7 +51,7 @@ export const WEB3_CONFIG = {
     baseSepolia: {
       chainId: 84532,
       name: "Base Sepolia",
-      rpcUrl: process.env.BASE_SEPOLIA_RPC || "",
+      rpcUrl: process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org",
     }
   },
 
