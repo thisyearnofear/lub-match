@@ -2,7 +2,7 @@
 
 import { useWriteContract, useReadContract, useAccount, useConfig } from "wagmi";
 import { parseAbi, parseEther, parseEventLogs } from "viem";
-import { readContract, waitForTransactionReceipt } from "viem/actions";
+import { readContract, waitForTransactionReceipt, getLogs } from "viem/actions";
 import { getClient } from "@wagmi/core";
 import { arbitrum } from "viem/chains";
 import { WEB3_CONFIG } from "@/config";
@@ -80,6 +80,7 @@ export function useHeartNFT() {
       const balance = Number(nftBalance);
 
       // Get all token IDs owned by the user
+      // Note: tokenOfOwnerByIndex might revert if contract doesn't properly implement ERC721Enumerable
       for (let i = 0; i < balance; i++) {
         try {
           const tokenId = await readContract(client, {
@@ -98,15 +99,103 @@ export function useHeartNFT() {
           }) as HeartData;
 
           collection.push({ tokenId, heartData });
-        } catch (error) {
-          console.error(`Error fetching NFT at index ${i}:`, error);
+        } catch (error: any) {
+          // Check if this is a contract function revert (common with tokenOfOwnerByIndex)
+          if (error?.name === 'ContractFunctionRevertedError' || 
+              error?.message?.includes('tokenOfOwnerByIndex') ||
+              error?.message?.includes('reverted')) {
+            console.warn(`tokenOfOwnerByIndex reverted at index ${i}, skipping. This might indicate the contract doesn't properly implement ERC721Enumerable.`);
+            // Break the loop as subsequent indices will likely also fail
+            break;
+          } else {
+            console.error(`Error fetching NFT at index ${i}:`, error);
+          }
           // Continue with other NFTs even if one fails
         }
+      }
+
+      // If we couldn't get any NFTs via tokenOfOwnerByIndex, try alternative method
+      if (collection.length === 0 && balance > 0) {
+        console.warn("tokenOfOwnerByIndex failed, attempting to fetch NFTs via event logs...");
+        return await getUserNFTCollectionViaEvents();
       }
 
       return collection;
     } catch (error) {
       console.error("Error fetching NFT collection:", error);
+      // Try fallback method
+      if (nftBalance > BigInt(0)) {
+        console.warn("Attempting fallback method via event logs...");
+        return await getUserNFTCollectionViaEvents();
+      }
+      return [];
+    }
+  };
+
+  // Alternative method to get NFT collection via event logs (fallback)
+  const getUserNFTCollectionViaEvents = async (): Promise<{ tokenId: bigint; heartData: HeartData }[]> => {
+    if (!HEART_NFT_ADDRESS || !enabled || !address) {
+      return [];
+    }
+
+    try {
+      const client = getClient(config);
+      if (!client) throw new Error("No client available");
+
+      // Get HeartMinted events for this user as completer
+       const logs = await getLogs(client, {
+         address: HEART_NFT_ADDRESS,
+         event: {
+           type: 'event',
+           name: 'HeartMinted',
+           inputs: [
+             { type: 'uint256', name: 'tokenId', indexed: true },
+             { type: 'address', name: 'creator', indexed: true },
+             { type: 'address', name: 'completer', indexed: true },
+             { type: 'string', name: 'gameType' },
+             { type: 'uint256', name: 'pricePaid' },
+             { type: 'bool', name: 'usedLubDiscount' }
+           ]
+         },
+         args: {
+           completer: address
+         },
+         fromBlock: 'earliest',
+         toBlock: 'latest'
+       });
+
+      const collection = [];
+      for (const log of logs) {
+        try {
+          const tokenId = log.args.tokenId as bigint;
+          
+          // Verify the user still owns this NFT by checking current owner
+          const currentOwner = await readContract(client, {
+            address: HEART_NFT_ADDRESS,
+            abi: parseAbi(["function ownerOf(uint256 tokenId) view returns (address)"]),
+            functionName: "ownerOf",
+            args: [tokenId]
+          }) as `0x${string}`;
+
+          if (currentOwner.toLowerCase() === address.toLowerCase()) {
+            // Get heart data for this token
+            const heartData = await readContract(client, {
+              address: HEART_NFT_ADDRESS,
+              abi: HEART_NFT_ABI,
+              functionName: "getHeartData",
+              args: [tokenId]
+            }) as HeartData;
+
+            collection.push({ tokenId, heartData });
+          }
+        } catch (error) {
+          console.error(`Error processing NFT from event log:`, error);
+        }
+      }
+
+      return collection;
+    } catch (error) {
+      console.error("Error fetching NFT collection via events:", error);
       return [];
     }
   };
@@ -351,6 +440,7 @@ export function useHeartNFT() {
 
     // NFT Collection
     getUserNFTCollection,
+    getUserNFTCollectionViaEvents,
     getNFTData,
 
     // Loading state
