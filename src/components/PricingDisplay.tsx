@@ -16,6 +16,7 @@ interface PricingDisplayProps {
   showEarningHints?: boolean;
   onGetLub?: () => void;
   onConnectWallet?: () => void;
+  useDiscount?: boolean; // If true and discount available, highlight discount pricing
 }
 
 export function PricingDisplay({
@@ -24,6 +25,7 @@ export function PricingDisplay({
   showEarningHints = true,
   onGetLub,
   onConnectWallet,
+  useDiscount = false,
 }: PricingDisplayProps) {
   const { stats, tier, gamesCompleted } = useUnifiedStats();
 
@@ -87,6 +89,9 @@ export function PricingDisplay({
   const pricingInfo = getPricingInfo();
 
   if (pricingInfo.type === "nft") {
+    const discountAvailable = !!pricingInfo.discount;
+    const highlightDiscount = useDiscount && discountAvailable;
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -99,7 +104,11 @@ export function PricingDisplay({
           </h3>
 
           {/* Regular pricing */}
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className={`rounded-lg p-4 border ${
+            highlightDiscount
+              ? "bg-white border-gray-200 opacity-70"
+              : "bg-white border-gray-200 ring-2 ring-pink-300"
+          }`}>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Regular Price</span>
               <span className="font-semibold text-gray-800">
@@ -110,10 +119,19 @@ export function PricingDisplay({
 
           {/* Discount pricing */}
           {pricingInfo.discount && (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+            <div className={`rounded-lg p-4 border ${
+              highlightDiscount
+                ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 ring-2 ring-green-300"
+                : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
+            }`}>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-green-700 font-medium">
+                <span className="text-green-700 font-medium flex items-center gap-2">
                   With LUB Discount
+                  {highlightDiscount && (
+                    <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
+                      Active
+                    </span>
+                  )}
                 </span>
                 <span className="font-semibold text-green-800">
                   {pricingInfo.discount.costFormatted}
@@ -129,9 +147,7 @@ export function PricingDisplay({
           {!pricingInfo.discount && tier !== "newcomer" && (
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <div className="text-sm text-gray-600 mb-2">
-                Need{" "}
-                {formatLubAmount(WEB3_CONFIG.pricing.farcasterHoldRequirement)}{" "}
-                LUB for discount
+                Need {formatLubAmount(WEB3_CONFIG.pricing.farcasterHoldRequirement)} LUB for discount
               </div>
               {onGetLub && (
                 <button

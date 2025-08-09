@@ -8,6 +8,7 @@ export interface FarcasterUser {
   bio?: string;
   follower_count: number;
   following_count: number;
+  power_badge?: boolean; // Added optional property to align with UI usage
   verified_addresses?: {
     eth_addresses: string[];
     sol_addresses: string[];

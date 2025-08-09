@@ -7,6 +7,7 @@ import { useGameZoom, useAutoZoom } from "@/hooks/useGameZoom";
 import { SimpleMobileZoomControls } from "./MobileZoomControls";
 import MatchNotification from "./shared/MatchNotification";
 import { FarcasterUser } from "@/types/socialGames";
+import { useInteractiveHints, getOnboardingDelay, getSwayTiming } from "@/hooks/useInteractiveHints";
 
 const shuffleArray = (array: string[]) => {
   for (let i = array.length - 1; i > 0; i--) {
@@ -75,6 +76,10 @@ export default function PhotoPairGame({
   const [showMatchNotification, setShowMatchNotification] = useState(false);
 
   const [isComplete, setIsComplete] = useState(false);
+
+  // Interactive hints for engaging idle users
+  const isGameActive = selected.length > 0 || matched.length > 0 || isComplete;
+  const isGameIdle = !isGameActive;
 
   // Initialize zoom system
   const zoomControls = useGameZoom({
@@ -200,23 +205,96 @@ export default function PhotoPairGame({
           const isSelected = selected.includes(cell);
           const isMatched = matched.includes(cell);
 
+          // Interactive hints for this tile
+          const hints = useInteractiveHints(cell, isGameActive, isGameIdle);
+          const swayTiming = getSwayTiming(cell);
+          
+          // Record interaction when tile is clicked
+          const handleTileClick = () => {
+            if (!isComplete) {
+              hints.recordInteraction();
+              handleClick(cell);
+            }
+          };
+
           return (
             <motion.div
               key={i}
               className="relative cursor-pointer"
               style={{ width: cellSize, height: cellSize }}
-              whileHover={{ scale: isComplete ? 1 : 1.05 }}
+              whileHover={{ 
+                scale: isComplete ? 1 : 1.05,
+                rotateZ: isComplete ? 0 : 2
+              }}
               animate={{
-                scale: isSelected ? 1.15 : 1,
                 zIndex: isSelected ? 10 : 0,
-                y: isComplete ? -100 : 0,
+                y: isComplete ? -100 : (hints.shouldSway && !isSelected && !isMatched ? [0, -1, 0, 1, 0] : 0),
                 opacity: isComplete ? 0 : 1,
+                // Add wiggle/sway effects
+                ...(hints.shouldWiggle && !isSelected && !isMatched
+                  ? {
+                      x: [0, -3, 3, -2, 2, 0],
+                      rotate: [0, -1, 1, -0.5, 0.5, 0],
+                      boxShadow: [
+                        "0 4px 8px rgba(236, 72, 153, 0.1)",
+                        "0 8px 20px rgba(236, 72, 153, 0.25)",
+                        "0 6px 15px rgba(147, 51, 234, 0.2)",
+                        "0 8px 18px rgba(236, 72, 153, 0.22)",
+                        "0 4px 8px rgba(236, 72, 153, 0.1)",
+                      ],
+                    }
+                  : hints.shouldSway && !isSelected && !isMatched
+                  ? { x: [0, 0.5, 0, -0.5, 0] }
+                  : {}),
+                // Compute scale once based on state
+                scale:
+                  isSelected
+                    ? 1.15
+                    : hints.shouldWiggle && !isSelected && !isMatched
+                    ? [1, 1.03, 1.01, 1.02, 1]
+                    : [1, 1.02, 1],
               }}
               transition={{
-                duration: 0.3,
-                delay: isComplete ? Math.random() * 0.8 : 0,
+                scale: isSelected ? { duration: 0.3 } : { 
+                  duration: 2, 
+                  repeat: Infinity, 
+                  ease: "easeInOut",
+                  delay: i * 0.05 
+                },
+                // Enhanced wiggle animation timing
+                x: hints.shouldWiggle ? { 
+                  duration: 0.8, 
+                  ease: "easeInOut",
+                  delay: getOnboardingDelay(cell)
+                } : hints.shouldSway ? {
+                  duration: swayTiming.duration,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: swayTiming.delay
+                } : { duration: 0 },
+                rotate: hints.shouldWiggle ? { 
+                  duration: 0.8, 
+                  ease: "easeInOut",
+                  delay: getOnboardingDelay(cell)
+                } : { duration: 0 },
+                boxShadow: hints.shouldWiggle ? {
+                  duration: 0.8,
+                  ease: "easeInOut", 
+                  delay: getOnboardingDelay(cell)
+                } : { duration: 0 },
+                zIndex: { duration: 0.3 },
+                y: isComplete ? { 
+                  duration: 0.3, 
+                  delay: Math.random() * 0.8 
+                } : hints.shouldSway ? {
+                  duration: swayTiming.duration,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: swayTiming.delay
+                } : { duration: 0.3 },
+                opacity: { duration: 0.3, delay: isComplete ? Math.random() * 0.8 : 0 },
               }}
-              onClick={() => !isComplete && handleClick(cell)}
+              onClick={handleTileClick}
             >
               {!isSelected && !isMatched && (
                 <motion.div

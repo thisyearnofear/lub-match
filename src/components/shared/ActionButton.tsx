@@ -87,10 +87,21 @@ export default function ActionButton({
   const content = (
     <>
       {loading && (
-        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+        />
       )}
-      {!loading && icon && <span>{icon}</span>}
-      <span>{children}</span>
+      {!loading && icon && (
+        <motion.span
+          animate={animate ? { scale: [1, 1.1, 1] } : {}}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          {icon}
+        </motion.span>
+      )}
+      <span className={loading ? "opacity-80" : ""}>{children}</span>
     </>
   );
 

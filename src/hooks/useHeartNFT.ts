@@ -1,8 +1,8 @@
 "use client";
 
 import { useWriteContract, useReadContract, useAccount, useConfig } from "wagmi";
-import { parseAbi, parseEther } from "viem";
-import { readContract } from "viem/actions";
+import { parseAbi, parseEther, parseEventLogs } from "viem";
+import { readContract, waitForTransactionReceipt } from "viem/actions";
 import { getClient } from "@wagmi/core";
 import { arbitrum } from "viem/chains";
 import { WEB3_CONFIG } from "@/config";
@@ -35,6 +35,7 @@ export interface HeartData {
 export function useHeartNFT() {
   const { address } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
+
   const config = useConfig();
   
   const enabled = !!HEART_NFT_ADDRESS;
@@ -274,6 +275,28 @@ export function useHeartNFT() {
     return mintCompletedHeart(completeHeartData, gameHash, useLubDiscount);
   };
 
+  // Wait for receipt and decode tokenId from HeartMinted event
+  const waitForMintReceiptAndTokenId = async (txHash: `0x${string}`) => {
+    try {
+      const client = getClient(config);
+      if (!client) throw new Error("No client available");
+
+      const receipt = await waitForTransactionReceipt(client, { hash: txHash });
+      const logs = parseEventLogs({
+        abi: HEART_NFT_ABI,
+        logs: receipt.logs,
+        eventName: "HeartMinted",
+      });
+
+      const event = logs.find((l: any) => l.eventName === "HeartMinted");
+      const tokenId = event?.args?.tokenId as bigint | undefined;
+      return { tokenId: tokenId ?? null, receipt } as const;
+    } catch (err) {
+      console.error("Failed to fetch receipt or parse event:", err);
+      return { tokenId: null, receipt: null } as const;
+    }
+  };
+
   // Legacy metadata creation (keeping for backward compatibility)
   const createLegacyHeartMetadata = (
     heartData: Omit<HeartData, "metadataURI">,
@@ -320,6 +343,7 @@ export function useHeartNFT() {
     // Actions
     mintCompletedHeart,
     mintCompletedHeartWithMetadata,
+    waitForMintReceiptAndTokenId,
     canMintGame,
     generateGameHash: generateGameHashForNFT,
     createHeartMetadata,
@@ -332,5 +356,6 @@ export function useHeartNFT() {
     // Loading state
     isPending
   };
+
 }
 

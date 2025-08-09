@@ -1,36 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { useAccount } from "wagmi";
-import { formatEther } from "viem";
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import EnhancedNFTPreview from "@/components/shared/EnhancedNFTPreview";
+import { PricingDisplay } from "@/components/PricingDisplay";
+import MiniAppWalletConnect from "@/components/MiniAppWalletConnect";
+import ActionButton from "@/components/shared/ActionButton";
+import { useAccount, useChainId } from "wagmi";
 import { useHeartNFT } from "@/hooks/useHeartNFT";
-import { useLubToken } from "@/hooks/useLubToken";
-import { convertHeartLayoutToContractFormat } from "@/utils/gameHash";
-import SuccessScreen from "./shared/SuccessScreen";
-import ActionButton from "./shared/ActionButton";
-import { useSuccessActions } from "@/hooks/useSuccessActions";
-import { InfoTooltip } from "./shared/InfoTooltip";
-import MiniAppWalletConnect from "./MiniAppWalletConnect";
-import NFTPreview from "./shared/NFTPreview";
-import { WEB3_CONFIG } from "@/config";
+import { formatEthAmount, formatLubAmount, pricingEngine } from "@/utils/pricingEngine";
+import { useUnifiedStats } from "@/hooks/useUnifiedStats";
+import { trackNFTMinted } from "@/utils/analytics";
+import { useOnboardingContext } from "@/components/onboarding/OnboardingProvider";
 
-interface HeartNFTMinterProps {
+type GameType = "custom" | "demo";
+
+type GameStats = {
+  completionTime: number;
+  accuracy: number;
+  socialDiscoveries: number;
+};
+
+export type HeartNFTMinterProps = {
   gameImages: string[];
   gameLayout: number[];
   message: string;
-  gameType: "custom" | "demo";
-  creator: `0x${string}`;
+  gameType: GameType;
+  creator: `0x${string}` | string;
   onClose: () => void;
   onMinted?: (tokenId: string) => void;
   onViewCollection?: () => void;
-  users?: any[]; // Farcaster user data for enhanced collectability
-  gameStats?: {
-    completionTime: number; // seconds
-    accuracy: number; // percentage
-    socialDiscoveries: number; // new profiles discovered
-  };
-}
+  users?: any[];
+  gameStats?: GameStats;
+};
 
 export default function HeartNFTMinter({
   gameImages,
@@ -44,573 +46,196 @@ export default function HeartNFTMinter({
   users,
   gameStats,
 }: HeartNFTMinterProps) {
+  const [isMinting, setIsMinting] = React.useState(false);
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { showToast } = useOnboardingContext();
+  const { stats } = useUnifiedStats();
   const {
-    mintCompletedHeartWithMetadata,
-    generateGameHash,
-    canMintGame,
     mintPrices,
     discountedMintPrices,
-    isPending: isMinting,
-    enabled: nftEnabled,
+    mintCompletedHeartWithMetadata,
+    waitForMintReceiptAndTokenId,
+    isPending,
   } = useHeartNFT();
 
-  const {
-    balance: lubBalance,
-    balanceFormatted: lubBalanceFormatted,
-    enabled: lubEnabled,
-  } = useLubToken();
+  const [useDiscount, setUseDiscount] = React.useState(false);
 
-  const [useLubDiscount, setUseLubDiscount] = useState(false);
-  const [gameHash, setGameHash] = useState<string>("");
-  const [canMint, setCanMint] = useState(false);
-  const [isCheckingMintability, setIsCheckingMintability] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showSuccessActions, setShowSuccessActions] = useState(false);
-  const [mintedTokenId, setMintedTokenId] = useState<string | null>(null);
-
-  // Use shared success actions hook
-  const { getNFTMintSuccessActions } = useSuccessActions();
-
-  // Generate game hash and check mintability
-  useEffect(() => {
-    if (address && gameImages.length > 0) {
-      const hash = generateGameHash(
-        gameImages,
-        convertHeartLayoutToContractFormat(),
-        message,
-        creator,
-        gameType
-      );
-      setGameHash(hash);
-
-      canMintGame(hash)
-        .then((canMint) => {
-          setCanMint(canMint);
-          setIsCheckingMintability(false);
-          if (!canMint) {
-            setError("This game has already been minted as an NFT");
-          }
-        })
-        .catch(() => {
-          setIsCheckingMintability(false);
-          setError("Error checking mint eligibility");
-        });
-    }
-  }, [
-    address,
-    gameImages,
-    message,
-    creator,
-    gameType,
-    generateGameHash,
-    canMintGame,
-  ]);
-
-  const canAffordLubDiscount =
-    lubEnabled &&
-    discountedMintPrices &&
-    lubBalance >= discountedMintPrices.lub;
+  // Determine discount eligibility using pricing engine + unified stats
+  const discountInfo = pricingEngine.getNFTMintPrice(true, stats.lubBalance);
+  const discountAvailable = !!discountedMintPrices; // indicates contract returned discount price
+  const canUseDiscount = isConnected && discountAvailable && discountInfo.canAffordDiscount;
 
   const handleMint = async () => {
-    if (!address || !isConnected) {
-      setError("Please connect your wallet");
-      return;
-    }
-
-    if (!canMint) {
-      setError("This game cannot be minted");
-      return;
-    }
-
     try {
-      setError(null);
+      setIsMinting(true);
+
+      // Prepare heart data for metadata/mint
+      const completedAt = BigInt(Math.floor(Date.now() / 1000));
+      const completer = (address as `0x${string}`) || ("0x0000000000000000000000000000000000000000" as const);
 
       const heartData = {
         imageHashes: gameImages,
-        layout: convertHeartLayoutToContractFormat(),
+        layout: gameLayout,
         message,
-        completedAt: BigInt(Math.floor(Date.now() / 1000)),
-        creator,
-        completer: address,
+        completedAt,
+        creator: creator as `0x${string}`,
+        completer,
         gameType,
         users,
         gameStats,
-      } as any;
+      } as const;
 
-      const txHash = await mintCompletedHeartWithMetadata(
-        heartData,
-        useLubDiscount
+      const tx = await mintCompletedHeartWithMetadata(heartData, useDiscount);
+
+      // Surface transaction submitted toast immediately
+      const explorerBase = chainId === 42161
+        ? "https://arbiscan.io/tx/"
+        : chainId === 421614
+        ? "https://sepolia.arbiscan.io/tx/" // Arbitrum Sepolia uses Arbiscan testnet domain
+        : "https://arbiscan.io/tx/";
+      const txHash = tx as `0x${string}`;
+      showToast(
+        "Transaction Submitted",
+        "Waiting for confirmation...",
+        {
+          icon: "⏳",
+          duration: 6000,
+          actionButton: {
+            text: "View on Explorer",
+            onClick: () => window.open(`${explorerBase}${txHash}`, "_blank"),
+          },
+        }
       );
 
-      if (onMinted) {
-        onMinted(txHash);
+      // Wait for receipt and decode tokenId from on-chain event
+      const { tokenId } = await waitForMintReceiptAndTokenId(tx as `0x${string}`);
+
+      // Show success toast with a CTA to view collection
+      showToast(
+        "💎 NFT Minted!",
+        tokenId
+          ? `Your NFT #${tokenId.toString()} has been minted successfully.`
+          : "Your NFT has been minted successfully.",
+        {
+          icon: "🎉",
+          duration: 6000,
+          actionButton: onViewCollection
+            ? { text: "View Collection", onClick: onViewCollection }
+            : undefined,
+        }
+      );
+
+      if (tokenId) {
+        onMinted?.(tokenId.toString());
       }
 
-      setMintedTokenId(txHash);
-      setShowSuccessActions(true);
-    } catch (err: any) {
-      console.error("Minting error:", err);
-
-      // Handle user rejection more gracefully
-      if (
-        err.message?.includes("User rejected") ||
-        err.message?.includes("user rejected")
-      ) {
-        setError(
-          "Transaction cancelled. No worries - you can try again anytime!"
-        );
-      } else if (err.message?.includes("insufficient funds")) {
-        setError(
-          "Insufficient funds. Please add more ETH to your wallet and try again."
-        );
-      } else if (err.message?.includes("network")) {
-        setError("Network error. Please check your connection and try again.");
-      } else {
-        setError(err.message || "Failed to mint NFT. Please try again.");
-      }
+      // Analytics
+      const priceEth = useDiscount
+        ? discountedMintPrices?.eth ?? BigInt(0)
+        : mintPrices?.eth ?? BigInt(0);
+      trackNFTMinted(tokenId ? tokenId.toString() : "", formatEthAmount(priceEth), useDiscount);
+    } catch (e) {
+      console.error("Mint failed:", e);
+      showToast(
+        "Mint Failed",
+        e instanceof Error ? e.message : "Please try again.",
+        { icon: "⚠️", duration: 6000 }
+      );
+    } finally {
+      setIsMinting(false);
     }
   };
 
-  if (!nftEnabled) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            NFT Minting Unavailable
-          </h2>
-          <p className="text-gray-600 mb-6">
-            NFT minting is not configured. Please check your environment
-            settings.
-          </p>
-          <ActionButton onClick={onClose} fullWidth variant="secondary">
-            Continue Without Minting
-          </ActionButton>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold">Mint Your Heart</h2>
-              <InfoTooltip
-                title="NFT"
-                content="A unique digital collectible of your completed game that you own forever"
-                placement="bottom"
-                maxWidth="200px"
-              >
-                <div className="w-5 h-5 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center text-xs font-bold hover:bg-opacity-30 transition-colors cursor-help">
-                  ?
-                </div>
-              </InfoTooltip>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-purple-200 hover:text-white text-2xl transition-colors"
-              aria-label="Skip NFT Minting"
-            >
-              ×
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <p className="text-purple-100 text-sm">
-              Immortalize your completed heart on Arbitrum
+        <motion.div
+          className="w-full max-w-md mx-4 rounded-2xl bg-gradient-to-b from-gray-900 to-black border border-white/10 shadow-2xl overflow-hidden"
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+        >
+          <div className="p-5 border-b border-white/10">
+            <h3 className="text-lg font-semibold text-white">Mint Your Heart NFT</h3>
+            <p className="text-xs text-gray-400 mt-1">
+              Celebrate this moment by minting a commemorative NFT on-chain.
             </p>
-            <InfoTooltip
-              title="Arbitrum"
-              content="Fast, low-cost blockchain network on Ethereum"
-              placement="bottom"
-              maxWidth="180px"
-            >
-              <div className="w-4 h-4 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center text-xs font-bold hover:bg-opacity-30 transition-colors cursor-help">
-                i
-              </div>
-            </InfoTooltip>
           </div>
-        </div>
 
-        <div className="p-6">
-          {/* Connection Status */}
-          {!isConnected && (
-            <div className="mb-6">
-              <MiniAppWalletConnect>
-                {/* Skip button for non-connected users - less prominent */}
-                <div className="mt-6">
-                  <button
-                    onClick={onClose}
-                    className="w-full py-2 rounded-lg text-gray-500 hover:text-gray-700 transition-colors text-xs font-medium underline"
-                    type="button"
-                  >
-                    Skip for now
-                  </button>
-                  <p className="text-xs text-gray-400 text-center mt-1">
-                    You can always mint later by connecting your wallet
-                  </p>
-                </div>
-              </MiniAppWalletConnect>
-            </div>
-          )}
-
-          {/* Loading State */}
-          {isConnected && isCheckingMintability && (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Checking mint eligibility...</p>
-
-              {/* Skip button during loading - less prominent */}
-              <div className="mt-6">
-                <button
-                  onClick={onClose}
-                  className="text-gray-500 hover:text-gray-700 transition-colors text-xs font-medium underline"
-                  type="button"
-                >
-                  Skip for now
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Error State */}
-          {error && (
-            <div className="mb-6">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl mb-4">
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
-
-              {/* Skip button for error states - less prominent */}
-              <div className="text-center mt-4">
-                <button
-                  onClick={onClose}
-                  className="text-gray-500 hover:text-gray-700 transition-colors text-xs font-medium underline"
-                  type="button"
-                >
-                  Continue without minting
-                </button>
-                <p className="text-xs text-gray-400 text-center mt-1">
-                  You can still enjoy your completed heart game
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Enhanced Success Screen with NFT Celebration */}
-          {showSuccessActions && mintedTokenId && (
-            <SuccessScreen
-              title="🎉 NFT Minted Successfully!"
-              message="Your heart has been immortalized on the blockchain forever!"
-              celebrationIcon="💎"
-              showConfetti={true}
-              celebrationLevel="epic"
-              nftPreview={
-                <NFTPreview
-                  images={gameImages}
-                  message={message}
-                  users={users}
-                  gameStats={gameStats}
-                  tokenId={mintedTokenId}
-                  showSocialContext={true}
-                />
-              }
-              actions={getNFTMintSuccessActions(
-                mintedTokenId,
-                { cid: gameHash, type: "heart" },
-                onClose,
-                onViewCollection,
-                mintedTokenId,
-                WEB3_CONFIG.contracts.heartNFT
-              )}
-              additionalContent={
-                <div className="space-y-4">
-                  {/* Transaction Details */}
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-green-600 text-lg">✅</span>
-                      <p className="text-sm font-semibold text-green-800">
-                        Minting Complete
-                      </p>
-                    </div>
-                    <p className="text-xs text-green-700 mb-2">
-                      <strong>Transaction Hash:</strong>
-                    </p>
-                    <p className="text-xs text-green-600 font-mono break-all bg-white rounded px-2 py-1">
-                      {mintedTokenId}
-                    </p>
-                  </div>
-
-                  {/* Value Proposition */}
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-purple-600 text-lg">🏆</span>
-                      <p className="text-sm font-semibold text-purple-800">
-                        Your Unique Achievement
-                      </p>
-                    </div>
-                    <ul className="text-xs text-purple-700 space-y-1">
-                      <li>• Permanently stored on Arbitrum blockchain</li>
-                      <li>
-                        • Features {gameImages.length} unique profile pictures
-                      </li>
-                      <li>
-                        • Includes {users?.length || 0} Farcaster users you
-                        discovered
-                      </li>
-                      <li>
-                        • One-of-a-kind digital collectible you own forever
-                      </li>
-                    </ul>
-                  </div>
-
-                  {/* Social Context */}
-                  {users && users.length > 0 && (
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-blue-600 text-lg">👥</span>
-                        <p className="text-sm font-semibold text-blue-800">
-                          Social Discovery
-                        </p>
-                      </div>
-                      <p className="text-xs text-blue-700">
-                        Your NFT immortalizes connections with {users.length}{" "}
-                        amazing people from the Farcaster community. Share it to
-                        celebrate these social discoveries!
-                      </p>
-                    </div>
-                  )}
-                </div>
-              }
-              layout="single-column"
+          <div className="p-5 space-y-4">
+            <EnhancedNFTPreview
+              images={gameImages}
+              message={message}
+              users={users}
+              gameStats={gameStats}
             />
-          )}
 
-          {/* Cannot Mint State */}
-          {isConnected &&
-            !isCheckingMintability &&
-            !canMint &&
-            !error &&
-            !showSuccessActions && (
-              <div className="text-center py-8">
-                <div className="mb-4">
-                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl">⚠️</span>
-                  </div>
-                  <p className="text-gray-600 mb-2">
-                    This heart cannot be minted
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    It may have already been minted as an NFT
-                  </p>
-                </div>
+            <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
+              <div className="text-sm text-white/80 flex items-center gap-2">
+                <span>Use LUB Discount</span>
+                {!canUseDiscount && (
+                  <span className="text-xs text-white/60">
+                    {isConnected
+                      ? `Need ${formatLubAmount(discountInfo.lubCost)} LUB`
+                      : "Connect Wallet"}
+                  </span>
+                )}
+              </div>
+              <label className={`inline-flex items-center ${canUseDiscount ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}>
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={useDiscount && canUseDiscount}
+                  onChange={(e) => canUseDiscount && setUseDiscount(e.target.checked)}
+                  disabled={!canUseDiscount}
+                />
+                <div className={`w-11 h-6 rounded-full transition-colors ${
+                  useDiscount && canUseDiscount ? "bg-pink-500" : "bg-white/20"
+                }`} />
+              </label>
+            </div>
 
-                <div className="text-center">
-                  <button
-                    onClick={onClose}
-                    className="text-gray-500 hover:text-gray-700 transition-colors text-xs font-medium underline"
-                    type="button"
-                  >
-                    Continue without minting
-                  </button>
-                  <p className="text-xs text-gray-400 text-center mt-1">
-                    Your heart game is still complete and beautiful!
-                  </p>
-                </div>
+            <PricingDisplay mode="nft" useDiscount={useDiscount} />
+
+            {!isConnected && (
+              <div className="rounded-lg bg-white/5 p-3">
+                <MiniAppWalletConnect />
               </div>
             )}
+          </div>
 
-          {/* Mint Interface */}
-          {isConnected &&
-            !isCheckingMintability &&
-            canMint &&
-            !showSuccessActions && (
-              <>
-                {/* Game Preview */}
-                <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200">
-                  <h3 className="font-semibold text-gray-800 mb-2">
-                    Your Completed Heart
-                  </h3>
-                  <div className="grid grid-cols-4 gap-1 mb-3">
-                    {gameImages.slice(0, 8).map((image, index) => (
-                      <img
-                        key={index}
-                        src={image}
-                        alt={`Heart image ${index + 1}`}
-                        className="w-full aspect-square object-cover rounded"
-                      />
-                    ))}
-                  </div>
-                  <p className="text-sm text-gray-600 italic">"{message}"</p>
-                  <p className="text-xs text-gray-500 mt-1">Type: {gameType}</p>
-                </div>
-
-                {/* Pricing Options */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <h3 className="font-semibold text-gray-800">
-                      Choose Payment Method
-                    </h3>
-                    <InfoTooltip
-                      title="Payment Options"
-                      content={
-                        <div>
-                          <p className="mb-2">
-                            You can pay for minting in two ways:
-                          </p>
-                          <ul className="list-disc list-inside space-y-1 text-xs">
-                            <li>
-                              <strong>ETH:</strong> Standard blockchain currency
-                            </li>
-                            <li>
-                              <strong>LUB + ETH:</strong> Use game tokens for
-                              50% discount
-                            </li>
-                          </ul>
-                          <p className="mt-2 text-blue-300">
-                            LUB tokens are earned by playing games!
-                          </p>
-                        </div>
-                      }
-                    />
-                  </div>
-
-                  {/* ETH Option */}
-                  <div
-                    className={`p-4 border-2 rounded-xl cursor-pointer transition-all mb-3 ${
-                      !useLubDiscount
-                        ? "border-purple-500 bg-purple-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => setUseLubDiscount(false)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            checked={!useLubDiscount}
-                            onChange={() => setUseLubDiscount(false)}
-                            className="text-purple-600"
-                          />
-                          <span className="font-medium">Pay with ETH</span>
-                          <InfoTooltip
-                            content="ETH is the native currency of Ethereum and Arbitrum networks"
-                            placement="top"
-                          />
-                        </div>
-                        <p className="text-sm text-gray-600 ml-6">
-                          {mintPrices ? formatEther(mintPrices.eth) : "0.001"}{" "}
-                          ETH
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* LUB Discount Option */}
-                  {lubEnabled && discountedMintPrices && (
-                    <div
-                      className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                        useLubDiscount
-                          ? "border-purple-500 bg-purple-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      } ${!canAffordLubDiscount ? "opacity-50" : ""}`}
-                      onClick={() =>
-                        canAffordLubDiscount && setUseLubDiscount(true)
-                      }
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              checked={useLubDiscount}
-                              onChange={() => setUseLubDiscount(true)}
-                              disabled={!canAffordLubDiscount}
-                              className="text-purple-600"
-                            />
-                            <span className="font-medium">
-                              Pay with LUB + ETH
-                            </span>
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                              50% OFF
-                            </span>
-                            <InfoTooltip
-                              content="LUB tokens are earned by playing games. Use them to get a 50% discount on minting!"
-                              placement="top"
-                            />
-                          </div>
-                          <p className="text-sm text-gray-600 ml-6">
-                            {formatEther(discountedMintPrices.lub)} LUB +{" "}
-                            {formatEther(discountedMintPrices.eth)} ETH
-                          </p>
-                          {!canAffordLubDiscount && (
-                            <p className="text-xs text-red-600 ml-6">
-                              Insufficient LUB (have {lubBalanceFormatted})
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Mint Button - Enhanced prominence */}
-                <div className="space-y-4">
-                  <ActionButton
-                    onClick={handleMint}
-                    disabled={
-                      isMinting ||
-                      (!useLubDiscount && !mintPrices) ||
-                      (useLubDiscount && !canAffordLubDiscount)
-                    }
-                    loading={isMinting}
-                    fullWidth
-                    variant="gradient-purple"
-                    size="lg"
-                    icon={<span className="text-xl">💎</span>}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="font-bold">Mint Heart NFT</span>
-                      <InfoTooltip
-                        title="Minting"
-                        content="Creates your unique digital trophy stored permanently on blockchain"
-                        placement="left"
-                        maxWidth="160px"
-                      >
-                        <div className="w-4 h-4 bg-white bg-opacity-20 text-white rounded-full flex items-center justify-center text-xs font-bold hover:bg-opacity-30 transition-colors cursor-help">
-                          ?
-                        </div>
-                      </InfoTooltip>
-                    </div>
-                  </ActionButton>
-
-                  {/* Skip button - much less prominent */}
-                  <div className="text-center">
-                    <button
-                      onClick={onClose}
-                      className="text-gray-500 hover:text-gray-700 transition-colors text-xs font-medium underline"
-                      type="button"
-                    >
-                      Skip for now
-                    </button>
-                  </div>
-                </div>
-
-                <p className="text-xs text-gray-500 text-center mt-3">
-                  Your NFT will be minted on Arbitrum Sepolia testnet
-                </p>
-              </>
+          <div className="p-5 flex gap-2 border-t border-white/10">
+            {onViewCollection && (
+              <ActionButton variant="ghost" size="sm" onClick={onViewCollection}>
+                View Collection
+              </ActionButton>
             )}
-        </div>
+            <div className="flex-1" />
+            <ActionButton
+              variant="secondary"
+              size="sm"
+              onClick={onClose}
+              disabled={isMinting || isPending}
+            >
+              Close
+            </ActionButton>
+            <ActionButton
+              variant="gradient-pink"
+              size="sm"
+              onClick={handleMint}
+              disabled={isMinting || isPending || !isConnected}
+            >
+              {isMinting || isPending ? "Minting..." : isConnected ? "Mint NFT" : "Connect Wallet"}
+            </ActionButton>
+          </div>
+        </motion.div>
       </motion.div>
-    </div>
+    </AnimatePresence>
   );
 }

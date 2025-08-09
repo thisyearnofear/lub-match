@@ -124,6 +124,93 @@ export const AnimationPresets = {
     }
   } as Variants,
 
+  // Heart-specific game animations
+  heartTileIdle: {
+    scale: [1, 1.015, 1],
+    transition: { 
+      duration: 3, 
+      repeat: Infinity, 
+      ease: "easeInOut",
+      delay: 0 // Will be overridden per tile
+    }
+  },
+
+  heartTileHover: {
+    scale: 1.08,
+    rotateZ: [-0.5, 0.5],
+    boxShadow: "0 8px 25px rgba(236, 72, 153, 0.2)",
+    transition: { duration: 0.2, ease: "easeOut" }
+  },
+
+  heartTileFlipAnticipation: {
+    scale: 0.95,
+    rotateY: -5,
+    transition: { duration: 0.15, ease: "easeOut" }
+  },
+
+  heartTileFlip: {
+    rotateY: 180,
+    scale: 1.05,
+    transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }
+  },
+
+  heartMatchCelebration: {
+    scale: [1, 1.2, 1.05, 1],
+    rotate: [0, 5, -2, 0],
+    boxShadow: [
+      "0 4px 8px rgba(34, 197, 94, 0.2)",
+      "0 8px 25px rgba(34, 197, 94, 0.4)",
+      "0 4px 8px rgba(34, 197, 94, 0.2)"
+    ],
+    transition: { duration: 0.8, ease: "easeOut" }
+  },
+
+  heartIncorrectShake: {
+    x: [-2, 2, -2, 2, 0],
+    scale: [1, 0.98, 1],
+    transition: { duration: 0.5, ease: "easeInOut" }
+  },
+
+  // Interactive hint animations
+  onboardingWiggle: {
+    x: [0, -3, 3, -2, 2, 0],
+    rotate: [0, -1, 1, -0.5, 0.5, 0],
+    scale: [1, 1.03, 1.01, 1.02, 1], // Enhanced scale variation
+    boxShadow: [
+      "0 4px 8px rgba(236, 72, 153, 0.1)",
+      "0 8px 20px rgba(236, 72, 153, 0.25)", // Subtle glow peak
+      "0 6px 15px rgba(147, 51, 234, 0.2)",   // Purple accent
+      "0 8px 18px rgba(236, 72, 153, 0.22)",  // Pink glow
+      "0 4px 8px rgba(236, 72, 153, 0.1)"    // Back to normal
+    ],
+    transition: { 
+      duration: 0.8, 
+      ease: "easeInOut",
+      delay: 0 // Will be overridden per tile
+    }
+  },
+
+  curiosityPulse: {
+    scale: [1, 1.04, 1.02, 1],
+    boxShadow: [
+      "0 4px 8px rgba(236, 72, 153, 0.1)",
+      "0 6px 15px rgba(236, 72, 153, 0.3)",
+      "0 4px 8px rgba(236, 72, 153, 0.1)"
+    ],
+    transition: { duration: 1.2, ease: "easeOut" }
+  },
+
+  gentleSway: {
+    y: [0, -1, 0, 1, 0],
+    x: [0, 0.5, 0, -0.5, 0],
+    transition: { 
+      duration: 6, // Will be varied per tile
+      repeat: Infinity, 
+      ease: "easeInOut",
+      delay: 0 // Will be set per tile
+    }
+  },
+
   // Floating hearts for background
   floatingHeart: {
     y: [0, -20, 0],

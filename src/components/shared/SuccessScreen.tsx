@@ -77,28 +77,50 @@ export default function SuccessScreen({
         }}
         className={`text-center ${className}`}
       >
-        {/* Celebration Header */}
+        {/* Enhanced Celebration Header */}
         <div className="mb-6">
           <motion.div
-            className="text-6xl mb-4"
+            className="text-6xl mb-4 relative"
             animate={
               celebrationLevel === "epic"
                 ? {
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 5, -5, 0],
+                    scale: [1, 1.3, 1.1, 1],
+                    rotate: [0, 10, -10, 5, 0],
+                    y: [0, -10, 0],
                   }
-                : undefined
+                : {
+                    scale: [1, 1.1, 1],
+                  }
             }
             transition={
               celebrationLevel === "epic"
                 ? {
-                    duration: 0.6,
+                    duration: 1.2,
                     ease: "easeOut",
                   }
-                : undefined
+                : {
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }
             }
           >
             {celebrationIcon}
+            {celebrationLevel === "epic" && (
+              <motion.div
+                className="absolute inset-0 text-6xl"
+                animate={{
+                  scale: [1, 1.5, 0],
+                  opacity: [0.5, 0.8, 0],
+                }}
+                transition={{
+                  duration: 1,
+                  ease: "easeOut",
+                }}
+              >
+                {celebrationIcon}
+              </motion.div>
+            )}
           </motion.div>
           <motion.h2
             className="text-3xl font-bold text-gray-800 mb-4 font-playfair"

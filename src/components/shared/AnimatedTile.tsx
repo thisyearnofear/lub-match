@@ -19,6 +19,10 @@ interface AnimatedTileProps {
   disabled?: boolean;
   ariaLabel?: string;
   testId?: string;
+  variant?: 'default' | 'heart-game' | 'heart-deco';
+  gameState?: 'idle' | 'selected' | 'matched' | 'incorrect' | 'anticipation';
+  staggerDelay?: number;
+  interactiveHint?: 'wiggle' | 'pulse' | null;
 }
 
 /**
@@ -33,12 +37,75 @@ export function AnimatedTile({
   className = "",
   disabled = false,
   ariaLabel,
-  testId
+  testId,
+  variant = 'default',
+  gameState = 'idle',
+  staggerDelay = 0,
+  interactiveHint = null
 }: AnimatedTileProps) {
-  // Get optimized animations
-  const entryAnimation = useOptimizedAnimation('tileEntry', !disabled);
-  const hoverAnimation = useOptimizedAnimation('tileHover', !disabled);
-  const breatheAnimation = useOptimizedAnimation('breathe', isPrimary && !disabled);
+  // Get optimized animations based on variant and hints
+  const getAnimations = () => {
+    if (variant === 'heart-game') {
+      // Interactive hints override normal idle animations
+      if (interactiveHint === 'wiggle' && gameState === 'idle') {
+        return {
+          entry: useOptimizedAnimation('tileEntry', !disabled),
+          hover: useOptimizedAnimation('heartTileHover', !disabled),
+          idle: useOptimizedAnimation('onboardingWiggle', !disabled)
+        };
+      }
+      
+      if (interactiveHint === 'pulse' && gameState === 'idle') {
+        return {
+          entry: useOptimizedAnimation('tileEntry', !disabled),
+          hover: useOptimizedAnimation('heartTileHover', !disabled),
+          idle: useOptimizedAnimation('curiosityPulse', !disabled)
+        };
+      }
+
+      switch (gameState) {
+        case 'idle':
+          return {
+            entry: useOptimizedAnimation('tileEntry', !disabled),
+            hover: useOptimizedAnimation('heartTileHover', !disabled),
+            idle: useOptimizedAnimation('heartTileIdle', !disabled)
+          };
+        case 'anticipation':
+          return {
+            entry: useOptimizedAnimation('tileEntry', !disabled),
+            hover: {},
+            idle: useOptimizedAnimation('heartTileFlipAnticipation', !disabled)
+          };
+        case 'matched':
+          return {
+            entry: useOptimizedAnimation('tileEntry', !disabled),
+            hover: {},
+            idle: useOptimizedAnimation('heartMatchCelebration', !disabled)
+          };
+        case 'incorrect':
+          return {
+            entry: useOptimizedAnimation('tileEntry', !disabled),
+            hover: {},
+            idle: useOptimizedAnimation('heartIncorrectShake', !disabled)
+          };
+        default:
+          return {
+            entry: useOptimizedAnimation('tileEntry', !disabled),
+            hover: useOptimizedAnimation('heartTileHover', !disabled),
+            idle: {}
+          };
+      }
+    }
+    
+    // Default variant animations
+    return {
+      entry: useOptimizedAnimation('tileEntry', !disabled),
+      hover: useOptimizedAnimation('tileHover', !disabled),
+      idle: useOptimizedAnimation('breathe', isPrimary && !disabled)
+    };
+  };
+
+  const animations = getAnimations();
 
   const handleClick = () => {
     if (!disabled && onClick) {
@@ -58,14 +125,24 @@ export function AnimatedTile({
       custom={index}
       initial="hidden"
       animate="visible"
-      variants={entryAnimation}
-      whileHover={disabled ? {} : hoverAnimation}
+      variants={{
+        ...animations.entry,
+        visible: {
+          ...animations.entry.visible,
+          transition: {
+            ...animations.entry.visible?.transition,
+            delay: staggerDelay + (animations.entry.visible?.transition?.delay || 0)
+          }
+        }
+      }}
+      whileHover={disabled ? {} : animations.hover}
       whileTap={disabled ? {} : { scale: 0.98 }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={`
         ${onClick ? 'cursor-pointer' : ''} 
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''} 
+        ${variant === 'heart-game' ? 'heart-game-tile' : ''}
         ${className}
       `}
       style={{ 
@@ -79,7 +156,13 @@ export function AnimatedTile({
       data-testid={testId}
     >
       <motion.div 
-        animate={breatheAnimation}
+        animate={{
+          ...animations.idle,
+          transition: {
+            ...animations.idle.transition,
+            delay: staggerDelay * 0.1 // Stagger idle animations
+          }
+        }}
         style={{
           // Prevent layout shifts during animation
           transformOrigin: 'center'
