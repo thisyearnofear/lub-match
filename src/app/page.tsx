@@ -19,7 +19,6 @@ import {
 } from "@/components/shared/AnimatedTile";
 
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
-import { useSocialGames } from "@/hooks/useSocialGames";
 import { useAccount } from "wagmi";
 import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
 
@@ -60,14 +59,13 @@ export default function Home() {
     enableAutoRefresh: false, // Disable auto-refresh to prevent hydration issues
   });
 
-  // Social games functionality
-  const {
-    isGameActive,
-    startSocialGames,
-    closeSocialGames,
-    canPlayGames,
-    refreshPlayerData,
-  } = useSocialGames();
+  // Social games functionality - simplified state management
+  const [isGameActive, setIsGameActive] = useState(false);
+
+  const startSocialGames = () => setIsGameActive(true);
+  const closeSocialGames = () => setIsGameActive(false);
+  const canPlayGames = (users: any[]) => users.length >= 4;
+  const refreshPlayerData = () => {}; // No longer needed with unified stats
 
   const { isConnected } = useAccount();
 
@@ -102,12 +100,7 @@ export default function Home() {
     showOnboardingMessage,
   ]);
 
-  // Refresh player data when component mounts
-  useEffect(() => {
-    if (isClient) {
-      refreshPlayerData();
-    }
-  }, [isClient, refreshPlayerData]);
+  // No longer need to refresh player data - using unified stats
 
   const handleShowProposal = () => {
     // For the home page demo, show NFT minting option first

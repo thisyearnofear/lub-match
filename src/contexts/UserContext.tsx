@@ -19,12 +19,11 @@ import { useLubToken } from "@/hooks/useLubToken";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { formatLubAmount } from "@/utils/pricingEngine";
 
+// Simplified UserStats - remove placeholder values
 interface UserStats {
   // Game Stats
   gamesCompleted: number;
   socialGamesPlayed: number;
-  currentStreak: number;
-  bestStreak: number;
 
   // Token Stats
   lubBalance: string;
@@ -33,11 +32,9 @@ interface UserStats {
 
   // NFT Stats
   nftsMinted: number;
-  nftsReceived: number;
 
   // Social Stats
-  lubsSent: number;
-  lubsReceived: number;
+  lubsCreated: number;
   gamesShared: number;
   referralsSent: number;
 
@@ -257,7 +254,7 @@ export function UserProvider({ children }: UserProviderProps) {
     []
   );
 
-  // Build user stats
+  // Build user stats - simplified without placeholder values
   const buildUserStats = useCallback((): UserStats => {
     const tierInfo = calculateTierProgress(tier, progress);
 
@@ -265,8 +262,6 @@ export function UserProvider({ children }: UserProviderProps) {
       // Game Stats
       gamesCompleted: progress.gamesCompleted,
       socialGamesPlayed: progress.socialGamesPlayed,
-      currentStreak: 0, // Not tracked in current UserProgress
-      bestStreak: 0, // Not tracked in current UserProgress
 
       // Token Stats
       lubBalance: balance ? formatLubAmount(balance) : "0",
@@ -275,11 +270,9 @@ export function UserProvider({ children }: UserProviderProps) {
 
       // NFT Stats
       nftsMinted: progress.nftsMinted,
-      nftsReceived: 0, // Not tracked in current UserProgress
 
       // Social Stats
-      lubsSent: progress.farcasterLubsCreated + progress.romanceLubsCreated,
-      lubsReceived: 0, // Not tracked in current UserProgress
+      lubsCreated: progress.farcasterLubsCreated + progress.romanceLubsCreated,
       gamesShared: progress.gamesShared,
       referralsSent: progress.referralsSent,
 

@@ -214,7 +214,7 @@ export class UserDisplayFormatter {
     
     // Priority 4: Tier-based fallback
     if (tier) {
-      return getTierDisplayName(tier as any);
+      return tier.charAt(0).toUpperCase() + tier.slice(1);
     }
     
     return context === 'compact' ? 'Anonymous' : 'Player';

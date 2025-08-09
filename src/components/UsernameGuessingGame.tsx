@@ -8,8 +8,6 @@ import {
   UsernameGuessingGame,
   UsernameGuessingResult,
 } from "@/types/socialGames";
-import { gameStorage } from "@/utils/gameStorage";
-import { scoreCalculator } from "@/utils/scoreCalculator";
 import { SocialGameUsernameButton } from "@/components/shared/UsernameButton";
 import { SocialGameProfileLink } from "@/components/shared/ProfileLinkButton";
 
@@ -126,11 +124,15 @@ export default function UsernameGuessingGameComponent({
     const correctGuesses = finalQuestions.filter((q) => q.isCorrect).length;
     const accuracy = (correctGuesses / finalQuestions.length) * 100;
 
+    // Calculate score: 100 points per correct answer
+    const score = correctGuesses * 100;
+    const maxScore = finalQuestions.length * 100;
+
     const result: UsernameGuessingResult = {
       gameId: game.id,
-      playerId: await gameStorage.generatePlayerId(),
-      score: 0, // Will be calculated by scoreCalculator
-      maxScore: finalQuestions.length * 100, // Assuming 100 points per correct answer
+      playerId: `player-${Date.now()}`, // Simple player ID
+      score,
+      maxScore,
       accuracy,
       timeSpent: totalTime,
       completedAt: new Date(),
@@ -147,11 +149,7 @@ export default function UsernameGuessingGameComponent({
       },
     };
 
-    // Calculate final score
-    result.score = scoreCalculator.calculateUsernameGuessingScore(result);
-
-    // Save result
-    await gameStorage.saveGameResult(result);
+    // No need to save separately - handled by parent component
 
     onGameComplete(result);
   };

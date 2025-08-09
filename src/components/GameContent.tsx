@@ -9,7 +9,7 @@ import HeartNFTMinter from "@/components/HeartNFTMinter";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 
-import { useUserProgression } from "@/utils/userProgression";
+import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import { ShareHelpers } from "@/utils/shareHelpers";
 import ActionButton from "@/components/shared/ActionButton";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -45,7 +45,7 @@ export default function GameContent({
   const [isClient, setIsClient] = useState(false);
 
   // User progression integration
-  const { recordEvent } = useUserProgression();
+  const { recordGameCompletion, recordGameShare } = useUnifiedStats();
 
   // Onboarding system
   const { showGameCompletionFlow } = useOnboarding();
@@ -93,18 +93,7 @@ export default function GameContent({
     const shareText = `💝 Will you Lub me? Match all the hearts? ${url}`;
 
     // Record sharing event in user progression
-    recordEvent({
-      type: "game_shared",
-      timestamp: new Date().toISOString(),
-      data: {
-        url,
-        shareText,
-        platform:
-          isClient && (window as FarcasterWindow)?.fc
-            ? "farcaster"
-            : "warpcast",
-      },
-    });
+    recordGameShare();
 
     // Copy to clipboard (with error handling)
     try {

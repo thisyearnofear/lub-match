@@ -4,16 +4,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
-import {
-  FarcasterUser,
-  GameResult,
-  LeaderboardEntry,
-} from "@/types/socialGames";
+import { FarcasterUser, GameResult } from "@/types/socialGames";
 import { socialGameFactory } from "@/utils/socialGameFactory";
-import { gameStorage } from "@/utils/gameStorage";
-import { scoreCalculator } from "@/utils/scoreCalculator";
 import UsernameGuessingGameComponent from "./UsernameGuessingGame";
-import { useUserProgression } from "@/utils/userProgression";
+import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import { useLubToken } from "@/hooks/useLubToken";
 import { WEB3_CONFIG } from "@/config";
 import { useEarningNotifications } from "./EarningToast";
@@ -23,6 +17,7 @@ import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
 import { ConnectionIncentive } from "./shared/ConnectionIncentive";
+import { useUserIdentity } from "@/contexts/UserContext";
 
 interface SocialGamesHubProps {
   users: FarcasterUser[];
@@ -34,7 +29,6 @@ type GameMode =
   | "username-guessing"
   | "pfp-matching"
   | "social-trivia"
-  | "leaderboard"
   | "results";
 
 export default function SocialGamesHub({
@@ -44,8 +38,6 @@ export default function SocialGamesHub({
   const [currentMode, setCurrentMode] = useState<GameMode>("menu");
   const [currentGame, setCurrentGame] = useState<any>(null);
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [playerStats, setPlayerStats] = useState<LeaderboardEntry | null>(null);
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">(
     "medium"
   );
@@ -60,32 +52,45 @@ export default function SocialGamesHub({
     context: farcasterContext,
   } = useMiniAppReady();
 
+  // Get user identity for personalized display
+  const { farcasterUser, displayName } = useUserIdentity();
+
+  // Debug logging for user identity
+  useEffect(() => {
+    console.log("SocialGamesHub - User Identity Debug:", {
+      farcasterUser,
+      displayName,
+      farcasterContext,
+      isInFarcaster,
+    });
+  }, [farcasterUser, displayName, farcasterContext, isInFarcaster]);
+
   // Filter users to only include those with valid profile pictures and usernames
   const validUsers = users.filter(
     (user) => user.pfp_url && user.username && user.pfp_url.trim() !== ""
   );
 
-  // User progression integration
-  const { features, recordEvent, progress } = useUserProgression();
+  // Unified stats system
+  const {
+    formattedStats,
+    recordSocialGameResult,
+    recordGameCompletion,
+    socialGameScore,
+    socialGameAccuracy,
+    socialGameLevel,
+    gamesCompleted,
+    socialGamesPlayed,
+    tierDisplayName,
+    tier,
+  } = useUnifiedStats();
+
   const { earnLub, balanceFormatted, enabled: lubTokenEnabled } = useLubToken();
   const { showEarning, ToastContainer } = useEarningNotifications();
 
   // Use shared success actions hook
   const { getSocialGameSuccessActions } = useSuccessActions();
 
-  // Load player stats and leaderboard on mount
-  useEffect(() => {
-    loadPlayerData();
-  }, []);
-
-  const loadPlayerData = async () => {
-    const playerId = await gameStorage.generatePlayerId();
-    const stats = await gameStorage.getPlayerStats(playerId);
-    const board = await gameStorage.getLeaderboard(undefined, 10);
-
-    setPlayerStats(stats);
-    setLeaderboard(board);
-  };
+  // No need to load separate player data - using unified stats
 
   const startUsernameGuessingGame = () => {
     const game = socialGameFactory.createUsernameGuessingGame(
@@ -99,29 +104,13 @@ export default function SocialGamesHub({
   const handleGameComplete = (result: GameResult) => {
     setGameResult(result);
     setCurrentMode("results");
-    loadPlayerData(); // Refresh stats
 
-    // Record social game completion in user progression
-    recordEvent({
-      type: "social_game",
-      timestamp: new Date().toISOString(),
-      data: {
-        gameId: result.gameId,
-        score: result.score,
-        maxScore: result.maxScore,
-        accuracy: result.accuracy,
-        timeSpent: result.timeSpent,
-        difficulty,
-        walletConnected: isConnected,
-      },
-    });
+    // Record social game result in unified stats
+    recordSocialGameResult(result.score, result.accuracy, result.timeSpent);
+    recordGameCompletion("social");
 
     // Award LUB tokens for game completion (if wallet connected and features enabled)
-    if (
-      isConnected &&
-      features.tokenEarning &&
-      WEB3_CONFIG.features.socialEarning
-    ) {
+    if (isConnected && WEB3_CONFIG.features.socialEarning) {
       earnLub("social_game_win");
 
       // Show earning notification
@@ -139,9 +128,7 @@ export default function SocialGamesHub({
     setGameResult(null);
   };
 
-  const showLeaderboard = () => {
-    setCurrentMode("leaderboard");
-  };
+  // Removed leaderboard - focusing on personal stats
 
   if (validUsers.length < 4) {
     return (
@@ -187,7 +174,10 @@ export default function SocialGamesHub({
               <div className="flex justify-between items-start mb-8">
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold text-white mb-2">
-                    🎮 Lubbers Anonymous
+                    🎮{" "}
+                    {farcasterUser?.username
+                      ? `@${farcasterUser.username}`
+                      : displayName || "Lubbers Anonymous"}
                   </h1>
                   <p className="text-purple-200">LUB me, or LUB me not?</p>
 
@@ -280,41 +270,37 @@ export default function SocialGamesHub({
               </div>
 
               {/* Player Stats */}
-              {playerStats && (
-                <div className="bg-purple-800 bg-opacity-50 rounded-xl p-6 mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-4">
-                    Your Stats
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-pink-400">
-                        {playerStats.totalScore}
-                      </div>
-                      <div className="text-sm text-purple-200">Total Score</div>
+              <div className="bg-purple-800 bg-opacity-50 rounded-xl p-6 mb-8">
+                <h3 className="text-xl font-semibold text-white mb-4">
+                  Your Stats
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-pink-400">
+                      {socialGameScore}
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-400">
-                        {playerStats.gamesPlayed}
-                      </div>
-                      <div className="text-sm text-purple-200">
-                        Games Played
-                      </div>
+                    <div className="text-sm text-purple-200">Total Score</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-400">
+                      {gamesCompleted}
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-400">
-                        {playerStats.averageAccuracy.toFixed(1)}%
-                      </div>
-                      <div className="text-sm text-purple-200">Accuracy</div>
+                    <div className="text-sm text-purple-200">Games Played</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-400">
+                      {socialGameAccuracy}
                     </div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-yellow-400">
-                        {playerStats.farcasterKnowledgeLevel}
-                      </div>
-                      <div className="text-sm text-purple-200">Level</div>
+                    <div className="text-sm text-purple-200">Accuracy</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-yellow-400">
+                      {tierDisplayName}
                     </div>
+                    <div className="text-sm text-purple-200">Level</div>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Difficulty Selector */}
               <div className="mb-8">
@@ -409,23 +395,7 @@ export default function SocialGamesHub({
                   </div>
                 </motion.button>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={showLeaderboard}
-                  className="bg-gradient-to-br from-yellow-600 to-orange-600 p-6 rounded-xl text-left hover:from-yellow-700 hover:to-orange-700 transition-all"
-                >
-                  <div className="text-2xl mb-2">🏆</div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    Leaderboard
-                  </h3>
-                  <p className="text-yellow-100 text-sm">
-                    See how you rank against other players.
-                  </p>
-                  <div className="mt-4 text-xs text-yellow-200">
-                    {leaderboard.length} players ranked
-                  </div>
-                </motion.button>
+                {/* Leaderboard removed - focusing on personal progression */}
               </div>
             </motion.div>
           )}
@@ -484,7 +454,7 @@ export default function SocialGamesHub({
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-yellow-400">
-                      {playerStats?.farcasterKnowledgeLevel || "Newcomer"}
+                      {socialGameLevel}
                     </div>
                     <div className="text-purple-200">Level</div>
                   </div>
@@ -494,9 +464,9 @@ export default function SocialGamesHub({
               {/* Wallet Connection Prompt for Rewards */}
               {!isConnected && WEB3_CONFIG.features.socialEarning && (
                 <div className="mb-6">
-                  <ConnectionIncentive 
-                    tier={progress.tier} 
-                    context="game-complete" 
+                  <ConnectionIncentive
+                    tier={tier}
+                    context="game-complete"
                     compact={false}
                   />
                 </div>
@@ -524,7 +494,7 @@ export default function SocialGamesHub({
                   celebrationIcon="🎉"
                   actions={getSocialGameSuccessActions(
                     backToMenu,
-                    showLeaderboard
+                    backToMenu // Removed leaderboard, just go back to menu
                   )}
                   layout="two-column"
                   className="bg-transparent"
@@ -533,82 +503,7 @@ export default function SocialGamesHub({
             </motion.div>
           )}
 
-          {currentMode === "leaderboard" && (
-            <motion.div
-              key="leaderboard"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="p-8"
-            >
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-white">
-                  🏆 Leaderboard
-                </h2>
-                <button
-                  onClick={backToMenu}
-                  className="text-purple-200 hover:text-white transition-colors"
-                >
-                  ← Back
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {leaderboard.map((entry, index) => (
-                  <div
-                    key={entry.playerId || index}
-                    className={`
-                      bg-purple-800 bg-opacity-50 rounded-xl p-6 flex items-center justify-between
-                      ${index < 3 ? "border-2 border-yellow-400" : ""}
-                    `}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`
-                        text-2xl font-bold w-8 text-center
-                        ${
-                          index === 0
-                            ? "text-yellow-400"
-                            : index === 1
-                            ? "text-gray-300"
-                            : index === 2
-                            ? "text-orange-400"
-                            : "text-purple-200"
-                        }
-                      `}
-                      >
-                        {index + 1}
-                      </div>
-                      <div>
-                        <div className="text-white font-semibold">
-                          {entry.playerName || "Anonymous Player"}
-                        </div>
-                        <div className="text-purple-200 text-sm">
-                          {entry.farcasterKnowledgeLevel} • {entry.gamesPlayed}{" "}
-                          games
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-pink-400">
-                        {entry.totalScore}
-                      </div>
-                      <div className="text-purple-200 text-sm">
-                        {entry.averageAccuracy.toFixed(1)}% avg
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {leaderboard.length === 0 && (
-                <div className="text-center text-purple-200 py-12">
-                  <div className="text-4xl mb-4">🎮</div>
-                  <p>No games played yet. Be the first to set a score!</p>
-                </div>
-              )}
-            </motion.div>
-          )}
+          {/* Leaderboard mode removed - focusing on personal stats */}
         </AnimatePresence>
       </motion.div>
 
