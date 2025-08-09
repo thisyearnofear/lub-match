@@ -233,7 +233,7 @@ export default function ValentinesProposal({
               height={200}
               unoptimized
             />
-            <div className="flex flex-wrap justify-center gap-3 mt-6">
+            <div className="flex flex-wrap justify-center gap-3 mt-6 relative" style={{ zIndex: 10 }}>
               {onShare && (
                 <button
                   onClick={onShare}
@@ -282,7 +282,7 @@ export default function ValentinesProposal({
       </AnimatePresence>
 
       {showFireworks && (
-        <div className="absolute w-full h-full">
+        <div className="absolute w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
           <Fireworks
             options={{
               autoresize: true,
@@ -293,6 +293,7 @@ export default function ValentinesProposal({
               position: "absolute",
               top: 0,
               left: 0,
+              pointerEvents: "none",
             }}
           />
         </div>

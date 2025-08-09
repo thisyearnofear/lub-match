@@ -69,6 +69,22 @@ export default function Home() {
 
   const { isConnected } = useAccount();
 
+  // Generate personalized completion message
+  const getPersonalizedMessage = () => {
+    if (!users || users.length === 0) {
+      return "Demo Lub Completed! 💝";
+    }
+    
+    const userNames = users.slice(0, 3).map(user => user.display_name || user.username).join(", ");
+    const remainingCount = users.length - 3;
+    
+    if (users.length <= 3) {
+      return `💌 Lub completed with ${userNames}! 💝`;
+    } else {
+      return `💌 Lub completed with ${userNames} and ${remainingCount} others! 💝`;
+    }
+  };
+
   // Game images - only use Farcaster profile images, no fallbacks
   const [gameImages, setGameImages] = useState<string[]>([]);
 
@@ -402,7 +418,17 @@ export default function Home() {
 
       {/* Social Games Modal */}
       {isGameActive && (
-        <SocialGamesHub users={users} onClose={handleSocialGamesClose} />
+        <SocialGamesHub 
+          users={users} 
+          onClose={handleSocialGamesClose}
+          onSkipToProposal={() => {
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setShowValentinesProposal(true);
+              setIsTransitioning(false);
+            }, ANIM_DURATION * 1000);
+          }}
+        />
       )}
 
       {/* Heart NFT Minter Modal */}
@@ -410,7 +436,7 @@ export default function Home() {
         <HeartNFTMinter
           gameImages={gameImages}
           gameLayout={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]}
-          message="Demo Lub Completed! 💝"
+          message={getPersonalizedMessage()}
           gameType="demo"
           creator="0x0000000000000000000000000000000000000000"
           onClose={handleNFTMinterClose}

@@ -45,7 +45,7 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
   }), [navigation, onReset]);
 
   const createPlayDemoAction = useCallback((): SuccessAction => ({
-    label: "Play Demo Game",
+    label: "Home Page",
     onClick: () => navigation.goHome(),
     variant: "gradient-blue",
     icon: "🏠"

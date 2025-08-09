@@ -156,7 +156,7 @@ export default function HeartNFTMinter({
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="w-full max-w-md mx-4 rounded-2xl bg-gradient-to-b from-gray-900 to-black border border-white/10 shadow-2xl overflow-hidden"
+          className="w-full max-w-md mx-4 rounded-2xl bg-gradient-to-b from-gray-900 to-black border border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
@@ -168,7 +168,7 @@ export default function HeartNFTMinter({
             </p>
           </div>
 
-          <div className="p-5 space-y-4">
+          <div className="p-5 space-y-4 overflow-y-auto flex-1">
             <EnhancedNFTPreview
               images={gameImages}
               message={message}
@@ -210,7 +210,7 @@ export default function HeartNFTMinter({
             )}
           </div>
 
-          <div className="p-5 flex gap-2 border-t border-white/10">
+          <div className="p-5 flex gap-2 border-t border-white/10 flex-shrink-0">
             {onViewCollection && (
               <ActionButton variant="ghost" size="sm" onClick={onViewCollection}>
                 View Collection

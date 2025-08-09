@@ -22,6 +22,7 @@ import { useUserIdentity } from "@/contexts/UserContext";
 interface SocialGamesHubProps {
   users: FarcasterUser[];
   onClose: () => void;
+  onSkipToProposal?: () => void;
 }
 
 type GameMode =
@@ -34,6 +35,7 @@ type GameMode =
 export default function SocialGamesHub({
   users,
   onClose,
+  onSkipToProposal,
 }: SocialGamesHubProps) {
   const [currentMode, setCurrentMode] = useState<GameMode>("menu");
   const [currentGame, setCurrentGame] = useState<any>(null);
@@ -253,7 +255,10 @@ export default function SocialGamesHub({
 
                     {/* Skip to Proposal Button */}
                     <button
-                      onClick={onClose}
+                      onClick={() => {
+                        onClose();
+                        onSkipToProposal?.();
+                      }}
                       className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all"
                     >
                       💝 Skip to Proposal
