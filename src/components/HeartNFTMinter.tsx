@@ -108,11 +108,27 @@ export default function HeartNFTMinter({
         gameStats,
       } as const;
 
+      // Get LUB costs for approval handling (mutually exclusive payment methods)
+      const totalLubCost = useFullLub 
+        ? nftPricing.fullLubPrice.lubCost 
+        : useDiscount 
+          ? nftPricing.discountedPrice.lubCost 
+          : BigInt(0);
+      
+      console.log('💰 Minting with:', {
+        useDiscount,
+        useFullLub,
+        totalLubCost: totalLubCost.toString(),
+        discountPrice: nftPricing.discountedPrice.lubCost.toString(),
+        fullLubPrice: nftPricing.fullLubPrice.lubCost.toString(),
+      });
+
       const tx = await mintCompletedHeartWithMetadata(
         heartData,
         useDiscount,
         undefined,
-        useFullLub
+        useFullLub,
+        totalLubCost
       );
 
       // Surface transaction submitted toast immediately

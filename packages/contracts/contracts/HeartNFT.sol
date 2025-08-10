@@ -86,7 +86,7 @@ contract HeartNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
             (uint256 lubCost, uint256 discountedEthPrice) = lubToken.getDiscountedMintPrice(mintPriceETH);
 
             if (lubToken.balanceOf(msg.sender) >= lubCost) {
-                lubToken.spendForMintDiscount(lubCost);
+                lubToken.spendForMintDiscount(msg.sender, lubCost);
                 finalPrice = discountedEthPrice;
                 usedDiscount = true;
             }
@@ -159,7 +159,7 @@ contract HeartNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
 
         // Burn LUB tokens for full payment
         require(lubToken.balanceOf(msg.sender) >= lubCost, "Insufficient LUB balance");
-        lubToken.spendForMintDiscount(lubCost);
+        lubToken.spendForMintDiscount(msg.sender, lubCost);
 
         uint256 tokenId = nextTokenId++;
 

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useGameZoom, useAutoZoom } from "@/hooks/useGameZoom";
 import { SimpleMobileZoomControls } from "./MobileZoomControls";
 import MatchNotification from "./shared/MatchNotification";
@@ -35,16 +35,12 @@ type PhotoPairGameProps = {
   onGameComplete?: (stats: { completionTime: number; accuracy: number; totalAttempts: number; totalMatches: number }) => void;
 };
 
-export default function PhotoPairGame({
+const PhotoPairGame = memo(function PhotoPairGame({
   images: imagesProp,
   users: usersProp,
   handleShowProposalAction,
   onGameComplete,
 }: PhotoPairGameProps) {
-  // Debug logging
-  console.log("PhotoPairGame received images:", imagesProp);
-  console.log("Images length:", imagesProp?.length);
-
   // Validate that we have exactly 8 images
   if (!imagesProp || imagesProp.length !== 8) {
     return (
@@ -58,15 +54,10 @@ export default function PhotoPairGame({
     );
   }
 
-  // More debug logging
-  console.log("Using Farcaster profile images:", imagesProp);
-
-  // Create a stable key for the images to prevent infinite re-renders
-  const imagesKey = useMemo(() => imagesProp.join(","), [imagesProp]);
-
+  // Create stable references with memoization
   const imagePairs = useMemo(
     () => imagesProp.flatMap((img) => [img, img]),
-    [imagesKey]
+    [imagesProp]
   );
 
   const [shuffledPairs, setShuffledPairs] = useState<string[]>([]);
@@ -110,9 +101,9 @@ export default function PhotoPairGame({
       setJustMatched([]);
       setIsComplete(false);
     }
-  }, [imagesKey]); // Use stable key instead of imagePairs
+  }, [imagePairs]);
 
-  const handleClick = async (index: number) => {
+  const handleClick = useCallback(async (index: number) => {
     if (
       selected.length === 2 ||
       matched.includes(index) ||
@@ -154,12 +145,12 @@ export default function PhotoPairGame({
       }
       setTimeout(() => setSelected([]), 1000);
     }
-  };
+  }, [selected, matched, shuffledPairs, usersProp]);
 
-  const handleCloseMatchNotification = () => {
+  const handleCloseMatchNotification = useCallback(() => {
     setShowMatchNotification(false);
     setMatchedUser(null);
-  };
+  }, []);
 
   useEffect(() => {
     if (matched.length === 16 && !isComplete) {
@@ -400,4 +391,6 @@ export default function PhotoPairGame({
       )}
     </div>
   );
-}
+});
+
+export default PhotoPairGame;

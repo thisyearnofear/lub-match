@@ -130,7 +130,7 @@ export function AnimatedTile({
         visible: {
           ...animations.entry.visible,
           transition: {
-            ...animations.entry.visible?.transition,
+            ...(animations.entry.visible?.transition || {}),
             delay: staggerDelay + (animations.entry.visible?.transition?.delay || 0)
           }
         }
@@ -159,7 +159,7 @@ export function AnimatedTile({
         animate={{
           ...animations.idle,
           transition: {
-            ...animations.idle.transition,
+            ...(animations.idle?.transition || {}),
             delay: staggerDelay * 0.1 // Stagger idle animations
           }
         }}

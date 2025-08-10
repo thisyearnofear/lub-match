@@ -6,11 +6,60 @@ import Link from "next/link";
 
 import TextFooter from "@/components/TextFooter";
 import PhotoPairGame from "../components/PhotoPairGame";
-import ValentinesProposal from "@/components/ValentinesProposal";
-import SocialGamesHub from "@/components/SocialGamesHub";
-import HeartNFTMinter from "@/components/HeartNFTMinter";
-import FloatingActionButton from "@/components/shared/FloatingActionButton";
-import WalletDrawer from "@/components/shared/WalletDrawer";
+import dynamic from "next/dynamic";
+
+// Only lazy load the heaviest components that appear in modals
+const ValentinesProposal = dynamic(
+  () => import("@/components/ValentinesProposal"),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-4xl mb-4">💖</div>
+          <p className="text-white">Loading proposal...</p>
+        </div>
+      </div>
+    ),
+    ssr: false,
+  }
+);
+
+const SocialGamesHub = dynamic(() => import("@/components/SocialGamesHub"), {
+  loading: () => (
+    <div className="flex items-center justify-center p-8">
+      <div className="text-center">
+        <div className="text-4xl mb-4">🎮</div>
+        <p className="text-white">Loading social games...</p>
+      </div>
+    </div>
+  ),
+  ssr: false,
+});
+
+const HeartNFTMinter = dynamic(() => import("@/components/HeartNFTMinter"), {
+  loading: () => (
+    <div className="flex items-center justify-center p-8">
+      <div className="text-center">
+        <div className="text-4xl mb-4">🎨</div>
+        <p className="text-white">Loading NFT minter...</p>
+      </div>
+    </div>
+  ),
+  ssr: false,
+});
+
+const FloatingActionButton = dynamic(
+  () => import("@/components/shared/FloatingActionButton"),
+  {
+    ssr: false,
+  }
+);
+
+const WalletDrawer = dynamic(() => import("@/components/shared/WalletDrawer"), {
+  ssr: false,
+});
+
+import ClientOnly from "@/components/ClientOnly";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import {
   AnimatedTile,
@@ -41,6 +90,13 @@ export default function Home() {
   const [showWalletDrawer, setShowWalletDrawer] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isClient, setIsClient] = useState(false);
+
+  // Game stats state to capture actual performance data
+  const [gameStats, setGameStats] = useState<{
+    completionTime: number;
+    accuracy: number;
+    socialDiscoveries: number;
+  } | null>(null);
 
   // Onboarding system
   const { showOnboardingMessage } = useOnboarding();
@@ -92,6 +148,9 @@ export default function Home() {
   // Game images - only use Farcaster profile images, no fallbacks
   const [gameImages, setGameImages] = useState<string[]>([]);
 
+  // Track the actual users whose images are used in the game
+  const [gameUsers, setGameUsers] = useState<any[]>([]);
+
   // Get current Farcaster user from context
   const farcasterUser = farcasterContext?.user;
 
@@ -106,6 +165,9 @@ export default function Home() {
       const farcasterPairs = getRandomPairs();
       if (farcasterPairs.length === 8) {
         setGameImages(farcasterPairs);
+
+        // Set the corresponding users (first 8 users whose images are used)
+        setGameUsers(users.slice(0, 8));
 
         // Show onboarding message for first-time users
         showOnboardingMessage("FARCASTER_INTRO", { delay: 1000 });
@@ -157,6 +219,29 @@ export default function Home() {
     console.log("NFT minted with token ID:", tokenId);
     // Continue to social games after successful minting
     handleNFTMinterClose();
+  };
+
+  // Handle game completion and capture real stats
+  const handleGameComplete = (stats: {
+    completionTime: number;
+    accuracy: number;
+    totalAttempts: number;
+    totalMatches: number;
+  }) => {
+    // Calculate social discoveries based on unique users actually used in the game
+    const socialDiscoveries = Math.min(gameUsers.length, 8);
+
+    setGameStats({
+      completionTime: stats.completionTime,
+      accuracy: stats.accuracy,
+      socialDiscoveries,
+    });
+
+    console.log("Game completed with stats:", {
+      ...stats,
+      socialDiscoveries,
+      actualUsersInGame: gameUsers.length,
+    });
   };
 
   const handleSocialGamesClose = () => {
@@ -291,14 +376,22 @@ export default function Home() {
                 </p>
               </div>
             ) : gameImages.length === 8 ? (
-              <>
+              <ClientOnly
+                fallback={
+                  <div className="text-center p-8">
+                    <div className="text-4xl mb-4">💝</div>
+                    <p className="text-purple-200">Preparing game...</p>
+                  </div>
+                }
+              >
                 <PhotoPairGame
                   images={gameImages}
-                  users={users}
+                  users={gameUsers}
                   handleShowProposalAction={handleShowProposal}
+                  onGameComplete={handleGameComplete}
                 />
                 <TextFooter />
-              </>
+              </ClientOnly>
             ) : (
               // Only show error state if API check is complete and we have a definitive failure
               <div className="text-center p-8">
@@ -443,12 +536,14 @@ export default function Home() {
             setShowHeartNFTMinter(false);
             setShowWalletDrawer(true);
           }}
-          users={users}
-          gameStats={{
-            completionTime: 120, // Default completion time
-            accuracy: 100, // Perfect accuracy for demo
-            socialDiscoveries: Math.min(users.length, 8), // Cap at 8 unique users
-          }}
+          users={gameUsers}
+          gameStats={
+            gameStats || {
+              completionTime: 120, // Fallback completion time
+              accuracy: 100, // Fallback accuracy for demo
+              socialDiscoveries: Math.min(gameUsers.length, 8), // Cap at 8 unique users
+            }
+          }
         />
       )}
 

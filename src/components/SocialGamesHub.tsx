@@ -18,6 +18,7 @@ import ActionButton from "./shared/ActionButton";
 import { useSuccessActions } from "@/hooks/useSuccessActions";
 import { ConnectionIncentive } from "./shared/ConnectionIncentive";
 import { useUserIdentity } from "@/contexts/UserContext";
+import { GlobalLeaderboard } from "./GlobalLeaderboard";
 
 interface SocialGamesHubProps {
   users: FarcasterUser[];
@@ -30,6 +31,7 @@ type GameMode =
   | "username-guessing"
   | "pfp-matching"
   | "social-trivia"
+  | "global-leaderboard"
   | "results";
 
 export default function SocialGamesHub({
@@ -385,6 +387,24 @@ export default function SocialGamesHub({
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => setCurrentMode("global-leaderboard")}
+                  className="bg-gradient-to-br from-purple-600 to-pink-600 p-6 rounded-xl text-left hover:from-purple-500 hover:to-pink-500 transition-all"
+                >
+                  <div className="text-2xl mb-2">🏆</div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Global Leaderboard
+                  </h3>
+                  <p className="text-purple-100 text-sm">
+                    Compete globally! Submit your best Photo Pair Game scores.
+                  </p>
+                  <div className="mt-4 text-xs text-purple-200">
+                    Earn LUB tokens & achievements!
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   className="bg-gradient-to-br from-orange-600 to-red-600 p-6 rounded-xl text-left opacity-50 cursor-not-allowed"
                   disabled
                 >
@@ -399,8 +419,6 @@ export default function SocialGamesHub({
                     Coming Soon!
                   </div>
                 </motion.button>
-
-                {/* Leaderboard removed - focusing on personal progression */}
               </div>
             </motion.div>
           )}
@@ -417,6 +435,51 @@ export default function SocialGamesHub({
                 game={currentGame}
                 onGameComplete={handleGameComplete}
                 onExit={backToMenu}
+              />
+            </motion.div>
+          )}
+
+          {currentMode === "global-leaderboard" && (
+            <motion.div
+              key="global-leaderboard"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                  🏆 Global Leaderboard
+                </h2>
+                <ActionButton
+                  onClick={backToMenu}
+                  variant="secondary"
+                  size="sm"
+                  icon="←"
+                >
+                  Back to Games
+                </ActionButton>
+              </div>
+
+              <GlobalLeaderboard
+                onSubmitScore={(time, accuracy) => {
+                  // Create viral sharing moment for social games context
+                  const shareText = `🎮 Just submitted ${time}s with ${accuracy}% accuracy to the global leaderboard! Can you beat my score? 💝`;
+
+                  // Try Farcaster sharing first
+                  if (isInFarcaster && addFrame) {
+                    try {
+                      addFrame();
+                    } catch (error) {
+                      console.log("Farcaster sharing not available:", error);
+                    }
+                  }
+
+                  // Show success message
+                  console.log(
+                    "Global leaderboard score submitted successfully!"
+                  );
+                }}
               />
             </motion.div>
           )}

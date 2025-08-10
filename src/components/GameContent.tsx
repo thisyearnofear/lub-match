@@ -10,9 +10,13 @@ import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
-import { ShareHelpers } from "@/utils/shareHelpers";
 import ActionButton from "@/components/shared/ActionButton";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { 
+  useSubtleRewards, 
+  SubtleRewardNotification,
+  EnhancedLubBalanceWidget 
+} from "@/components/enhanced/SubtleRewardsIntegration";
 
 interface GameContentProps {
   pairUrls: string[];
@@ -20,7 +24,12 @@ interface GameContentProps {
   message: string;
   justCreated: boolean;
   users?: any[]; // Optional: Farcaster user data for enhanced social features
-  onGameComplete?: (stats: { completionTime: number; accuracy: number; totalAttempts: number; totalMatches: number }) => void;
+  onGameComplete?: (stats: {
+    completionTime: number;
+    accuracy: number;
+    totalAttempts: number;
+    totalMatches: number;
+  }) => void;
 }
 
 interface FarcasterWindow extends Window {
@@ -40,6 +49,7 @@ export default function GameContent({
 }: GameContentProps) {
   // --- NFT Minter Modal State ---
   const [showHeartMinter, setShowHeartMinter] = useState(false);
+  const [demoGameFinished, setDemoGameFinished] = useState(false);
   // State to store game stats
   const [gameStats, setGameStats] = useState<{
     completionTime: number;
@@ -47,15 +57,34 @@ export default function GameContent({
     totalAttempts: number;
     totalMatches: number;
   } | null>(null);
-  
-  const handleGameComplete = (stats: { 
-    completionTime: number; 
-    accuracy: number; 
-    totalAttempts: number; 
-    totalMatches: number 
+
+  const handleGameComplete = (stats: {
+    completionTime: number;
+    accuracy: number;
+    totalAttempts: number;
+    totalMatches: number;
   }) => {
     setGameStats(stats);
     onGameComplete?.(stats);
+
+    // Enhanced rewards recording
+    recordGameCompletionWithRewards({
+      completionTime: stats.completionTime,
+      accuracy: stats.accuracy,
+      isFirstToday: formattedStats.gamesCompleted === 0 // Simple check for first game
+    });
+
+    // Record leaderboard submission if user is eligible (engaged tier or higher)
+    // This prevents abuse by new users
+    if (formattedStats.tier !== "newcomer") {
+      recordEvent({
+        type: "photo_pair_leaderboard_submission",
+        time: stats.completionTime,
+        accuracy: stats.accuracy,
+        attempts: stats.totalAttempts,
+        matches: stats.totalMatches,
+      });
+    }
   };
   const { goToSocialGames } = useAppNavigation();
   useMiniAppReady();
@@ -63,7 +92,13 @@ export default function GameContent({
   const [isClient, setIsClient] = useState(false);
 
   // User progression integration
-  const { recordGameCompletion, recordGameShare } = useUnifiedStats();
+  const { recordGameShare, recordEvent, formattedStats } = useUnifiedStats();
+  const { 
+    recordGameCompletionWithRewards, 
+    showNotification, 
+    notificationRewards, 
+    handleNotificationComplete 
+  } = useSubtleRewards();
 
   // Onboarding system
   const { showGameCompletionFlow } = useOnboarding();
@@ -86,21 +121,14 @@ export default function GameContent({
     // Show game completion flow
     showGameCompletionFlow();
 
+    // Show NFT minter first (skippable)
     setShowHeartMinter(true);
   };
 
-  const handleShowProposal = () => {
-    // Check if running in Farcaster and send celebration event
-    if (isClient && (window as FarcasterWindow)?.fc) {
-      try {
-        (window as FarcasterWindow).fc?.requestNotificationPermission?.();
-        // Could add confetti or celebration effects here
-      } catch (_error) {
-        console.log("Farcaster notification not available");
-      }
-    }
-
-    // A short delay for the final transition
+  // Called when NFT minter is closed/skipped
+  const handleNFTMinterClose = () => {
+    setShowHeartMinter(false);
+    // After NFT minter, show the proposal
     setTimeout(() => {
       setShowValentinesProposal(true);
     }, 500);
@@ -144,6 +172,12 @@ export default function GameContent({
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
+      <EnhancedLubBalanceWidget />
+      <SubtleRewardNotification 
+        show={showNotification} 
+        rewards={notificationRewards} 
+        onComplete={handleNotificationComplete} 
+      />
       {/* Heart NFT Minter Modal (only after demo game) */}
       {showHeartMinter && (
         <HeartNFTMinter
@@ -151,24 +185,38 @@ export default function GameContent({
           gameLayout={[0, 1, 2, 3, 4, 5, 6, 7]} // Simple layout for now
           message={message}
           gameType="demo"
-          creator={message.includes("lub") ? "0x0000000000000000000000000000000000000000" : "0x1234567890123456789012345678901234567890"}
-          onClose={() => setShowHeartMinter(false)}
+          creator={
+            message.includes("lub")
+              ? "0x0000000000000000000000000000000000000000"
+              : "0x1234567890123456789012345678901234567890"
+          }
+          onClose={handleNFTMinterClose}
           onViewCollection={goToSocialGames}
           users={users}
-          gameStats={gameStats ? {
-            completionTime: gameStats.completionTime,
-            accuracy: gameStats.accuracy,
-            socialDiscoveries: Math.min(users?.length ? Math.floor(users.length / 2) : 0, 8),
-          } : {
-            completionTime: 90, // Default completion time for custom games
-            accuracy: 85, // More realistic accuracy
-            socialDiscoveries: Math.min(users?.length ? Math.floor(users.length / 2) : 0, 8),
-          }}
+          gameStats={
+            gameStats
+              ? {
+                  completionTime: gameStats.completionTime,
+                  accuracy: gameStats.accuracy,
+                  socialDiscoveries: Math.min(
+                    users?.length ? Math.floor(users.length / 2) : 0,
+                    8
+                  ),
+                }
+              : {
+                  completionTime: 90, // Default completion time for custom games
+                  accuracy: 85, // More realistic accuracy
+                  socialDiscoveries: Math.min(
+                    users?.length ? Math.floor(users.length / 2) : 0,
+                    8
+                  ),
+                }
+          }
         />
       )}
 
-      {/* Main game/proposal content, hidden when NFT minter is open */}
-      {!showHeartMinter && !showValentinesProposal ? (
+      {/* Main game content, hidden when NFT minter or proposal is open */}
+      {!showHeartMinter && !showValentinesProposal && (
         <>
           <PhotoPairGame
             images={pairUrls}
@@ -192,7 +240,7 @@ export default function GameContent({
             </ActionButton>
           </div>
         </>
-      ) : null}
+      )}
 
       {!showHeartMinter && showValentinesProposal && (
         <motion.div

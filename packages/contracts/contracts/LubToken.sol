@@ -69,13 +69,13 @@ contract LubToken is ERC20, Ownable {
         discountedEthPrice = ethPrice - ethDiscount;
     }
     
-    function spendForMintDiscount(uint256 lubAmount) external {
+    function spendForMintDiscount(address user, uint256 lubAmount) external {
         require(authorizedSpenders[msg.sender], "Not authorized to spend for discounts");
-        require(balanceOf(msg.sender) >= lubAmount, "Insufficient LUB balance");
+        require(balanceOf(user) >= lubAmount, "Insufficient LUB balance");
 
-        _burn(msg.sender, lubAmount);
+        _burn(user, lubAmount);
         uint256 ethValue = lubAmount / LUB_PER_ETH; // Calculate ETH value of burned LUB
-        emit MintDiscount(msg.sender, lubAmount, ethValue);
+        emit MintDiscount(user, lubAmount, ethValue);
     }
 
     function getLubPerEthRate() external pure returns (uint256) {

@@ -10,6 +10,7 @@ import {
   ViralMetrics,
 } from "@/utils/analytics";
 import { useUserProgression } from "@/utils/userProgression";
+import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import { WEB3_CONFIG } from "@/config";
 
 interface AnalyticsDashboardProps {
@@ -45,6 +46,7 @@ export function AnalyticsDashboard({
   } | null>(null);
 
   const { progress } = useUserProgression();
+  const { formattedStats } = useUnifiedStats();
 
   useEffect(() => {
     const updateMetrics = () => {
@@ -212,6 +214,87 @@ export function AnalyticsDashboard({
           </div>
         </div>
       </div>
+
+      {/* Photo Pair Game Leaderboard Stats - Local */}
+      {progress.tier !== "newcomer" && (
+        <div className="mt-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-4 border border-pink-200">
+          <h3 className="text-lg font-semibold text-purple-800 mb-3">
+            💎 Photo Pair Leaderboard (Local)
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-xl font-bold text-purple-600">
+                {formattedStats.photoPairBestTime}
+              </div>
+              <div className="text-xs text-gray-600">Best Time</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-purple-600">
+                {formattedStats.photoPairBestAccuracy}
+              </div>
+              <div className="text-xs text-gray-600">Best Accuracy</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-purple-600">
+                {formattedStats.photoPairSubmissionCount}
+              </div>
+              <div className="text-xs text-gray-600">Local Plays</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-purple-600">
+                {formattedStats.photoPairAchievements.length}
+              </div>
+              <div className="text-xs text-gray-600">Achievements</div>
+            </div>
+          </div>
+
+          {/* Achievement Badges */}
+          {formattedStats.photoPairAchievements.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {formattedStats.photoPairAchievements.map(
+                (achievement, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
+                  >
+                    {achievement === "perfect" && "🎯 Perfect"}
+                    {achievement === "speed-demon" && "⚡ Speed Demon"}
+                    {achievement === "comeback-king" && "👑 Comeback King"}
+                    {achievement === "first-timer" && "⭐ First Timer"}
+                    {achievement === "consistent" && "🔥 Consistent"}
+                    {achievement === "tournament-winner" && "🏆 Champion"}
+                  </span>
+                )
+              )}
+            </div>
+          )}
+
+          {/* Global Leaderboard Integration */}
+          <div className="mt-4 pt-3 border-t border-purple-200">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-purple-700">
+                <span className="font-medium">Global Rank:</span>{" "}
+                {formattedStats.photoPairGlobalRank}
+              </div>
+              <div className="text-sm text-purple-700">
+                <span className="font-medium">Global LUB:</span>{" "}
+                {formattedStats.photoPairGlobalLubEarned}
+              </div>
+            </div>
+
+            {formattedStats.photoPairCanSubmitGlobal ? (
+              <div className="mt-2 text-xs text-green-600 font-medium">
+                ✅ Ready to submit to global leaderboard!
+              </div>
+            ) : (
+              <div className="mt-2 text-xs text-orange-600">
+                ⏳ Next global submission:{" "}
+                {formattedStats.photoPairNextGlobalSubmission}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Personal Progress Section */}
       <div className="mt-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200">

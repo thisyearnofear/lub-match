@@ -4,6 +4,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import ActionButton, { ButtonVariant } from "./ActionButton";
 import Confetti from "../Confetti";
+import { RewardsSummaryContent } from "../enhanced/SubtleRewardsIntegration";
 
 export interface SuccessAction {
   label: string;
@@ -24,6 +25,7 @@ interface SuccessScreenProps {
   showConfetti?: boolean;
   celebrationLevel?: "standard" | "epic";
   nftPreview?: ReactNode;
+  sessionRewards?: Array<{ amount: bigint; description: string; type: string }>; // Optional earnings summary
 }
 
 export default function SuccessScreen({
@@ -37,6 +39,7 @@ export default function SuccessScreen({
   showConfetti = false,
   celebrationLevel = "standard",
   nftPreview,
+  sessionRewards,
 }: SuccessScreenProps) {
   const [triggerConfetti, setTriggerConfetti] = useState(false);
 
@@ -152,13 +155,25 @@ export default function SuccessScreen({
           </motion.div>
         )}
 
+        {/* Session Rewards Summary */}
+        {sessionRewards && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: nftPreview ? 0.5 : 0.4, duration: 0.3 }}
+          >
+            <RewardsSummaryContent rewards={sessionRewards} />
+          </motion.div>
+        )}
+
         {/* Additional Content */}
         {additionalContent && (
           <motion.div
             className="mb-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: nftPreview ? 0.6 : 0.4, duration: 0.3 }}
+            transition={{ delay: sessionRewards ? 0.6 : nftPreview ? 0.6 : 0.4, duration: 0.3 }}
           >
             {additionalContent}
           </motion.div>

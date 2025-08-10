@@ -1,7 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { NEYNAR_API_KEY, NEYNAR_API_BASE } from "@/config";
+import { neynarCache } from "@/utils/neynarCache";
 
 export const runtime = "nodejs";
+
+// Tiered caching strategy based on content freshness requirements
+const getCacheHeaders = (type: string = 'default') => {
+  const cacheConfigs = {
+    trending: {
+      'Cache-Control': 'public, s-maxage=180, stale-while-revalidate=300', // 3min cache, 5min stale
+      'CDN-Cache-Control': 'public, s-maxage=300', // 5min CDN cache
+    },
+    active: {
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600', // 5min cache, 10min stale
+      'CDN-Cache-Control': 'public, s-maxage=600', // 10min CDN cache
+    },
+    quality: {
+      'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=1800', // 15min cache, 30min stale
+      'CDN-Cache-Control': 'public, s-maxage=1800', // 30min CDN cache
+    },
+    search: {
+      'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=240', // 2min cache, 4min stale
+      'CDN-Cache-Control': 'public, s-maxage=240', // 4min CDN cache
+    }
+  };
+
+  const config = cacheConfigs[type as keyof typeof cacheConfigs] || cacheConfigs.quality;
+  return {
+    ...config,
+    'Vary': 'Accept-Encoding',
+  };
+};
 
 // Types for API responses
 interface FarcasterUser {
@@ -329,20 +358,42 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
     const limit = parseInt(searchParams.get("limit") || "10");
 
-    // Handle search requests
-    if (search) {
-      const searchResults = await searchUsers(search, limit);
-      return NextResponse.json({ users: searchResults });
+    // Create cache key for this request
+    const cacheParams = { count, minFollowers, type, search, limit };
+    
+    // Check cache first
+    const cachedUsers = neynarCache.get(cacheParams);
+    if (cachedUsers) {
+      return NextResponse.json({
+        users: cachedUsers,
+        count: cachedUsers.length,
+        timestamp: Date.now(),
+        cached: true,
+      }, { headers: getCacheHeaders(type) });
     }
 
-    // Debug logging
-    console.log("API Route Debug:", {
-      hasApiKey: !!NEYNAR_API_KEY,
-      apiKeyLength: NEYNAR_API_KEY?.length || 0,
-      count,
-      minFollowers,
-      type
-    });
+    // Check rate limits before making API calls
+    if (!neynarCache.canMakeRequest()) {
+      const rateLimitStatus = neynarCache.getRateLimitStatus();
+      console.warn("🚫 Neynar rate limit exceeded", rateLimitStatus);
+      
+      return NextResponse.json(
+        { 
+          error: "Rate limit exceeded",
+          rateLimitStatus,
+          fallback: true 
+        },
+        { status: 429 }
+      );
+    }
+
+    // Handle search requests
+    if (search) {
+      neynarCache.recordRequest();
+      const searchResults = await searchUsers(search, limit);
+      neynarCache.set(cacheParams, searchResults);
+      return NextResponse.json({ users: searchResults }, { headers: getCacheHeaders('search') });
+    }
 
     // Early return for API availability check
     if (count === 1 && !NEYNAR_API_KEY) {
@@ -351,13 +402,14 @@ export async function GET(req: NextRequest) {
           error: "NEYNAR_API_KEY not configured",
           available: false 
         },
-        { status: 200 } // Return 200 so the client can distinguish between network errors and config issues
+        { status: 200 }
       );
     }
 
     let users: FarcasterUser[] = [];
 
     if (type === "trending") {
+      neynarCache.recordRequest(); // Record API usage
       try {
         // First, try to get recent active users (higher quality than just trending)
         const activeUsers = await fetchRecentActiveUsers(Math.min(15, count), minFollowers);
@@ -398,7 +450,7 @@ export async function GET(req: NextRequest) {
     } else if (type === "quality") {
       users = await fetchHighQualityUsers(count);
     } else if (type === "active") {
-      // New type for explicitly requesting recent active users
+      neynarCache.recordRequest(); // Record API usage
       try {
         users = await fetchRecentActiveUsers(count, minFollowers);
         if (users.length < count) {
@@ -411,11 +463,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Cache the results
+    neynarCache.set(cacheParams, users);
+
     return NextResponse.json({
       users: users.slice(0, count), // Ensure we don't exceed requested count
       count: users.length,
       timestamp: Date.now(),
-    });
+      cached: false,
+    }, { headers: getCacheHeaders(type) });
 
   } catch (error) {
     console.error("Error in /api/farcaster-users:", error);

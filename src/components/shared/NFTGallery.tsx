@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useHeartNFT, HeartData, CollectionStats } from "@/hooks/useHeartNFT";
 import { useAccount } from "wagmi";
 import { ContractInfo } from "./ContractInfo";
+
+// Cache for NFT data to prevent excessive API calls
+const nftCache = new Map<string, {
+  data: any;
+  timestamp: number;
+  stats?: CollectionStats | null;
+  totalSupply?: bigint | null;
+}>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
 interface NFTItem {
   tokenId: bigint;
@@ -25,71 +34,140 @@ export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
     getHeartRarity,
     getTotalSupply,
   } = useHeartNFT();
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const [nfts, setNfts] = useState<NFTItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [collectionStats, setCollectionStats] =
     useState<CollectionStats | null>(null);
   const [totalSupply, setTotalSupply] = useState<bigint | null>(null);
+  
+  // Refs for cleanup and debouncing
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Create cache key for current user
+  const cacheKey = useMemo(() => address ? `nft-${address}-${nftBalance?.toString()}` : null, [address, nftBalance]);
 
-  useEffect(() => {
-    if (!isConnected || nftBalance === BigInt(0)) {
+  // Optimized NFT loading with caching and debouncing
+  const loadNFTs = useCallback(async (forceRefresh = false) => {
+    if (!isConnected || nftBalance === BigInt(0) || !cacheKey) {
       setNfts([]);
       return;
     }
 
-    const loadNFTs = async () => {
+    // Abort any existing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    // Check cache first
+    const cached = nftCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (!forceRefresh && cached && now - cached.timestamp < CACHE_DURATION) {
+      console.log('🎯 Using cached NFT data');
+      setNfts(cached.data);
+      if (cached.stats !== undefined) setCollectionStats(cached.stats);
+      if (cached.totalSupply !== undefined) setTotalSupply(cached.totalSupply);
+      return;
+    }
+
+    // Clear any existing loading timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+
+    // Debounce loading indicator
+    loadingTimeoutRef.current = setTimeout(() => {
       setLoading(true);
-      setError(null);
-      try {
-        const collection = await getUserNFTCollection();
+    }, 200);
 
-        // Fetch rarity for each NFT (only if new features are available)
-        const enhancedCollection = await Promise.all(
-          collection.map(async (nft) => {
-            try {
-              const rarity = await getHeartRarity(nft.tokenId);
-              return { ...nft, rarity: rarity || undefined };
-            } catch (error) {
-              // Gracefully handle if rarity function doesn't exist (backward compatibility)
-              return nft;
-            }
-          })
-        );
+    setError(null);
 
-        setNfts(enhancedCollection);
-      } catch (err) {
-        console.error("Error loading NFT collection:", err);
-        setError("Failed to load NFT collection");
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      const collection = await getUserNFTCollection();
 
-    loadNFTs();
-  }, [getUserNFTCollection, isConnected, nftBalance, getHeartRarity]);
+      // Batch rarity fetching with error handling and limits
+      const enhancedCollection = await Promise.allSettled(
+        collection.slice(0, 20).map(async (nft) => { // Limit to 20 for performance
+          try {
+            const rarity = await getHeartRarity(nft.tokenId);
+            return { ...nft, rarity: rarity || undefined };
+          } catch (error) {
+            // Gracefully handle rarity fetch failures
+            return nft;
+          }
+        })
+      );
 
-  // Load collection stats (optional enhancement)
-  useEffect(() => {
-    const loadStats = async () => {
-      if (!isConnected) return;
+      // Filter successful results
+      const validNFTs = enhancedCollection
+        .filter((result): result is PromiseFulfilledResult<NFTItem> => result.status === 'fulfilled')
+        .map(result => result.value);
 
-      try {
-        const [stats, supply] = await Promise.all([
-          getCollectionStats().catch(() => null), // Graceful fallback
-          getTotalSupply().catch(() => null),
-        ]);
+      // Cache the results
+      nftCache.set(cacheKey, {
+        data: validNFTs,
+        timestamp: now,
+      });
+
+      setNfts(validNFTs);
+      
+      // Load stats in background without blocking UI
+      Promise.allSettled([
+        getCollectionStats().catch(() => null),
+        getTotalSupply().catch(() => null),
+      ]).then(([statsResult, supplyResult]) => {
+        const stats = statsResult.status === 'fulfilled' ? statsResult.value : null;
+        const supply = supplyResult.status === 'fulfilled' ? supplyResult.value : null;
+        
         setCollectionStats(stats);
         setTotalSupply(supply);
-      } catch (error) {
-        // Silently fail for backward compatibility
-        console.debug("Collection stats not available:", error);
+        
+        // Update cache with stats
+        if (nftCache.has(cacheKey)) {
+          const existing = nftCache.get(cacheKey)!;
+          nftCache.set(cacheKey, {
+            ...existing,
+            stats,
+            totalSupply: supply,
+          });
+        }
+      });
+
+    } catch (err) {
+      if (!abortControllerRef.current?.signal.aborted) {
+        console.error("Error loading NFT collection:", err);
+        setError("Failed to load NFT collection. Please try again.");
+      }
+    } finally {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+      setLoading(false);
+    }
+  }, [getUserNFTCollection, isConnected, nftBalance, getHeartRarity, cacheKey, getCollectionStats, getTotalSupply]);
+
+  useEffect(() => {
+    loadNFTs();
+    
+    // Cleanup on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
       }
     };
+  }, [loadNFTs]);
 
-    loadStats();
-  }, [isConnected, getCollectionStats, getTotalSupply]);
+  // Refresh function for manual refresh (e.g., pull-to-refresh)
+  const refreshNFTs = useCallback(() => {
+    loadNFTs(true);
+  }, [loadNFTs]);
 
   if (!isConnected) {
     return (
@@ -126,7 +204,13 @@ export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
         <h3 className="text-lg font-semibold text-red-600 mb-2">
           Error Loading Collection
         </h3>
-        <p className="text-red-500 text-sm">{error}</p>
+        <p className="text-red-500 text-sm mb-4">{error}</p>
+        <button
+          onClick={refreshNFTs}
+          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          🔄 Try Again
+        </button>
       </div>
     );
   }

@@ -33,7 +33,7 @@ A romantic heart-shaped memory card game with Web3 token economics, NFT minting,
 
 ### For Players
 
-1. Visit the game at [valentines-proposal-visibait.vercel.app](https://valentines-proposal-visibait.vercel.app)
+1. Visit the game at [lub-match.vercel.app](https://lub-match.vercel.app)
 2. Play the demo - no wallet required
 3. Connect wallet for enhanced features
 4. Mint your Heart NFT - choose your payment method
@@ -57,8 +57,8 @@ A romantic heart-shaped memory card game with Web3 token economics, NFT minting,
 ### Blockchain
 
 - Arbitrum Mainnet for low gas costs
-- LUB Token (ERC20) - 0xEC3Fd6325E2E05dBed1a3bF17FDDB20414446083
-- Heart NFT (ERC721) - 0x5b8fbC567089a3C5424bFFa8911AFa00C6a87836
+- LUB Token (ERC20) - 0x5eb4dAF1637620aEC4244D6F95AA8FF65fc2B5F0 (Fixed V2)
+- Heart NFT (ERC721) - 0x1db663b601aAfb926fAE305B236E4444E51f488d (Fixed V2)
 - IPFS Storage via Pinata for metadata
 
 ## 🚀 Development
@@ -90,10 +90,10 @@ pnpm dev
 
 ### Environment Variables
 
-# Smart Contract Addresses
+# Smart Contract Addresses (Fixed V2)
 
-NEXT_PUBLIC_LUB_TOKEN_ADDRESS=0xEC3Fd6325E2E05dBed1a3bF17FDDB20414446083
-NEXT_PUBLIC_HEART_NFT_ADDRESS=0x5b8fbC567089a3C5424bFFa8911AFa00C6a87836
+NEXT_PUBLIC_LUB_TOKEN_ADDRESS=0x5eb4dAF1637620aEC4244D6F95AA8FF65fc2B5F0
+NEXT_PUBLIC_HEART_NFT_ADDRESS=0x1db663b601aAfb926fAE305B236E4444E51f488d
 
 # Feature Flags
 
@@ -116,19 +116,21 @@ pnpm type-check # Run TypeScript checks
 
 ## 📊 Smart Contracts
 
-### LUB Token (ERC20)
+### LUB Token (ERC20) - Fixed V2
 
-- Address: 0xEC3Fd6325E2E05dBed1a3bF17FDDB20414446083
+- Address: 0x5eb4dAF1637620aEC4244D6F95AA8FF65fc2B5F0
 - Supply: 1,000,000 LUB
 - Exchange Rate: 1000 LUB = 1 ETH
 - Features: Deflationary mechanics, discount system
+- **Bug Fix**: spendForMintDiscount now properly checks user balance instead of contract balance
 
-### Heart NFT (ERC721)
+### Heart NFT (ERC721) - Fixed V2
 
-- Address: 0x5b8fbC567089a3C5424bFFa8911AFa00C6a87836
+- Address: 0x1db663b601aAfb926fAE305B236E4444E51f488d
 - Standard: ERC721 + Enumerable + URIStorage
 - Features: Social metadata, rarity classification, three payment options
 - Minting: Regular (ETH), Discount (ETH + LUB), Full LUB
+- **Bug Fix**: Now properly passes user address to LUB token for balance checks
 
 ## 💝 Use Cases
 
@@ -161,8 +163,8 @@ For detailed information, see our comprehensive documentation:
 ## 🔗 Links
 
 - Live App: [lub-match.vercel.app](https://lub-match.vercel.app)
-- LUB Token: [Arbiscan](https://arbiscan.io/address/0xEC3Fd6325E2E05dBed1a3bF17FDDB20414446083)
-- Heart NFT: [Arbiscan](https://arbiscan.io/address/0x5b8fbC567089a3C5424bFFa8911AFa00C6a87836)
+- LUB Token (Fixed V2): [Arbiscan](https://arbiscan.io/address/0x5eb4dAF1637620aEC4244D6F95AA8FF65fc2B5F0)
+- Heart NFT (Fixed V2): [Arbiscan](https://arbiscan.io/address/0x1db663b601aAfb926fAE305B236E4444E51f488d)
 
 ## 📄 License
 

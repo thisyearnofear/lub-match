@@ -21,8 +21,10 @@ export function useMiniAppReady() {
         // Get context information
         try {
           const farcasterContext = sdk.context;
-          setContext(farcasterContext);
-          console.log("Farcaster Mini App initialized:", farcasterContext);
+          // Serialize the context to avoid Comlink cloning issues with Promises
+          const serializedContext = JSON.parse(JSON.stringify(farcasterContext || {}));
+          setContext(serializedContext);
+          console.log("Farcaster Mini App initialized:", serializedContext);
         } catch (contextError) {
           console.log("Could not get Farcaster context:", contextError);
           setContext(null);

@@ -130,7 +130,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>
+      <body suppressHydrationWarning={true}>
         <OnboardingProvider>
           <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
         </OnboardingProvider>

@@ -10,6 +10,7 @@ import { arbitrum } from "viem/chains";
 import { WEB3_CONFIG } from "@/config";
 import { generateGameHash, GameHashData, convertHeartLayoutToContractFormat } from "@/utils/gameHash";
 import { uploadNFTMetadata, createNFTMetadataPreview } from "@/utils/nftMetadata";
+import { useLubApproval } from "./useLubApproval";
 
 const HEART_NFT_ADDRESS = WEB3_CONFIG.contracts.heartNFT;
 
@@ -57,6 +58,7 @@ export interface CollectionStats {
 export function useHeartNFT() {
   const { address } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
+  const { ensureApproval } = useLubApproval();
 
   const config = useConfig();
   
@@ -87,62 +89,93 @@ export function useHeartNFT() {
           args: [address]
         }) as bigint[];
 
-        console.log(`Found  tokens using getUserTokens method`);
+        console.log(`📋 Found ${tokenIds.length} tokens using getUserTokens method`);
 
-        const collection: { tokenId: bigint; heartData: HeartData }[] = [];
-        for (const tokenId of tokenIds) {
-          try {
+        // Batch fetch heart data with proper error handling
+        const collection = await Promise.allSettled(
+          tokenIds.map(async (tokenId) => {
             const heartData = await readContract(client, {
               address: HEART_NFT_ADDRESS,
               abi: HEART_NFT_ABI,
               functionName: "getHeartData",
               args: [tokenId]
             }) as HeartData;
+            
+            return { tokenId, heartData };
+          })
+        );
 
-            collection.push({ tokenId, heartData });
-          } catch (error) {
-            console.error(`Error fetching heart data for token :`, error);
-          }
-        }
+        // Filter successful results
+        const validCollection = collection
+          .filter((result): result is PromiseFulfilledResult<{ tokenId: bigint; heartData: HeartData }> => 
+            result.status === 'fulfilled')
+          .map(result => result.value);
 
-        return collection;
+        console.log(`✅ Successfully loaded ${validCollection.length}/${tokenIds.length} NFTs`);
+        return validCollection;
       } catch (error) {
         console.warn("getUserTokens method failed, falling back to tokenOfOwnerByIndex:", error);
       }
 
-      const collection: { tokenId: bigint; heartData: HeartData }[] = [];
+      // Fallback: use tokenOfOwnerByIndex with batched requests
       const balance = Number(nftBalance);
-
-      for (let i = 0; i < balance; i++) {
-        try {
-          const tokenId = await readContract(client, {
-            address: HEART_NFT_ADDRESS,
-            abi: HEART_NFT_ABI,
-            functionName: "tokenOfOwnerByIndex",
-            args: [address, BigInt(i)]
-          }) as bigint;
-
-          const heartData = await readContract(client, {
-            address: HEART_NFT_ADDRESS,
-            abi: HEART_NFT_ABI,
-            functionName: "getHeartData",
-            args: [tokenId]
-          }) as HeartData;
-
-          collection.push({ tokenId, heartData });
-        } catch (error: any) {
+      console.log(`🔄 Using tokenOfOwnerByIndex fallback for ${balance} tokens`);
+      
+      // Batch token ID fetching first
+      const tokenIdPromises = Array.from({ length: balance }, (_, i) =>
+        readContract(client, {
+          address: HEART_NFT_ADDRESS,
+          abi: HEART_NFT_ABI,
+          functionName: "tokenOfOwnerByIndex",
+          args: [address, BigInt(i)]
+        }).catch(error => {
           if (error?.name === 'ContractFunctionRevertedError' ||
               error?.message?.includes('tokenOfOwnerByIndex') ||
               error?.message?.includes('reverted')) {
-            console.warn(`tokenOfOwnerByIndex reverted at index , trying event logs fallback...`);
-            return await getUserNFTCollectionViaEvents();
-          } else {
-            console.error(`Error fetching NFT at index :`, error);
+            console.warn(`⚠️  tokenOfOwnerByIndex reverted at index ${i}, trying event logs fallback...`);
+            throw new Error('FALLBACK_TO_EVENTS');
           }
-        }
-      }
+          console.error(`❌ Error fetching NFT at index ${i}:`, error);
+          return null;
+        })
+      );
 
-      return collection;
+      const tokenIdResults = await Promise.allSettled(tokenIdPromises);
+      
+      // Check if we need to fallback to events
+      if (tokenIdResults.some(result => 
+          result.status === 'rejected' && 
+          result.reason?.message === 'FALLBACK_TO_EVENTS')) {
+        console.warn("🔄 Falling back to event logs due to contract function reverts...");
+        return await getUserNFTCollectionViaEvents();
+      }
+      
+      // Get valid token IDs
+      const validTokenIds = tokenIdResults
+        .filter((result): result is PromiseFulfilledResult<bigint> => 
+          result.status === 'fulfilled' && result.value != null)
+        .map(result => result.value as bigint);
+
+      // Batch fetch heart data
+      const heartDataPromises = validTokenIds.map(async (tokenId) => {
+        const heartData = await readContract(client, {
+          address: HEART_NFT_ADDRESS,
+          abi: HEART_NFT_ABI,
+          functionName: "getHeartData",
+          args: [tokenId]
+        }) as HeartData;
+        
+        return { tokenId, heartData };
+      });
+
+      const heartDataResults = await Promise.allSettled(heartDataPromises);
+      const validCollection = heartDataResults
+        .filter((result): result is PromiseFulfilledResult<{ tokenId: bigint; heartData: HeartData }> => 
+          result.status === 'fulfilled')
+        .map(result => result.value);
+
+      console.log(`✅ Fallback method loaded ${validCollection.length}/${balance} NFTs`);
+      return validCollection;
     } catch (error) {
       console.error("Error fetching NFT collection:", error);
       if (nftBalance > BigInt(0)) {
@@ -244,33 +277,113 @@ export function useHeartNFT() {
   const mintCompletedHeart = useCallback(async (
     heartData: HeartData,
     gameHash: string,
-    useLubDiscount: boolean = false
+    useLubDiscount: boolean = false,
+    lubCost?: bigint,
+    ethCost?: bigint
   ) => {
     if (!HEART_NFT_ADDRESS) throw new Error("Heart NFT address not configured");
-    const mintPrice = parseEther("0.001");
-    return writeContractAsync({
-      address: HEART_NFT_ADDRESS,
-      abi: HEART_NFT_ABI,
-      functionName: "mintCompletedHeart",
-      args: [heartData, gameHash, useLubDiscount] as any,
-      value: mintPrice,
-      chainId: arbitrum.id
+    
+    console.log('🚀 Starting regular/discount minting process...', {
+      contractAddress: HEART_NFT_ADDRESS,
+      gameHash,
+      useLubDiscount,
+      lubCost: lubCost?.toString(),
+      ethCost: ethCost?.toString()
     });
-  }, [writeContractAsync]);
+    
+    // Ensure LUB approval if using discount and LUB cost is provided
+    if (useLubDiscount && lubCost && lubCost > BigInt(0)) {
+      console.log('🔐 Approving LUB spend for discount:', lubCost.toString());
+      await ensureApproval(HEART_NFT_ADDRESS, lubCost, {
+        verbose: true
+      });
+      console.log('✅ LUB approval completed for discount');
+    }
+    
+    // Use provided ETH cost or fallback to standard price
+    const mintPrice = ethCost || parseEther("0.001");
+    console.log('💰 Minting NFT with ETH:', mintPrice.toString(), 'LUB:', lubCost?.toString() || '0');
+    
+    try {
+      const result = await writeContractAsync({
+        address: HEART_NFT_ADDRESS,
+        abi: HEART_NFT_ABI,
+        functionName: "mintCompletedHeart",
+        args: [heartData, gameHash, useLubDiscount] as any,
+        value: mintPrice,
+        chainId: arbitrum.id
+      });
+      
+      console.log('✅ Regular/discount mint successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Regular/discount mint failed:', error);
+      console.error('Contract details:', {
+        address: HEART_NFT_ADDRESS,
+        functionName: "mintCompletedHeart",
+        args: [heartData, gameHash, useLubDiscount],
+        value: mintPrice.toString()
+      });
+      throw error;
+    }
+  }, [writeContractAsync, ensureApproval]);
 
   const mintCompletedHeartWithLub = useCallback(async (
     heartData: HeartData,
-    gameHash: string
+    gameHash: string,
+    lubCost?: bigint
   ) => {
     if (!HEART_NFT_ADDRESS) throw new Error("Heart NFT address not configured");
-    return writeContractAsync({
-      address: HEART_NFT_ADDRESS,
-      abi: HEART_NFT_ABI,
-      functionName: "mintCompletedHeartWithLub",
-      args: [heartData, gameHash] as any,
-      chainId: arbitrum.id
+    
+    console.log('🚀 Starting full LUB minting process...', {
+      contractAddress: HEART_NFT_ADDRESS,
+      gameHash,
+      lubCost: lubCost?.toString(),
+      heartDataPreview: {
+        imageHashes: heartData.imageHashes.length,
+        layout: heartData.layout.length,
+        message: heartData.message,
+        gameType: heartData.gameType
+      }
     });
-  }, [writeContractAsync]);
+    
+    // Ensure LUB approval for full LUB minting
+    if (lubCost && lubCost > BigInt(0)) {
+      console.log('🔐 Approving full LUB spend:', lubCost.toString());
+      await ensureApproval(HEART_NFT_ADDRESS, lubCost, {
+        verbose: true
+      });
+      console.log('✅ LUB approval completed');
+    } else {
+      console.warn('⚠️ No LUB cost provided, proceeding without approval');
+    }
+    
+    console.log('📝 Calling contract function with args:', {
+      heartData: JSON.stringify(heartData, (_, v) => typeof v === 'bigint' ? v.toString() : v),
+      gameHash
+    });
+    
+    try {
+      const result = await writeContractAsync({
+        address: HEART_NFT_ADDRESS,
+        abi: HEART_NFT_ABI,
+        functionName: "mintCompletedHeartWithLub",
+        args: [heartData, gameHash] as any,
+        chainId: arbitrum.id
+      });
+      
+      console.log('✅ Contract call successful:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Contract call failed:', error);
+      console.error('Contract details:', {
+        address: HEART_NFT_ADDRESS,
+        functionName: "mintCompletedHeartWithLub",
+        args: [heartData, gameHash]
+      });
+      throw error;
+    }
+  }, [writeContractAsync, ensureApproval]);
 
   const generateGameHashForNFT = (
     imageHashes: string[],
@@ -332,7 +445,8 @@ export function useHeartNFT() {
     },
     useLubDiscount: boolean = false,
     userApiKey?: string,
-    useFullLub: boolean = false
+    useFullLub: boolean = false,
+    lubCost?: bigint
   ) => {
     if (!HEART_NFT_ADDRESS) throw new Error("Heart NFT address not configured");
 
@@ -386,9 +500,12 @@ export function useHeartNFT() {
     };
 
     if (useFullLub) {
-      return mintCompletedHeartWithLub(completeHeartData, gameHash);
+      return mintCompletedHeartWithLub(completeHeartData, gameHash, lubCost);
     } else {
-      return mintCompletedHeart(completeHeartData, gameHash, useLubDiscount);
+      const discountLubCost = useLubDiscount ? lubCost : BigInt(0);
+      // Pass base mint price for regular minting (discount still pays some ETH)
+      const ethCost = parseEther("0.001"); // Base price - discount reduces this on contract side
+      return mintCompletedHeart(completeHeartData, gameHash, useLubDiscount, discountLubCost, ethCost);
     }
   }, [uploadHeartMetadata, mintCompletedHeartWithLub, mintCompletedHeart]);
 

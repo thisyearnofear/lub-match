@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   CACHE_DURATION,
   REFRESH_INTERVAL,
@@ -79,10 +79,16 @@ export function useFarcasterUsers(
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000); // Longer timeout per attempt
+          const timeoutMs = 3000 + (attempt * 2000); // Progressive timeout: 5s, 7s, 9s
+          const timeoutId = setTimeout(() => {
+            controller.abort('Request timeout');
+          }, timeoutMs);
 
           const response = await fetch('/api/farcaster-users?count=1', {
-            signal: controller.signal
+            signal: controller.signal,
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
           });
           clearTimeout(timeoutId);
 
@@ -127,6 +133,11 @@ export function useFarcasterUsers(
     checkApiAvailability();
   }, [isClient]);
 
+  // Request deduplication and throttling
+  const activeRequestsRef = useRef<Set<string>>(new Set());
+  const lastRequestTimeRef = useRef<number>(0);
+  const REQUEST_THROTTLE_MS = 500; // Minimum time between requests
+
   // Check cache first
   const getCachedUsers = useCallback(
     (cacheKey: string): FarcasterUser[] | null => {
@@ -149,13 +160,31 @@ export function useFarcasterUsers(
       throw new Error("API availability check in progress");
     }
 
+    const requestKey = `trending-${count}-${minFollowers}`;
+    
+    // Prevent duplicate requests
+    if (activeRequestsRef.current.has(requestKey)) {
+      throw new Error("Request already in progress");
+    }
+
+    // Throttle requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTimeRef.current;
+    if (timeSinceLastRequest < REQUEST_THROTTLE_MS) {
+      const delay = REQUEST_THROTTLE_MS - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
     try {
-      const cacheKey = `trending-${count}-${minFollowers}`;
-      const cached = getCachedUsers(cacheKey);
+      const cached = getCachedUsers(requestKey);
       if (cached) {
         setIsUsingMockData(false);
         return cached;
       }
+
+      // Mark request as active
+      activeRequestsRef.current.add(requestKey);
+      lastRequestTimeRef.current = Date.now();
 
       // Fetch from our server-side API route - use 'active' type for better user quality
       const response = await fetch(
@@ -175,7 +204,7 @@ export function useFarcasterUsers(
       const data: FarcasterUsersResponse = await response.json();
 
       // Cache the results
-      userCache.set(cacheKey, {
+      userCache.set(requestKey, {
         data: data.users,
         timestamp: Date.now(),
       });
@@ -185,6 +214,9 @@ export function useFarcasterUsers(
     } catch (err) {
       console.error("Error fetching Farcaster users:", err);
       throw err;
+    } finally {
+      // Always cleanup active request tracking
+      activeRequestsRef.current.delete(requestKey);
     }
   }, [hasApiKey, count, minFollowers, getCachedUsers]);
 

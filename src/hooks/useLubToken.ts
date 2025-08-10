@@ -16,10 +16,13 @@ const LUB_ABI = parseAbi([
   "function getDiscountedMintPrice(uint256 ethPrice) view returns (uint256 lubCost, uint256 discountedEthPrice)",
   "function getLubPerEthRate() view returns (uint256)",
   "function spendForGameCreation()",
-  "function spendForMintDiscount(uint256 lubAmount)",
+  "function spendForMintDiscount(address user, uint256 lubAmount)",
   "function totalGamesCreated() view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
   "event GameCreated(address indexed creator, uint256 costPaid)",
-  "event MintDiscount(address indexed user, uint256 lubSpent, uint256 ethSaved)"
+  "event MintDiscount(address indexed user, uint256 lubSpent, uint256 ethSaved)",
+  "event Approval(address indexed owner, address indexed spender, uint256 value)"
 ]);
 
 // LUB transaction history type
@@ -148,13 +151,13 @@ export function useLubToken() {
   };
 
   // Spend LUB for mint discount
-  const spendForMintDiscount = async (lubAmount: bigint) => {
+  const spendForMintDiscount = async (user: string, lubAmount: bigint) => {
     if (!LUB_TOKEN_ADDRESS) throw new Error("LUB token address not configured");
     const tx = await writeContractAsync({
       address: LUB_TOKEN_ADDRESS,
       abi: LUB_ABI,
       functionName: "spendForMintDiscount",
-      args: [lubAmount],
+      args: [user as `0x${string}`, lubAmount],
       chainId: arbitrum.id
     });
     addHistory({
@@ -164,6 +167,7 @@ export function useLubToken() {
     });
     return tx;
   };
+
 
   // Earn LUB tokens for various actions
   const earnLub = async (action: EarningAction, amount?: bigint) => {
