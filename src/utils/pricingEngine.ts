@@ -124,6 +124,7 @@ export class PricingEngine {
   }
   
   // Calculate NFT minting price with optional LUB discount
+  // NOTE: This is now a fallback method. Use useNFTPricing hook for real-time contract data.
   getNFTMintPrice(useLubDiscount: boolean, userLubBalance: bigint): {
     ethPrice: bigint;
     lubCost: bigint;
@@ -131,8 +132,10 @@ export class PricingEngine {
     totalCostFormatted: string;
     discountSavings?: string;
   } {
+    // Note: This is a fallback method. useNFTPricing hook provides real-time contract data.
+
     const baseEthPrice = BigInt(WEB3_CONFIG.pricing.nftMintPrice.replace("0.", "")) * BigInt(10 ** 15); // 0.001 ETH
-    
+
     if (!useLubDiscount) {
       return {
         ethPrice: baseEthPrice,
@@ -141,14 +144,18 @@ export class PricingEngine {
         totalCostFormatted: `${WEB3_CONFIG.pricing.nftMintPrice} ETH`
       };
     }
-    
+
     // 50% ETH discount when paying with LUB
     const discountedEthPrice = baseEthPrice / BigInt(2);
-    const lubCost = WEB3_CONFIG.pricing.farcasterHoldRequirement; // Use same amount as Farcaster requirement
+
+    // Calculate LUB cost using exchange rate: 1000 LUB = 1 ETH
+    const ethDiscount = baseEthPrice - discountedEthPrice; // 0.0005 ETH
+    const lubCost = ethDiscount * BigInt(1000); // Convert to LUB using 1000:1 rate
+
     const canAffordDiscount = userLubBalance >= lubCost;
-    
-    const savings = this.formatEth(baseEthPrice - discountedEthPrice);
-    
+
+    const savings = this.formatEth(ethDiscount);
+
     return {
       ethPrice: discountedEthPrice,
       lubCost,

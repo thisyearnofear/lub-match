@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
           trait_type: "Collection Type",
           value: data.gameType === 'demo' ? 'Farcaster Trending Snapshot' : 'Custom Lub Heart'
         },
-        { trait_type: "Featured Profiles", value: data.imageHashes.length },
+        { trait_type: "Featured Profiles", value: Math.min(data.imageHashes.length, 8) },
         { trait_type: "Capture Date", value: dateString },
         { trait_type: "Capture Time (UTC)", value: timeString },
         { trait_type: "Heart Layout", value: "Classic 16-Cell Heart" },
@@ -217,7 +217,13 @@ export async function POST(req: NextRequest) {
 async function generateHeartImage(imageHashes: string[], gameHash: string, layout: number[], users?: FarcasterUser[]): Promise<string> {
   try {
     // Try to generate actual heart composite image
-    const response = await fetch('/api/generateHeartImage', {
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3000'
+        : 'https://valentines-proposal-visibait.vercel.app';
+
+    const response = await fetch(`${baseUrl}/api/generateHeartImage`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -341,19 +347,20 @@ function generateEnhancedMetadata(
 
   // Enhanced demo game metadata with rich user data
   const users = data.users || [];
+  const uniqueCount = users.length ? Math.min(users.length, 8) : Math.min(new Set(data.imageHashes).size, 8);
   const usernames = users.map(u => `@${u.username}`).slice(0, 8); // Limit for readability
   const powerBadgeHolders = users.filter(u => u.power_badge).length;
   const totalFollowers = users.reduce((sum, u) => sum + u.follower_count, 0);
   const verifiedUsers = users.filter(u => u.verified_addresses?.eth_addresses && u.verified_addresses.eth_addresses.length > 0).length;
   
-  // Calculate rarity metrics
-  const avgFollowers = Math.round(totalFollowers / Math.max(users.length, 1));
-  const powerBadgeRatio = Math.round((powerBadgeHolders / Math.max(users.length, 1)) * 100);
-  const verificationRatio = Math.round((verifiedUsers / Math.max(users.length, 1)) * 100);
+  // Calculate rarity metrics using unique count
+  const avgFollowers = Math.round(totalFollowers / Math.max(uniqueCount, 1));
+  const powerBadgeRatio = Math.round((powerBadgeHolders / Math.max(uniqueCount, 1)) * 100);
+  const verificationRatio = Math.round((verifiedUsers / Math.max(uniqueCount, 1)) * 100);
   
   // Create sophisticated naming
   const featuredUsers = usernames.slice(0, 3).join(', ');
-  const remainingCount = Math.max(0, usernames.length - 3);
+  const remainingCount = Math.max(0, uniqueCount - 3);
   const userSuffix = remainingCount > 0 ? ` +${remainingCount} others` : '';
   
   // Determine special characteristics for naming
@@ -377,7 +384,7 @@ function generateEnhancedMetadata(
   
   const contextString = contextualInfo.length > 0 ? ` featuring ${contextualInfo.join(', ')}` : '';
   
-  const nftDescription = `A unique heart-shaped snapshot of ${users.length} trending Farcaster community members captured on ${dateString} at ${timeString} UTC${contextString}. This digital artifact preserves a specific moment in Farcaster's social graph - when these ${users.length} voices were actively shaping the community conversation. Each heart represents the intersection of social discovery, community engagement, and the ephemeral nature of trending moments in decentralized social networks.`;
+  const nftDescription = `A unique heart-shaped snapshot of ${uniqueCount} trending Farcaster community members captured on ${dateString} at ${timeString} UTC${contextString}. This digital artifact preserves a specific moment in Farcaster's social graph - when these ${uniqueCount} voices were actively shaping the community conversation. Each heart represents the intersection of social discovery, community engagement, and the ephemeral nature of trending moments in decentralized social networks.`;
 
   // Enhanced rarity attributes
   const rarityAttributes = [

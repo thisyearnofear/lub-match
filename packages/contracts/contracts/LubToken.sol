@@ -13,6 +13,7 @@ contract LubToken is ERC20, Ownable {
     
     // Minting economics
     uint256 public constant MINT_DISCOUNT_BPS = 5000; // 50% discount with LUB
+    uint256 public constant LUB_PER_ETH = 1000; // 1000 LUB = 1 ETH exchange rate
     
     // Authorized contracts
     mapping(address => bool) public authorizedMinters;
@@ -58,16 +59,27 @@ contract LubToken is ERC20, Ownable {
     }
     
     function getDiscountedMintPrice(uint256 ethPrice) external view returns (uint256 lubCost, uint256 discountedEthPrice) {
-        lubCost = (ethPrice * MINT_DISCOUNT_BPS) / 10000; // 50% of ETH price in LUB value
-        discountedEthPrice = ethPrice - ((ethPrice * MINT_DISCOUNT_BPS) / 10000);
+        // Calculate ETH discount amount (50% of original price)
+        uint256 ethDiscount = (ethPrice * MINT_DISCOUNT_BPS) / 10000;
+
+        // Convert ETH discount to LUB cost using exchange rate
+        lubCost = ethDiscount * LUB_PER_ETH;
+
+        // Final discounted ETH price
+        discountedEthPrice = ethPrice - ethDiscount;
     }
     
     function spendForMintDiscount(uint256 lubAmount) external {
         require(authorizedSpenders[msg.sender], "Not authorized to spend for discounts");
         require(balanceOf(msg.sender) >= lubAmount, "Insufficient LUB balance");
-        
+
         _burn(msg.sender, lubAmount);
-        emit MintDiscount(msg.sender, lubAmount, lubAmount); // 1:1 ETH value for simplicity
+        uint256 ethValue = lubAmount / LUB_PER_ETH; // Calculate ETH value of burned LUB
+        emit MintDiscount(msg.sender, lubAmount, ethValue);
+    }
+
+    function getLubPerEthRate() external pure returns (uint256) {
+        return LUB_PER_ETH;
     }
     
     // Admin functions

@@ -4,214 +4,170 @@ A romantic heart-shaped memory card game with Web3 token economics, NFT minting,
 
 ![Demo Preview](public/github-demo.gif)
 
-## 🌟 **What Makes Lub Match Special**
+## 🌟 What Makes Lub Match Special
 
-### 🎮 **Core Game Experience**
+### 🎮 Core Game Experience
 
-- **Heart-shaped memory game** with romantic card matching
-- **Custom photo uploads** - use your own memories
-- **Personal messages** - add romantic touches
-- **Beautiful animations** - smooth, delightful interactions
-- **Mobile-first design** - perfect on any device
+- Heart-shaped memory game with romantic card matching
+- Custom photo uploads - use your own memories
+- Personal messages - add romantic touches
+- Beautiful animations - smooth, delightful interactions
+- Mobile-first design - perfect on any device
 
-### 🚀 **Web3 Features**
+### 🚀 Web3 Features
 
-- **LUB Token Economics** - earn and spend tokens for game creation
-- **NFT Minting** - immortalize completed games as NFTs
-- **Progressive Web3** - works great without wallet, enhanced with it
-- **Arbitrum Mainnet** - low gas fees, fast transactions
+- LUB Token Economics - earn and spend tokens for game creation
+- NFT Minting - immortalize completed games as Heart NFTs
+- Progressive Web3 - works great without wallet, enhanced with it
+- Social Integration - Farcaster usernames and social discovery
+- Three Payment Options - Regular ETH, 50% LUB discount, or 100% LUB payment
 
-### 👥 **Social Features**
+### 💰 Token Economics
 
-- **Farcaster Integration** - connect with friends
-- **Social Games** - username guessing challenges
-- **Viral Sharing** - spread the love across platforms
-- **Achievement System** - track your lub journey
+- 1000 LUB = 1 ETH exchange rate (realistic and sustainable)
+- Full LUB Minting - mint NFTs with 100% LUB (0 ETH required!)
+- Social Earning - earn 10 LUB when your images are used in games
+- Dynamic Pricing - game creation cost increases with global usage
 
-## 🎯 **How It Works**
+## 🎯 Quick Start
 
-### **For Newcomers**
+### For Players
 
-```
-Demo Game → Mint Heart NFT → Social Games → "First lub FREE!" → Create & Share
-```
+1. Visit the game at [valentines-proposal-visibait.vercel.app](https://valentines-proposal-visibait.vercel.app)
+2. Play the demo - no wallet required
+3. Connect wallet for enhanced features
+4. Mint your Heart NFT - choose your payment method
 
-### **For Web3 Users**
+### For LUB Token Holders
 
-```
-Connect Wallet → Earn LUB → Create Games → Mint NFTs → Build Collection
-```
+- 1000 LUB Balance = 1000 NFT Mints with full LUB option
+- Zero ETH Required - use pure LUB for minting
+- Maximum Value - 100% savings on ETH costs
 
-## 🚀 **Live Demo**
+## 🏗️ Technical Stack
 
-Experience Lub Match: [https://valentines-proposal-visibait.vercel.app](https://valentines-proposal-visibait.vercel.app)
+### Frontend
 
-## 🛠️ **Tech Stack**
+- Next.js 14 with App Router
+- TypeScript for type safety
+- Tailwind CSS for styling
+- Wagmi + Viem for Web3 integration
+- Framer Motion for animations
 
-### **Frontend**
+### Blockchain
 
-- **Next.js 14** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first styling
-- **Framer Motion** - Smooth animations
-- **Wagmi + Viem** - Web3 React hooks
+- Arbitrum Mainnet for low gas costs
+- LUB Token (ERC20) - 0xEC3Fd6325E2E05dBed1a3bF17FDDB20414446083
+- Heart NFT (ERC721) - 0x5b8fbC567089a3C5424bFFa8911AFa00C6a87836
+- IPFS Storage via Pinata for metadata
 
-### **Blockchain**
+## 🚀 Development
 
-- **Arbitrum Mainnet** - Layer 2 for low gas fees
-- **Smart Contracts** - LUB Token (ERC-20) + Heart NFT (ERC-721)
-- **RainbowKit** - Beautiful wallet connection
-- **IPFS** - Decentralized metadata storage
+### Prerequisites
 
-### **Social & APIs**
+- Node.js 18+
+- pnpm package manager
+- Git
 
-- **Neynar API** - Farcaster integration
-- **Pinata** - IPFS pinning service
-- **Analytics** - User progression tracking
+### Setup
 
-## 🚀 **Quick Start**
-
-### **Prerequisites**
-
-- Node.js 18+ and pnpm
-- Neynar API key (for Farcaster features)
-- Pinata JWT (for IPFS storage)
-
-### **Installation**
-
-```bash
 # Clone the repository
-git clone https://github.com/thisyearnofear/valentines-game.git
+
+git clone <repository-url>
 cd valentines-game
 
 # Install dependencies
+
 pnpm install
 
-# Set up environment variables
+# Copy environment template
+
 cp .env.example .env.local
-# Edit .env.local with your API keys
 
-# Run development server
+# Start development server
+
 pnpm dev
-```
 
-### **Environment Setup**
+### Environment Variables
 
-```env
-# Required for Farcaster features (server-side only, secure)
-NEYNAR_API_KEY=your_neynar_api_key
+# Smart Contract Addresses
 
-# Required for IPFS storage
-PINATA_JWT=your_pinata_jwt
+NEXT_PUBLIC_LUB_TOKEN_ADDRESS=0xEC3Fd6325E2E05dBed1a3bF17FDDB20414446083
+NEXT_PUBLIC_HEART_NFT_ADDRESS=0x5b8fbC567089a3C5424bFFa8911AFa00C6a87836
 
-# Smart contract addresses (Arbitrum Mainnet)
-NEXT_PUBLIC_LUB_TOKEN_ADDRESS=0xc51065eCBe91E7DbA69934F37130DCA29E516189
-NEXT_PUBLIC_HEART_NFT_ADDRESS=0x18082d110113B40A24A41dF10b4b249Ee461D3eb
+# Feature Flags
 
-# Feature flags
 NEXT_PUBLIC_ENABLE_ONCHAIN=true
 NEXT_PUBLIC_ENABLE_TOKEN_ECONOMICS=true
 NEXT_PUBLIC_ENABLE_NFT_MINTING=true
-NEXT_PUBLIC_ENABLE_SOCIAL_EARNING=true
-```
 
-## Prerequisites 📋
+# API Keys (optional for development)
 
-- Node.js (v18.18.0 or higher)
-- npm or yarn
-- Git
+NEYNAR_API_KEY=your_neynar_api_key
+PINATA_JWT=your_pinata_jwt_token
 
-## Getting Started 🚀
+### Available Scripts
 
-1. Clone the repository:
+pnpm dev # Start development server
+pnpm build # Build for production
+pnpm start # Start production server
+pnpm lint # Run ESLint
+pnpm type-check # Run TypeScript checks
 
-```bash
-git clone https://github.com/visibait/lub-match.git
-cd lub-match
-```
+## 📊 Smart Contracts
 
-2. Install dependencies:
+### LUB Token (ERC20)
 
-```bash
-npm install
-# or
-yarn install
-```
+- Address: 0xEC3Fd6325E2E05dBed1a3bF17FDDB20414446083
+- Supply: 1,000,000 LUB
+- Exchange Rate: 1000 LUB = 1 ETH
+- Features: Deflationary mechanics, discount system
 
-3. Replace the photos:
+### Heart NFT (ERC721)
 
-   - Navigate to the `public/game-photos` directory
-   - Replace the existing images (1.avif through 36.avif) with your own photos
-   - Make sure to keep the same naming convention
-   - Use photos of you and your partner together!
+- Address: 0x5b8fbC567089a3C5424bFFa8911AFa00C6a87836
+- Standard: ERC721 + Enumerable + URIStorage
+- Features: Social metadata, rarity classification, three payment options
+- Minting: Regular (ETH), Discount (ETH + LUB), Full LUB
 
-4. Start the development server:
+## 💝 Use Cases
 
-```bash
-npm run dev
-# or
-yarn dev
-```
+### Romantic Proposals
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+- Create custom games with proposal photos
+- Add romantic messages to each card
+- Mint as NFT for permanent memory
 
-## Customization 🎨
+### Social Games
 
-### Changing Photos
+- Use Farcaster integration for social discovery
+- Create games featuring friend groups
+- Earn LUB tokens through participation
 
-- Add your photos to `public/game-photos/`
-- Name them from 1.avif to 36.avif
-- For best results, use square images of the same size
-- Convert your images to .avif format for better performance
+### Collectors
 
-### Modifying Text
+- Mint rare NFTs with social metadata
+- Collect games from verified Farcaster users
+- Participate in token economics
 
-- Edit proposal messages in `components/ValentinesProposal.tsx`
-- Change game instructions in `components/TextFooter.tsx`
+## 📚 Documentation
 
-### Styling
+For detailed information, see our comprehensive documentation:
 
-- The project uses Tailwind CSS for styling
-- Modify colors, fonts, and other styles in the respective component files
-- Main color schemes can be adjusted in `tailwind.config.js`
+- [Setup & Deployment Guide](docs/DEPLOYMENT.md) - Technical setup, deployment, and configuration
+- [Features & Economics Guide](docs/ECONOMICS.md) - Product features, token economics, and user guide
+- [Development & Integration Guide](docs/DEVELOPMENT.md) - Technical implementation, architecture, and integration
 
-## Tech Stack 💻
+## 🔗 Links
 
-- [Next.js](https://nextjs.org/)
-- [React](https://reactjs.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Framer Motion](https://www.framer.com/motion/)
-- [Fireworks.js](https://fireworks.js.org/)
+- Live App: [lub-match.vercel.app](https://lub-match.vercel.app)
+- LUB Token: [Arbiscan](https://arbiscan.io/address/0xEC3Fd6325E2E05dBed1a3bF17FDDB20414446083)
+- Heart NFT: [Arbiscan](https://arbiscan.io/address/0x5b8fbC567089a3C5424bFFa8911AFa00C6a87836)
 
-## Contributing 🤝
+## 📄 License
 
-Contributions are welcome! Feel free to submit issues and enhancement requests.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License 📄
-
-This project is licensed under the MIT License.
-
-## Acknowledgments 🙏
-
-- Inspired by love and creativity
-- Built with Next.js 15 App Router
-
-## Author ✍️
-
-visibait - [https://visibait.com]
-
-## Donate
-
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/visibait)
+MIT License - see LICENSE file for details.
 
 ---
 
-Made with ❤️ to send lub
-
-_Note: This project is meant for romantic purposes. Please use responsibly and spread love!_
+Built with ❤️ for the Web3 community

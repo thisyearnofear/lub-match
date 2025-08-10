@@ -100,6 +100,29 @@ export class ShareHelpers {
     }
   }
 
+  // Helper function to safely count unique users for share text
+  static getUniqueUserCount(usernames?: string[], imageUrls?: string[]): number {
+    if (usernames && usernames.length > 0) {
+      return Math.min(usernames.length, 8);
+    }
+    if (imageUrls && imageUrls.length > 0) {
+      return Math.min(new Set(imageUrls).size, 8);
+    }
+    return 0;
+  }
+
+  // Helper function to generate user list text with proper counting
+  static generateUserListText(usernames: string[], maxDisplay: number = 3): string {
+    const uniqueCount = Math.min(usernames.length, 8);
+    const displayNames = usernames.slice(0, maxDisplay);
+    const remainingCount = Math.max(0, uniqueCount - maxDisplay);
+    
+    if (remainingCount > 0) {
+      return `${displayNames.join(', ')} and ${remainingCount} others`;
+    }
+    return displayNames.join(', ');
+  }
+
   static async shareGame(data: GameShareData): Promise<void> {
     const text = this.generateGameShareText(data);
     const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/game/${data.cid}`;

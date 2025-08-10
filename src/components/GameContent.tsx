@@ -20,6 +20,7 @@ interface GameContentProps {
   message: string;
   justCreated: boolean;
   users?: any[]; // Optional: Farcaster user data for enhanced social features
+  onGameComplete?: (stats: { completionTime: number; accuracy: number; totalAttempts: number; totalMatches: number }) => void;
 }
 
 interface FarcasterWindow extends Window {
@@ -35,10 +36,27 @@ export default function GameContent({
   message,
   justCreated,
   users,
+  onGameComplete,
 }: GameContentProps) {
   // --- NFT Minter Modal State ---
   const [showHeartMinter, setShowHeartMinter] = useState(false);
-  const [demoGameFinished, setDemoGameFinished] = useState(false);
+  // State to store game stats
+  const [gameStats, setGameStats] = useState<{
+    completionTime: number;
+    accuracy: number;
+    totalAttempts: number;
+    totalMatches: number;
+  } | null>(null);
+  
+  const handleGameComplete = (stats: { 
+    completionTime: number; 
+    accuracy: number; 
+    totalAttempts: number; 
+    totalMatches: number 
+  }) => {
+    setGameStats(stats);
+    onGameComplete?.(stats);
+  };
   const { goToSocialGames } = useAppNavigation();
   useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
@@ -130,19 +148,21 @@ export default function GameContent({
       {showHeartMinter && (
         <HeartNFTMinter
           gameImages={pairUrls}
-          gameLayout={[]}
+          gameLayout={[0, 1, 2, 3, 4, 5, 6, 7]} // Simple layout for now
           message={message}
           gameType="demo"
-          creator={"0x0000000000000000000000000000000000000000"}
-          onClose={() => {
-            setShowHeartMinter(false);
-            goToSocialGames();
-          }}
+          creator={message.includes("lub") ? "0x0000000000000000000000000000000000000000" : "0x1234567890123456789012345678901234567890"}
+          onClose={() => setShowHeartMinter(false)}
+          onViewCollection={goToSocialGames}
           users={users}
-          gameStats={{
+          gameStats={gameStats ? {
+            completionTime: gameStats.completionTime,
+            accuracy: gameStats.accuracy,
+            socialDiscoveries: Math.min(users?.length ? Math.floor(users.length / 2) : 0, 8),
+          } : {
             completionTime: 90, // Default completion time for custom games
-            accuracy: 100, // Perfect accuracy assumption
-            socialDiscoveries: users?.length || 0, // Number of users discovered
+            accuracy: 85, // More realistic accuracy
+            socialDiscoveries: Math.min(users?.length ? Math.floor(users.length / 2) : 0, 8),
           }}
         />
       )}
@@ -154,6 +174,7 @@ export default function GameContent({
             images={pairUrls}
             users={users}
             handleShowProposalAction={handleDemoGameFinished}
+            onGameComplete={handleGameComplete}
           />
           <div
             className="w-full flex justify-center mt-4"

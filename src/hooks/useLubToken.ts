@@ -14,6 +14,7 @@ const LUB_ABI = parseAbi([
   "function balanceOf(address owner) view returns (uint256)",
   "function getCurrentGameCreationCost() view returns (uint256)",
   "function getDiscountedMintPrice(uint256 ethPrice) view returns (uint256 lubCost, uint256 discountedEthPrice)",
+  "function getLubPerEthRate() view returns (uint256)",
   "function spendForGameCreation()",
   "function spendForMintDiscount(uint256 lubAmount)",
   "function totalGamesCreated() view returns (uint256)",
@@ -72,15 +73,17 @@ export function useLubToken() {
   }, []);
 
   // Read user's LUB balance with error handling
-  const { data: balance = BigInt(0), error: balanceError } = useReadContract({
+  const { data: balance = BigInt(0), error: balanceError, refetch: refetchBalance } = useReadContract({
     address: LUB_TOKEN_ADDRESS,
     abi: LUB_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: {
       enabled: enabled && !!address,
-      retry: 3,
+      retry: 2, // Reduced retries
       retryDelay: 1000,
+      staleTime: 30_000, // Cache for 30 seconds
+      gcTime: 120_000, // Keep in cache for 2 minutes
     }
   });
 
@@ -124,6 +127,8 @@ export function useLubToken() {
   const getNFTMintPricing = (useLubDiscount: boolean = false) => {
     return pricingEngine.getNFTMintPrice(useLubDiscount, balance);
   };
+
+  // Note: Exchange rate is now handled by useNFTPricing hook to avoid duplicate calls
 
   // Spend LUB for game creation
   const spendForGameCreation = async () => {
@@ -194,8 +199,8 @@ export function useLubToken() {
     }, 0);
     
     const totalEarned = progress.totalLubEarned;
-    const referralEarnings = BigInt(0); // TODO: Calculate from referral events
-    const streakBonus = BigInt(0); // TODO: Calculate from streak events
+    const referralEarnings = BigInt(0); // Future: Calculate from referral events
+    const streakBonus = BigInt(0); // Future: Calculate from streak events
     
     // Calculate next tier progress
     const tierThresholds = {
@@ -246,11 +251,13 @@ export function useLubToken() {
     canCreateFarcasterLub,
     getRomanceLubCost,
     getNFTMintPricing,
+    exchangeRate: BigInt(1000), // Default to 1000 LUB per ETH (real rate from useNFTPricing)
 
     // Actions
     spendForGameCreation,
     spendForMintDiscount,
     earnLub,
+    refetchBalance,
 
     // User progression
     progress,

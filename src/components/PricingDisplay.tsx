@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
+import { useNFTPricing } from "@/hooks/useNFTPricing";
 import {
   pricingEngine,
   LubMode,
@@ -28,6 +29,7 @@ export function PricingDisplay({
   useDiscount = false,
 }: PricingDisplayProps) {
   const { stats, tier, gamesCompleted } = useUnifiedStats();
+  const nftPricing = useNFTPricing();
 
   // Create pricing state for pricing engine
   const pricingState = {
@@ -46,31 +48,36 @@ export function PricingDisplay({
   // Get pricing information based on mode
   const getPricingInfo = () => {
     if (mode === "nft") {
-      const nftPricing = pricingEngine.getNFTMintPrice(
-        false,
-        pricingState.lubBalance
-      );
-      const nftPricingWithDiscount = pricingEngine.getNFTMintPrice(
-        true,
-        pricingState.lubBalance
-      );
+      // Use new unified pricing hook for accurate contract data
+      if (nftPricing.isLoading) {
+        return {
+          type: "nft" as const,
+          regular: {
+            cost: BigInt(0),
+            costFormatted: "Loading...",
+            canAfford: false,
+            message: "Loading pricing...",
+          },
+          discount: null,
+        };
+      }
 
       return {
         type: "nft" as const,
         regular: {
-          cost: nftPricing.ethPrice,
-          costFormatted: `${formatEthAmount(nftPricing.ethPrice)} ETH`,
+          cost: nftPricing.regularPrice.ethCost,
+          costFormatted: nftPricing.regularPrice.totalCostFormatted,
           canAfford: true, // We'll assume they can afford ETH for now
           message: "Mint your completed heart as an NFT",
         },
-        discount: nftPricingWithDiscount.canAffordDiscount
+        discount: nftPricing.canAffordDiscount
           ? {
-              cost: nftPricingWithDiscount.ethPrice,
-              lubCost: nftPricingWithDiscount.lubCost,
-              costFormatted: nftPricingWithDiscount.totalCostFormatted,
-              savings: nftPricingWithDiscount.discountSavings,
+              cost: nftPricing.discountedPrice.ethCost,
+              lubCost: nftPricing.discountedPrice.lubCost,
+              costFormatted: nftPricing.discountedPrice.totalCostFormatted,
+              savings: nftPricing.discountedPrice.savingsFormatted,
               canAfford: true,
-              message: "Save 50% with LUB tokens!",
+              message: `Save ${nftPricing.discountedPrice.discountPercentage}% with LUB tokens!`,
             }
           : null,
       };
@@ -104,11 +111,13 @@ export function PricingDisplay({
           </h3>
 
           {/* Regular pricing */}
-          <div className={`rounded-lg p-4 border ${
-            highlightDiscount
-              ? "bg-white border-gray-200 opacity-70"
-              : "bg-white border-gray-200 ring-2 ring-pink-300"
-          }`}>
+          <div
+            className={`rounded-lg p-4 border ${
+              highlightDiscount
+                ? "bg-white border-gray-200 opacity-70"
+                : "bg-white border-gray-200 ring-2 ring-pink-300"
+            }`}
+          >
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Regular Price</span>
               <span className="font-semibold text-gray-800">
@@ -119,11 +128,13 @@ export function PricingDisplay({
 
           {/* Discount pricing */}
           {pricingInfo.discount && (
-            <div className={`rounded-lg p-4 border ${
-              highlightDiscount
-                ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 ring-2 ring-green-300"
-                : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
-            }`}>
+            <div
+              className={`rounded-lg p-4 border ${
+                highlightDiscount
+                  ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 ring-2 ring-green-300"
+                  : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
+              }`}
+            >
               <div className="flex justify-between items-center mb-2">
                 <span className="text-green-700 font-medium flex items-center gap-2">
                   With LUB Discount
@@ -147,7 +158,9 @@ export function PricingDisplay({
           {!pricingInfo.discount && tier !== "newcomer" && (
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <div className="text-sm text-gray-600 mb-2">
-                Need {formatLubAmount(WEB3_CONFIG.pricing.farcasterHoldRequirement)} LUB for discount
+                Need{" "}
+                {formatLubAmount(WEB3_CONFIG.pricing.farcasterHoldRequirement)}{" "}
+                LUB for discount
               </div>
               {onGetLub && (
                 <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -74,11 +74,15 @@ export default function Home() {
     if (!users || users.length === 0) {
       return "Demo Lub Completed! 💝";
     }
-    
-    const userNames = users.slice(0, 3).map(user => user.display_name || user.username).join(", ");
-    const remainingCount = users.length - 3;
-    
-    if (users.length <= 3) {
+
+    const uniqueUserCount = Math.min(users.length, 8);
+    const userNames = users
+      .slice(0, 3)
+      .map((user) => user.display_name || user.username)
+      .join(", ");
+    const remainingCount = Math.max(0, uniqueUserCount - 3);
+
+    if (uniqueUserCount <= 3) {
       return `💌 Lub completed with ${userNames}! 💝`;
     } else {
       return `💌 Lub completed with ${userNames} and ${remainingCount} others! 💝`;
@@ -107,14 +111,8 @@ export default function Home() {
         showOnboardingMessage("FARCASTER_INTRO", { delay: 1000 });
       }
     }
-  }, [
-    isClient,
-    apiCheckComplete,
-    users,
-    loading,
-    getRandomPairs,
-    showOnboardingMessage,
-  ]);
+    // Only depend on stable values, not functions that change on every render
+  }, [isClient, apiCheckComplete, loading, users.length]);
 
   // No longer need to refresh player data - using unified stats
 
@@ -418,8 +416,8 @@ export default function Home() {
 
       {/* Social Games Modal */}
       {isGameActive && (
-        <SocialGamesHub 
-          users={users} 
+        <SocialGamesHub
+          users={users}
           onClose={handleSocialGamesClose}
           onSkipToProposal={() => {
             setIsTransitioning(true);
@@ -449,7 +447,7 @@ export default function Home() {
           gameStats={{
             completionTime: 120, // Default completion time
             accuracy: 100, // Perfect accuracy for demo
-            socialDiscoveries: users.length, // All users are discoveries in demo
+            socialDiscoveries: Math.min(users.length, 8), // Cap at 8 unique users
           }}
         />
       )}

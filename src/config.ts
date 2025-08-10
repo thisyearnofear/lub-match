@@ -20,10 +20,10 @@ export const MIN_FOLLOWERS = 100;
 
 // Web3 Configuration
 export const WEB3_CONFIG = {
-  // Contract Addresses
+  // Contract Addresses - V3 Release (January 2025)
   contracts: {
-    lubToken: process.env.NEXT_PUBLIC_LUB_TOKEN_ADDRESS as `0x${string}` | undefined,
-    heartNFT: process.env.NEXT_PUBLIC_HEART_NFT_ADDRESS as `0x${string}` | undefined,
+    lubToken: process.env.NEXT_PUBLIC_LUB_TOKEN_ADDRESS as `0x${string}` | undefined, // LUB Token V2
+    heartNFT: process.env.NEXT_PUBLIC_HEART_NFT_ADDRESS as `0x${string}` | undefined, // Heart NFT V3
     registry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS as `0x${string}` | undefined,
   },
 

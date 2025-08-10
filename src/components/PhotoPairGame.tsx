@@ -32,12 +32,14 @@ type PhotoPairGameProps = {
   images: string[]; // requires exactly 8 IPFS image URLs
   users?: FarcasterUser[]; // Optional: Farcaster user data for enhanced social features
   handleShowProposalAction: () => void;
+  onGameComplete?: (stats: { completionTime: number; accuracy: number; totalAttempts: number; totalMatches: number }) => void;
 };
 
 export default function PhotoPairGame({
   images: imagesProp,
   users: usersProp,
   handleShowProposalAction,
+  onGameComplete,
 }: PhotoPairGameProps) {
   // Debug logging
   console.log("PhotoPairGame received images:", imagesProp);
@@ -76,6 +78,11 @@ export default function PhotoPairGame({
   const [showMatchNotification, setShowMatchNotification] = useState(false);
 
   const [isComplete, setIsComplete] = useState(false);
+  
+  // Game stats tracking
+  const [startTime] = useState(Date.now());
+  const [totalAttempts, setTotalAttempts] = useState(0);
+  const [totalMatches, setTotalMatches] = useState(0);
 
   // Interactive hints for engaging idle users
   const isGameActive = selected.length > 0 || matched.length > 0 || isComplete;
@@ -116,8 +123,14 @@ export default function PhotoPairGame({
     setSelected((prev) => [...prev, index]);
 
     if (selected.length === 1) {
+      // Increment total attempts when second card is selected
+      setTotalAttempts(prev => prev + 1);
+      
       const firstIndex = selected[0];
       if (shuffledPairs[firstIndex] === shuffledPairs[index]) {
+        // Increment total matches when cards match
+        setTotalMatches(prev => prev + 1);
+        
         setJustMatched([firstIndex, index]);
 
         // Show match notification with user profile if available
@@ -149,14 +162,29 @@ export default function PhotoPairGame({
   };
 
   useEffect(() => {
-    if (matched.length === imagePairs.length && !isComplete) {
+    if (matched.length === 16 && !isComplete) {
       setIsComplete(true);
+      
+      // Calculate game stats
+      const completionTime = Math.floor((Date.now() - startTime) / 1000); // in seconds
+      const accuracy = totalAttempts > 0 ? Math.round((totalMatches / totalAttempts) * 100) : 0;
+      
+      // Call the callback with game stats
+      onGameComplete?.({
+        completionTime,
+        accuracy,
+        totalAttempts,
+        totalMatches
+      });
+
+      // Show proposal after a delay
       setTimeout(() => {
+        document.dispatchEvent(new CustomEvent("demoGameFinished"));
         handleShowProposalAction();
       }, 3500); // Give users time to process their success
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matched, isComplete]);
+  }, [matched, isComplete, onGameComplete, startTime, totalAttempts, totalMatches]);
 
   return (
     <div className="relative flex justify-center items-center w-full px-4 sm:px-6 py-8">

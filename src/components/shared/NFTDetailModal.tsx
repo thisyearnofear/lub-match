@@ -84,7 +84,7 @@ export function NFTDetailModal({ nft, onClose }: NFTDetailModalProps) {
                   Images
                 </h3>
                 <p className="text-gray-600">
-                  {heartData.imageHashes.length} photos
+                  {Math.min(new Set(heartData.imageHashes).size, 8)} photos
                 </p>
               </div>
             </div>

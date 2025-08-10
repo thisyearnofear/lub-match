@@ -12,6 +12,7 @@ import { UserStatsSection } from "./UserStatsSection";
 import { ConnectionIncentive } from "./ConnectionIncentive";
 import { NFTGallery } from "./NFTGallery";
 import { NFTDetailModal } from "./NFTDetailModal";
+import { ContractInfo } from "./ContractInfo";
 import { HeartData } from "@/hooks/useHeartNFT";
 import { UserDisplayFormatter } from "@/utils/userDisplay";
 import { useUserIdentity } from "@/contexts/UserContext";
@@ -205,6 +206,11 @@ export default function WalletDrawer({
             {/* NFT Gallery */}
             <div className="mb-6">
               <NFTGallery onNFTClick={setSelectedNFT} />
+            </div>
+
+            {/* Contract Information */}
+            <div className="mb-6">
+              <ContractInfo variant="detailed" />
             </div>
 
             {/* Portfolio Actions */}

@@ -152,7 +152,7 @@ export function MultiMatchNotification({
                 Amazing Matches!
               </h3>
               <p className="text-purple-200 text-sm">
-                You discovered {users.length} Farcaster users
+                You discovered {Math.min(users.length, 8)} Farcaster users
               </p>
             </div>
 

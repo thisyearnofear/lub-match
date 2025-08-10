@@ -1,7 +1,8 @@
 // Check deployer balance and network connectivity
 // Run with: npx hardhat run scripts/checkBalance.ts --network arbitrum
 
-import { ethers } from "hardhat";
+import hre from "hardhat";
+const { ethers } = hre;
 
 async function main() {
   console.log("🔍 Checking deployment readiness...");
@@ -25,8 +26,8 @@ async function main() {
   const balanceEth = ethers.formatEther(balance);
   console.log("ETH Balance:", balanceEth);
   
-  // Check if sufficient for deployment
-  const minRequired = ethers.parseEther("0.01");
+  // Check if sufficient for deployment (just Heart NFT)
+  const minRequired = ethers.parseEther("0.002");
   if (balance < minRequired) {
     console.error("❌ Insufficient ETH balance for deployment");
     console.log("Required:", ethers.formatEther(minRequired), "ETH");
@@ -39,10 +40,9 @@ async function main() {
   
   // Estimate gas costs
   console.log("\n💰 Estimated deployment costs:");
-  console.log("LUB Token deployment: ~0.003 ETH");
-  console.log("Heart NFT deployment: ~0.004 ETH");
-  console.log("Configuration setup: ~0.001 ETH");
-  console.log("Total estimated: ~0.008 ETH");
+  console.log("Heart NFT deployment: ~0.002 ETH");
+  console.log("Configuration setup: ~0.0005 ETH");
+  console.log("Total estimated: ~0.0025 ETH");
   console.log("Your balance:", balanceEth, "ETH");
   
   // Check gas price

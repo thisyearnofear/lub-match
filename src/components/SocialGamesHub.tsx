@@ -142,7 +142,7 @@ export default function SocialGamesHub({
           <p className="text-purple-200 mb-6">
             We need at least 4 Farcaster users with valid profile pictures to
             start the social games. Found {validUsers.length} valid users out of{" "}
-            {users.length} total.
+            {Math.min(users.length, 8)} total.
           </p>
           <button
             onClick={onClose}

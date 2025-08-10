@@ -9,9 +9,29 @@ const Web3Provider = dynamic(() => import("@/components/Web3Provider"), {
   ssr: false,
 });
 
-const LubBalanceWidget = dynamic(() => import("@/components/LubBalanceWidget"), {
-  ssr: false,
-});
+const LubBalanceWidget = dynamic(
+  () => import("@/components/LubBalanceWidget"),
+  {
+    ssr: false,
+  }
+);
+
+const PricingDebugPanel = dynamic(
+  () => import("@/components/debug/PricingDebugPanel"),
+  {
+    ssr: false,
+  }
+);
+
+const NetworkStatus = dynamic(
+  () =>
+    import("@/components/debug/NetworkStatus").then((mod) => ({
+      default: mod.NetworkStatus,
+    })),
+  {
+    ssr: false,
+  }
+);
 
 export default function ClientLayoutWrapper({
   children,
@@ -23,6 +43,12 @@ export default function ClientLayoutWrapper({
       <Web3Provider>
         <UserProvider>
           <LubBalanceWidget />
+          {process.env.NODE_ENV === "development" && (
+            <>
+              <PricingDebugPanel />
+              <NetworkStatus />
+            </>
+          )}
           {children}
         </UserProvider>
       </Web3Provider>

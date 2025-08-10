@@ -187,6 +187,7 @@ function generateHeartSVG(
   
   // Add user stats if available
   if (users.length > 0) {
+    const userCount = Math.min(users.length, 8);
     const totalFollowers = users.reduce((sum, u) => sum + u.follower_count, 0);
     const powerBadgeCount = users.filter(u => u.power_badge).length;
     const statsText = `${formatNumber(totalFollowers)} total reach • ${powerBadgeCount} power badges`;
@@ -204,7 +205,7 @@ function generateHeartSVG(
       svgContent += `
         <text x="${svgWidth/2}" y="${titleY + 95}" text-anchor="middle"
               font-family="Arial, sans-serif" font-size="11" fill="#6b7280">
-          ${featuredUsers}${users.length > 4 ? ` +${users.length - 4} more` : ''}
+          ${featuredUsers}${userCount > 4 ? ` +${userCount - 4} more` : ''}
         </text>
       `;
     }
@@ -245,18 +246,20 @@ function generateEnhancedTitle(gameType: "custom" | "demo", completedAt: string,
     };
   }
 
+  // Ensure we only count up to 8 unique users
+  const userCount = Math.min(users.length, 8);
   const powerBadgeHolders = users.filter(u => u.power_badge).length;
   const totalFollowers = users.reduce((sum, u) => sum + u.follower_count, 0);
-  const avgFollowers = Math.round(totalFollowers / users.length);
+  const avgFollowers = Math.round(totalFollowers / userCount);
   
   // Determine special characteristics
   let titlePrefix = 'Heart of';
-  if (powerBadgeHolders >= users.length * 0.5) titlePrefix = 'Power Badge Heart of';
+  if (powerBadgeHolders >= userCount * 0.5) titlePrefix = 'Power Badge Heart of';
   else if (avgFollowers >= 50000) titlePrefix = 'Influencer Heart of';
   else if (avgFollowers >= 10000) titlePrefix = 'Community Heart of';
   
   const featuredUsers = users.slice(0, 2).map(u => u.username).join(' & ');
-  const remainingCount = Math.max(0, users.length - 2);
+  const remainingCount = Math.max(0, userCount - 2);
   const userSuffix = remainingCount > 0 ? ` +${remainingCount}` : '';
   
   return {
