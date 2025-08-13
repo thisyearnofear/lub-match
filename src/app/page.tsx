@@ -180,38 +180,24 @@ export default function Home() {
 
   const handleShowProposal = () => {
     // For the home page demo, show NFT minting option first
+    // Removed extra delay to match custom game timing for consistent UX
     if (isClient && gameImages.length === 8) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setShowHeartNFTMinter(true);
-        setIsTransitioning(false);
-      }, ANIM_DURATION * 1000);
+      setShowHeartNFTMinter(true);
     } else {
       // Fallback to proposal if game images aren't available
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setShowValentinesProposal(true);
-        setIsTransitioning(false);
-      }, ANIM_DURATION * 1000);
+      setShowValentinesProposal(true);
     }
   };
 
   const handleNFTMinterClose = () => {
     setShowHeartNFTMinter(false);
     // After closing NFT minter, proceed to social games if available
+    // Removed extra delay to match custom game timing for consistent UX
     if (isClient && canPlayGames(users)) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        startSocialGames();
-        setIsTransitioning(false);
-      }, ANIM_DURATION * 1000);
+      startSocialGames();
     } else {
       // Fallback to proposal if social games aren't available
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setShowValentinesProposal(true);
-        setIsTransitioning(false);
-      }, ANIM_DURATION * 1000);
+      setShowValentinesProposal(true);
     }
   };
 
@@ -247,7 +233,6 @@ export default function Home() {
   const handleSocialGamesClose = () => {
     closeSocialGames();
     // Reset all states to allow playing again
-    setIsTransitioning(false);
     setShowHeartNFTMinter(false);
     setShowValentinesProposal(false);
   };
@@ -272,7 +257,7 @@ export default function Home() {
             </h1>
             {farcasterUser && (
               <div className="text-sm text-gray-300">
-                Welcome, {farcasterUser.displayName || farcasterUser.username}!
+                Welcome, {farcasterUser.display_name || farcasterUser.username}!
               </div>
             )}
           </div>
@@ -513,11 +498,8 @@ export default function Home() {
           users={users}
           onClose={handleSocialGamesClose}
           onSkipToProposal={() => {
-            setIsTransitioning(true);
-            setTimeout(() => {
-              setShowValentinesProposal(true);
-              setIsTransitioning(false);
-            }, ANIM_DURATION * 1000);
+            // Removed extra delay for consistent UX timing
+            setShowValentinesProposal(true);
           }}
         />
       )}
