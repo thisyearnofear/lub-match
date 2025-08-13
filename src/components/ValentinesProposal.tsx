@@ -107,7 +107,7 @@ export default function ValentinesProposal({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full">
+    <div className="flex flex-col items-center justify-center min-h-full py-4 proposal-container">
       <AnimatePresence mode="wait">
         {step === 0 && (
           <motion.div
@@ -208,32 +208,38 @@ export default function ValentinesProposal({
         {step === 3 && (
           <motion.div
             key="step-3"
-            className="flex flex-col justify-center items-center"
+            className="flex flex-col items-center w-full max-w-lg mx-auto"
             transition={{ duration: 1 }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="bg-black bg-opacity-50 p-8 rounded-lg text-center mb-6">
+            <div className="bg-black bg-opacity-50 p-4 sm:p-8 rounded-lg text-center mb-4 sm:mb-6 mx-4">
               <h2
-                className={`text-4xl font-semibold text-white text-shadow-lg mb-4 font-playfair`}
+                className={`text-2xl sm:text-4xl font-semibold text-white text-shadow-lg mb-4 font-playfair`}
               >
                 You are as brave as you are beautiful <br />
                 Asante sana for accepting my lub! 💕
               </h2>
-              <p className="text-lg text-white text-shadow-md mt-4">
+              <p className="text-sm sm:text-lg text-white text-shadow-md mt-4">
                 Lets not take so long to get to the right answer next year
                 please 💌
               </p>
             </div>
-            <Image
-              src="/hamster_jumping.gif"
-              alt="Hamster Feliz"
-              width={200}
-              height={200}
-              unoptimized
-            />
-            <div className="flex flex-wrap justify-center gap-3 mt-6 relative" style={{ zIndex: 10 }}>
+            <div className="mb-2">
+              <Image
+                src="/hamster_jumping.gif"
+                alt="Hamster Feliz"
+                width={150}
+                height={150}
+                unoptimized
+                className="sm:w-[200px] sm:h-[200px]"
+              />
+            </div>
+            <div
+              className="flex flex-wrap justify-center gap-3 mt-6 mb-4 relative px-4"
+              style={{ zIndex: 10 }}
+            >
               {onShare && (
                 <button
                   onClick={onShare}
@@ -282,7 +288,10 @@ export default function ValentinesProposal({
       </AnimatePresence>
 
       {showFireworks && (
-        <div className="absolute w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+        <div
+          className="absolute w-full h-full pointer-events-none"
+          style={{ zIndex: 1 }}
+        >
           <Fireworks
             options={{
               autoresize: true,

@@ -180,24 +180,38 @@ export default function Home() {
 
   const handleShowProposal = () => {
     // For the home page demo, show NFT minting option first
-    // Removed extra delay to match custom game timing for consistent UX
     if (isClient && gameImages.length === 8) {
-      setShowHeartNFTMinter(true);
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setShowHeartNFTMinter(true);
+        setIsTransitioning(false);
+      }, ANIM_DURATION * 1000);
     } else {
       // Fallback to proposal if game images aren't available
-      setShowValentinesProposal(true);
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setShowValentinesProposal(true);
+        setIsTransitioning(false);
+      }, ANIM_DURATION * 1000);
     }
   };
 
   const handleNFTMinterClose = () => {
     setShowHeartNFTMinter(false);
     // After closing NFT minter, proceed to social games if available
-    // Removed extra delay to match custom game timing for consistent UX
     if (isClient && canPlayGames(users)) {
-      startSocialGames();
+      setIsTransitioning(true);
+      setTimeout(() => {
+        startSocialGames();
+        setIsTransitioning(false);
+      }, ANIM_DURATION * 1000);
     } else {
       // Fallback to proposal if social games aren't available
-      setShowValentinesProposal(true);
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setShowValentinesProposal(true);
+        setIsTransitioning(false);
+      }, ANIM_DURATION * 1000);
     }
   };
 
@@ -233,12 +247,13 @@ export default function Home() {
   const handleSocialGamesClose = () => {
     closeSocialGames();
     // Reset all states to allow playing again
+    setIsTransitioning(false);
     setShowHeartNFTMinter(false);
     setShowValentinesProposal(false);
   };
 
   return (
-    <div className="flex flex-col h-screen bg-black relative overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-black relative">
       {/* Enhanced floating hearts background */}
       <FloatingHearts count={6} className="opacity-20" />
       {/* Subtle dark header that blends with the aesthetic */}
@@ -286,7 +301,7 @@ export default function Home() {
 
       {/* Main game area */}
       <div
-        className="flex-grow flex items-center justify-center px-4 pb-4"
+        className="flex-grow flex items-center justify-center px-4 pb-4 overflow-y-auto"
         style={{
           paddingTop: `max(5rem, calc(var(--safe-area-inset-top) + 4rem))`,
           paddingBottom: `max(1rem, var(--safe-area-inset-bottom))`,
@@ -498,8 +513,11 @@ export default function Home() {
           users={users}
           onClose={handleSocialGamesClose}
           onSkipToProposal={() => {
-            // Removed extra delay for consistent UX timing
-            setShowValentinesProposal(true);
+            setIsTransitioning(true);
+            setTimeout(() => {
+              setShowValentinesProposal(true);
+              setIsTransitioning(false);
+            }, ANIM_DURATION * 1000);
           }}
         />
       )}
