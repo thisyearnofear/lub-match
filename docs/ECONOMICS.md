@@ -44,10 +44,30 @@
 
 ### Token Utility
 
-1. Game Creation: Dynamic pricing (increases 10% per game globally)
-2. NFT Minting Discounts: 50% off when paying with LUB
-3. Full LUB Minting: 100% LUB payment (0 ETH required!)
-4. Social Earning: 10 LUB when your images are used in games
+1. **NFT Minting Discounts**: 50% off when paying with LUB
+2. **Full LUB Minting**: 100% LUB payment (0 ETH required!)
+3. **Game Creation**: Dynamic pricing (increases 10% per game globally)
+4. **Premium Features**: Custom messages, leaderboard spotlight, NFT enhancements
+
+### 🎯 Event-Based Reward System
+
+**Earn LUB tokens automatically for on-chain activities:**
+
+| Activity               | Reward | Contract Event        |
+| ---------------------- | ------ | --------------------- |
+| **Mint Heart NFT**     | 25 LUB | `HeartMinted`         |
+| **Create Game**        | 10 LUB | `GameCreated`         |
+| **Leaderboard Score**  | 15 LUB | `ScoreSubmitted`      |
+| **Achievement Unlock** | 50 LUB | `AchievementUnlocked` |
+| **Tournament Join**    | 30 LUB | `TournamentJoined`    |
+| **Publish Game**       | 20 LUB | `GamePublished`       |
+
+**Distribution Schedule:**
+
+- **Weekly scanning**: Every Sunday at 23:00 UTC
+- **Weekly distribution**: Every Monday at 09:00 UTC
+- **Fully automated**: Based on blockchain events
+- **Fraud-resistant**: Can't fake on-chain activities
 
 ### Value Proposition
 
@@ -59,22 +79,76 @@
 
 ### Dual-Path Design: Social + Romance
 
-Landing → Demo Game → Mint Heart NFT → Social Games Hub → Create Lub
+Landing → Demo Game → Mint Heart NFT (Earn 25 LUB) → Social Games Hub → Create Lub
 ├── Farcaster Mode (Hold LUB)
 └── Romance Mode (Spend LUB)
 
 ### Progressive User Types
 
-1. New Users: Start with ETH, learn about LUB benefits
-2. LUB Holders: Use discount minting, save 50% on ETH
-3. Power Users: Full LUB minting, 100% ETH savings
+1. **New Users**: Start with ETH, earn LUB through activities
+2. **Active Users**: Earn LUB from minting, games, achievements
+3. **LUB Holders**: Use discount minting, save 50% on ETH
+4. **Power Users**: Full LUB minting, 100% ETH savings
+
+### 🔄 LUB Earning & Spending Cycle
+
+**Earn LUB:**
+
+- Mint your first NFT → 25 LUB
+- Participate in leaderboards → 15 LUB per score
+- Join tournaments → 30 LUB
+- Unlock achievements → 50 LUB
+- Create games → 10 LUB bonus
+
+**Spend LUB:**
+
+- Discount NFT minting (save 50% ETH)
+- Full LUB minting (save 100% ETH)
+- Game creation (dynamic pricing)
+- Premium features and customizations
 
 ### Anti-Spam Strategy
 
-- Dynamic Pricing: Game creation cost increases with usage
-- Token Requirements: LUB holding for advanced features
-- Social Verification: Farcaster integration for authenticity
-- Quality Incentives: Rewards for high-quality content
+- **Event-Based Rewards**: Only real on-chain activities earn LUB
+- **Dynamic Pricing**: Game creation cost increases with usage
+- **Token Requirements**: LUB holding for advanced features
+- **Social Verification**: Farcaster integration for authenticity
+- **Fraud Resistance**: Can't fake blockchain events
+
+## 🔧 Technical Implementation
+
+### Event-Based Reward Architecture
+
+**No Database Required:**
+
+- Blockchain serves as the database
+- All user activities recorded as events
+- Weekly scanning of contract events
+- Automated reward distribution
+
+**Smart Contracts:**
+
+- **LUB Token**: `0x5eb4dAF1637620aEC4244D6F95AA8FF65fc2B5F0`
+- **Heart NFT**: `0x1db663b601aAfb926fAE305B236E4444E51f488d`
+- **Leaderboard**: Coming soon
+- **Game Registry**: Coming soon
+
+**Weekly Distribution Process:**
+
+```bash
+# Sunday: Scan blockchain events
+npm run scan-events
+
+# Monday: Distribute LUB rewards
+npm run distribute-rewards
+```
+
+**Benefits:**
+
+- ✅ **Zero infrastructure costs** (no database)
+- ✅ **Fraud-resistant** (can't fake events)
+- ✅ **Transparent** (all rewards verifiable)
+- ✅ **Scalable** (works with unlimited users)
 
 ## 🌟 V3 Release Features
 

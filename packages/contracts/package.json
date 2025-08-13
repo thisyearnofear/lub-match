@@ -6,7 +6,12 @@
     "compile": "hardhat compile",
     "deploy:arbitrum": "hardhat run scripts/deployArbitrumMainnet.ts --network arbitrum",
     "check-balance": "hardhat run scripts/checkBalance.ts --network arbitrum",
-    "verify": "hardhat verify --network arbitrum"
+    "verify": "hardhat verify --network arbitrum",
+    "scan-events": "hardhat run scripts/scanWeeklyEvents.ts --network arbitrum",
+    "distribute-rewards": "hardhat run scripts/distributeWeeklyRewards.ts --network arbitrum",
+    "send-lub": "hardhat run scripts/sendLub.ts --network arbitrum",
+    "test-events": "hardhat run scripts/testEventSystem.ts --network arbitrum",
+    "weekly-rewards": "npm run scan-events && npm run distribute-rewards"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",

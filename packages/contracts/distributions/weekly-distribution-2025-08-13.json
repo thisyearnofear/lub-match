@@ -1,0 +1,13 @@
+{
+  "scanPeriod": {
+    "fromBlock": 367974360,
+    "toBlock": 367974460,
+    "fromDate": "2025-08-06T11:30:42.000Z",
+    "toDate": "2025-08-13T11:30:42.000Z"
+  },
+  "totalUsers": 0,
+  "totalRewards": "0.0",
+  "totalEvents": 0,
+  "eventBreakdown": {},
+  "recipients": []
+}
