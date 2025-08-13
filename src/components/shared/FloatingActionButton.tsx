@@ -21,19 +21,18 @@ export default function FloatingActionButton({
   const { balanceFormatted } = useLubToken();
   const { progress } = useUserProgression();
   const { isConnected } = useAccount();
-  const { farcasterUser, avatarUrl } = useUserIdentity();
+  const {
+    farcasterUser,
+    avatarUrl,
+    displayName,
+    hasUsername,
+    isInFarcaster,
+    isLoadingContext,
+  } = useUserIdentity();
   const [showConnectOption, setShowConnectOption] = useState(false);
 
   // Show notification dot for new achievements or milestones
   const hasNotification = progress.gamesCompleted > 0 && !isConnected;
-
-  // Get display name for connected users
-  const displayName = UserDisplayFormatter.getDisplayName(
-    farcasterUser,
-    undefined,
-    undefined,
-    "compact"
-  );
 
   // If disconnected and showing connect option, render the connect button
   if (!isConnected && showConnectOption) {
@@ -62,9 +61,7 @@ export default function FloatingActionButton({
                   <span className="text-xs font-medium opacity-90">
                     Connect
                   </span>
-                  <span className="text-sm font-bold leading-none">
-                    Wallet
-                  </span>
+                  <span className="text-sm font-bold leading-none">Wallet</span>
                 </div>
               </div>
               <div className="absolute inset-0 bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -130,7 +127,9 @@ export default function FloatingActionButton({
       style={{
         paddingBottom: "max(0px, env(safe-area-inset-bottom))",
       }}
-      aria-label={isConnected ? "Open wallet" : "Connect wallet or view balance"}
+      aria-label={
+        isConnected ? "Open wallet" : "Connect wallet or view balance"
+      }
     >
       {/* Notification Badge */}
       {hasNotification && (
@@ -166,9 +165,14 @@ export default function FloatingActionButton({
         )}
 
         <div className="flex flex-col items-start">
-          {/* Show username if connected, otherwise show LUB label */}
+          {/* Show username if available from Farcaster context, otherwise show LUB label */}
           <span className="text-xs font-medium opacity-90">
-            {isConnected && farcasterUser?.username ? displayName : "LUB"}
+            {(isInFarcaster && hasUsername) ||
+            (isConnected && farcasterUser?.username)
+              ? farcasterUser?.username
+                ? `@${farcasterUser.username}`
+                : displayName
+              : "LUB"}
           </span>
           <span className="text-sm font-bold leading-none">
             {balanceFormatted}

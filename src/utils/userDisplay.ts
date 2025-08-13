@@ -4,22 +4,9 @@
  * Maintains DRY principles and consistent user experience
  */
 
-import { useUserProfile } from "@/contexts/UserContext";
+import { FarcasterUser, UserDisplayConfig } from "@/types/user";
 
-// Define the types we need locally to avoid circular dependencies
-interface FarcasterUser {
-  username: string;
-  displayName?: string;
-  pfpUrl?: string;
-}
-
-export interface UserDisplayConfig {
-  showUsername: boolean;
-  showAvatar: boolean;
-  showBalance: boolean;
-  format: 'compact' | 'full' | 'minimal';
-  maxUsernameLength?: number;
-}
+// UserDisplayConfig now imported from types
 
 export interface DiamondDisplayData {
   title: string;
@@ -83,10 +70,10 @@ export class UserDisplayFormatter {
     const hasBalance = defaultConfig.showBalance && balance;
 
     let title = "Connected";
-    if (hasUsername) {
-      const username = farcasterUser!.username.length > (defaultConfig.maxUsernameLength || 10)
-        ? `${farcasterUser!.username.slice(0, defaultConfig.maxUsernameLength)}...`
-        : farcasterUser!.username;
+    if (hasUsername && farcasterUser?.username) {
+      const username = farcasterUser.username.length > (defaultConfig.maxUsernameLength || 10)
+        ? `${farcasterUser.username.slice(0, defaultConfig.maxUsernameLength)}...`
+        : farcasterUser.username;
       title = `@${username}`;
     }
 

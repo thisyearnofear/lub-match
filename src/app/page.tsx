@@ -272,7 +272,7 @@ export default function Home() {
             </h1>
             {farcasterUser && (
               <div className="text-sm text-gray-300">
-                Welcome, {farcasterUser.display_name || farcasterUser.username}!
+                Welcome, {farcasterUser.displayName || farcasterUser.username}!
               </div>
             )}
           </div>

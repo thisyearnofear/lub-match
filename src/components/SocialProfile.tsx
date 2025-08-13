@@ -3,23 +3,10 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
-
-interface FarcasterUser {
-  fid: number;
-  username: string;
-  display_name: string;
-  pfp_url: string;
-  bio?: string;
-  follower_count: number;
-  following_count: number;
-  verified_addresses?: {
-    eth_addresses: string[];
-    sol_addresses: string[];
-  };
-}
+import { FarcasterUserLegacy, normalizeFarcasterUser } from "@/types/user";
 
 interface SocialProfileProps {
-  user: FarcasterUser;
+  user: FarcasterUserLegacy;
   gameCreator?: boolean;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;
@@ -35,6 +22,9 @@ export default function SocialProfile({
 }: SocialProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Normalize user data for consistent property access
+  const normalizedUser = normalizeFarcasterUser(user);
 
   const handleFollow = async () => {
     if (!onFollow || isLoading) return;
@@ -199,7 +189,7 @@ export function CompactSocialProfile({
   onFollow,
   className = "",
 }: {
-  user: FarcasterUser;
+  user: FarcasterUserLegacy;
   gameCreator?: boolean;
   onFollow?: (fid: number) => void;
   className?: string;
@@ -271,7 +261,7 @@ export function SocialProfileGrid({
   onCast,
   className = "",
 }: {
-  users: FarcasterUser[];
+  users: FarcasterUserLegacy[];
   gameCreatorFid?: number;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;

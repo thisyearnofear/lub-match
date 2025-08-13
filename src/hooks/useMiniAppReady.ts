@@ -2,40 +2,65 @@
 import { useEffect, useState } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 
-// Use the actual SDK types instead of custom interface
-type FarcasterContext = any; // Will be properly typed by the SDK
+// Import proper types from the SDK
+type MiniAppContext = {
+  user: {
+    fid: number;
+    username?: string;
+    displayName?: string;
+    pfpUrl?: string;
+  };
+  location?: any;
+  client: {
+    platformType?: 'web' | 'mobile';
+    clientFid: number;
+    added: boolean;
+    safeAreaInsets?: any;
+    notificationDetails?: any;
+  };
+  features?: {
+    haptics: boolean;
+    cameraAndMicrophoneAccess?: boolean;
+  };
+};
 
 export function useMiniAppReady() {
-  const [context, setContext] = useState<FarcasterContext | null>(null);
+  const [context, setContext] = useState<MiniAppContext | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isInFarcaster, setIsInFarcaster] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        // Initialize the mini app
-        await sdk.actions.ready({
-          disableNativeGestures: false,
-        });
+        // First check if we're in a mini app environment
+        const isMiniApp = await sdk.isInMiniApp();
+        setIsInFarcaster(isMiniApp);
 
-        // Get context information
-        try {
-          const farcasterContext = sdk.context;
-          // Serialize the context to avoid Comlink cloning issues with Promises
-          const serializedContext = JSON.parse(JSON.stringify(farcasterContext || {}));
-          setContext(serializedContext);
-          console.log("Farcaster Mini App initialized:", serializedContext);
-        } catch (contextError) {
-          console.log("Could not get Farcaster context:", contextError);
-          setContext(null);
+        if (isMiniApp) {
+          // Get context information BEFORE calling ready
+          try {
+            const farcasterContext = await sdk.context;
+            setContext(farcasterContext);
+            console.log("Farcaster Mini App context loaded:", farcasterContext);
+          } catch (contextError) {
+            console.log("Could not get Farcaster context:", contextError);
+            setContext(null);
+          }
+
+          // Initialize the mini app
+          await sdk.actions.ready({
+            disableNativeGestures: false,
+          });
         }
 
-        setIsInFarcaster(true);
         setIsReady(true);
+        setIsInitializing(false);
       } catch (error) {
-        console.log("Running outside Farcaster environment");
+        console.log("Running outside Farcaster environment or initialization failed:", error);
         setIsInFarcaster(false);
         setIsReady(true);
+        setIsInitializing(false);
       }
     })();
   }, []);
@@ -93,6 +118,7 @@ export function useMiniAppReady() {
     context,
     isReady,
     isInFarcaster,
+    isInitializing,
     addFrame,
     openUrl,
     closeApp,

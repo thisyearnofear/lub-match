@@ -106,6 +106,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Lub Match" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="format-detection" content="telephone=no" />
+
+        {/* Preconnect to Farcaster services for faster mini app loading */}
+        <link rel="preconnect" href="https://auth.farcaster.xyz" />
+        <link rel="preconnect" href="https://api.farcaster.xyz" />
         <style
           dangerouslySetInnerHTML={{
             __html: `

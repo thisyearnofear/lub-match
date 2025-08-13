@@ -2,7 +2,6 @@
 
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { useUserIdentity } from "@/contexts/UserContext";
 import { UserDisplayFormatter } from "@/utils/userDisplay";
 import ActionButton from "./shared/ActionButton";
@@ -19,10 +18,15 @@ export default function MiniAppWalletConnect({
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
-  const { isInFarcaster } = useMiniAppReady();
 
   // Get unified user identity for consistent display
-  const { farcasterUser, displayName, avatarUrl } = useUserIdentity();
+  const {
+    farcasterUser,
+    displayName,
+    avatarUrl,
+    isInFarcaster,
+    isLoadingContext,
+  } = useUserIdentity();
 
   // In Farcaster mini app, use custom connect button
   if (isInFarcaster) {

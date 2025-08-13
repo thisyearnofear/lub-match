@@ -18,6 +18,7 @@ import {
 import { useLubToken } from "@/hooks/useLubToken";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { formatLubAmount } from "@/utils/pricingEngine";
+import { UserDisplayFormatter } from "@/utils/userDisplay";
 
 // Simplified UserStats - remove placeholder values
 interface UserStats {
@@ -106,7 +107,11 @@ export function UserProvider({ children }: UserProviderProps) {
   const { address, isConnected } = useAccount();
   const { progress, features, recordEvent } = useUserProgression();
   const { balance, isPending: lubLoading } = useLubToken();
-  const { context: farcasterContext } = useMiniAppReady();
+  const {
+    context: farcasterContext,
+    isInFarcaster,
+    isInitializing,
+  } = useMiniAppReady();
 
   // Extract tier from progress
   const tier = progress.tier;
@@ -120,8 +125,21 @@ export function UserProvider({ children }: UserProviderProps) {
     platform: string;
   }>();
 
-  // Resolve universal profile using Web3.bio
+  // Enhanced profile resolution: Prioritize Farcaster context for immediate display
   useEffect(() => {
+    // Priority 1: Farcaster context (immediate, most reliable in mini apps)
+    if (farcasterContext?.user) {
+      setWeb3Profile({
+        username: farcasterContext.user.username || "",
+        displayName: farcasterContext.user.displayName || "",
+        pfpUrl: farcasterContext.user.pfpUrl || "",
+        bio: undefined, // Bio not available in mini app context
+        platform: "farcaster",
+      });
+      return;
+    }
+
+    // Priority 2: Web3.bio resolution (for wallet-based identity)
     if (!address || !isConnected) {
       setWeb3Profile(undefined);
       return;
@@ -166,17 +184,6 @@ export function UserProvider({ children }: UserProviderProps) {
         }
       } catch (error) {
         console.log("Web3.bio profile resolution failed:", error);
-
-        // Fallback: Mini-app context user (most reliable when in Farcaster)
-        if (farcasterContext?.user) {
-          setWeb3Profile({
-            username: farcasterContext.user.username,
-            displayName: farcasterContext.user.display_name,
-            pfpUrl: farcasterContext.user.pfp_url,
-            bio: farcasterContext.user.bio,
-            platform: "farcaster",
-          });
-        }
       }
     };
 
@@ -489,27 +496,30 @@ export function useUserTier(): {
   };
 }
 
-// Hook for connection status and identity
+// Enhanced hook for connection status and identity with Farcaster context
 export function useUserIdentity(): {
   isConnected: boolean;
   walletAddress?: string;
   farcasterUser?: UserProfile["farcasterUser"];
   displayName: string;
   avatarUrl?: string;
+  hasUsername: boolean;
+  isInFarcaster: boolean;
+  isLoadingContext: boolean;
 } {
   const { profile } = useUser();
+  const { isInFarcaster, isInitializing } = useMiniAppReady();
 
-  const displayName =
-    profile.farcasterUser?.displayName ||
-    profile.farcasterUser?.username ||
-    (profile.walletAddress
-      ? `${profile.walletAddress.slice(0, 6)}...${profile.walletAddress.slice(
-          -4
-        )}`
-      : "") ||
-    getTierDisplayName(profile.tier);
+  // Use centralized display formatter for consistency
+  const displayName = UserDisplayFormatter.getDisplayName(
+    profile.farcasterUser,
+    profile.walletAddress,
+    getTierDisplayName(profile.tier),
+    "full"
+  );
 
   const avatarUrl = profile.farcasterUser?.pfpUrl;
+  const hasUsername = Boolean(profile.farcasterUser?.username);
 
   return {
     isConnected: profile.isConnected,
@@ -517,6 +527,9 @@ export function useUserIdentity(): {
     farcasterUser: profile.farcasterUser,
     displayName,
     avatarUrl,
+    hasUsername,
+    isInFarcaster,
+    isLoadingContext: isInitializing,
   };
 }
 
