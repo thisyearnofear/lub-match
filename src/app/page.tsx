@@ -60,7 +60,7 @@ const WalletDrawer = dynamic(() => import("@/components/shared/WalletDrawer"), {
 });
 
 import ClientOnly from "@/components/ClientOnly";
-import { useOnboarding } from "@/hooks/useOnboarding";
+import { MainPageSubtleOnboarding } from "@/components/onboarding/SubtleOnboardingIntegration";
 import {
   AnimatedTile,
   AnimatedTileContainer,
@@ -98,8 +98,6 @@ export default function Home() {
     socialDiscoveries: number;
   } | null>(null);
 
-  // Onboarding system
-  const { showOnboardingMessage } = useOnboarding();
 
   // Dynamic Farcaster users for social experience - only on client
   const {
@@ -169,8 +167,8 @@ export default function Home() {
         // Set the corresponding users (first 8 users whose images are used)
         setGameUsers(users.slice(0, 8));
 
-        // Show onboarding message for first-time users
-        showOnboardingMessage("FARCASTER_INTRO", { delay: 1000 });
+        // Legacy onboarding - will be replaced by enhanced system
+        // showOnboardingMessage("FARCASTER_INTRO", { delay: 1000 });
       }
     }
     // Only depend on stable values, not functions that change on every render
@@ -272,7 +270,7 @@ export default function Home() {
             </h1>
             {farcasterUser && (
               <div className="text-sm text-gray-300">
-                Welcome, {farcasterUser.display_name || farcasterUser.username}!
+                Welcome, {farcasterUser.displayName || farcasterUser.username}!
               </div>
             )}
           </div>
@@ -556,6 +554,14 @@ export default function Home() {
       <WalletDrawer
         isOpen={showWalletDrawer}
         onClose={() => setShowWalletDrawer(false)}
+      />
+
+      {/* Subtle Onboarding System */}
+      <MainPageSubtleOnboarding
+        handlers={{
+          onWalletConnect: () => setShowWalletDrawer(true),
+          onExploreGames: () => startSocialGames(),
+        }}
       />
     </div>
   );

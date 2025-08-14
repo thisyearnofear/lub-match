@@ -11,7 +11,7 @@ import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import ActionButton from "@/components/shared/ActionButton";
-import { useOnboarding } from "@/hooks/useOnboarding";
+import { GamePageSubtleOnboarding, GameCompletionSubtleOnboarding } from "@/components/onboarding/SubtleOnboardingIntegration";
 import { 
   useSubtleRewards, 
   SubtleRewardNotification,
@@ -100,8 +100,6 @@ export default function GameContent({
     handleNotificationComplete 
   } = useSubtleRewards();
 
-  // Onboarding system
-  const { showGameCompletionFlow } = useOnboarding();
 
   useEffect(() => {
     setIsClient(true);
@@ -118,8 +116,7 @@ export default function GameContent({
   const handleDemoGameFinished = () => {
     setDemoGameFinished(true);
 
-    // Show game completion flow
-    showGameCompletionFlow();
+    // Game completion flow now handled by SubtleOnboarding component
 
     // Show NFT minter first (skippable)
     setShowHeartMinter(true);
@@ -260,6 +257,23 @@ export default function GameContent({
             onShare={share}
           />
         </motion.div>
+      )}
+
+      {/* Subtle Onboarding for Game Pages */}
+      <GamePageSubtleOnboarding
+        handlers={{
+          onExploreGames: () => goToSocialGames(),
+        }}
+      />
+
+      {/* Game Completion Subtle Onboarding */}
+      {demoGameFinished && (
+        <GameCompletionSubtleOnboarding
+          handlers={{
+            onMintNFT: () => setShowHeartMinter(true),
+            onExploreGames: () => goToSocialGames(),
+          }}
+        />
       )}
     </div>
   );
