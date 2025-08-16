@@ -11,10 +11,12 @@ async function main() {
   console.log("Sending from account:", deployer.address);
 
   // Contract address and recipients
-  const lubTokenAddress = "0x5eb4dAF1637620aEC4244D6F95AA8FF65fc2B5F0";
+  const lubTokenAddress = process.env.NEXT_PUBLIC_LUB_TOKEN_ADDRESS;
   const recipients = [
-    "0xc0401272C353200Da1C6EEf2D100a108FDa06025",
-    "0x5499247Ff3157A1ab95ad3cD23150edCf44350d0"
+    "0x8e2913A92DEB13d796e6D99D1471AF3d2d4353ab",
+    "0xAd9d1147b83DE6cf24A179BDE5b362A188e14037",
+    "0x38c062DA3Db9f636834c1609dF6f5Eea45c7f7f9",
+    "0xc81da4bafc506b9faf37866003e10ae954f850ff"
   ];
   const amountToSend = ethers.parseEther("1000"); // 1000 LUB per recipient
 

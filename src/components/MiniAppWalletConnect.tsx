@@ -16,7 +16,7 @@ export default function MiniAppWalletConnect({
   showDisconnect = false,
 }: MiniAppWalletConnectProps) {
   const { address, isConnected } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connect, connectors, isPending, error } = useConnect();
   const { disconnect } = useDisconnect();
 
   // Get unified user identity for consistent display
@@ -27,6 +27,16 @@ export default function MiniAppWalletConnect({
     isInFarcaster,
     isLoadingContext,
   } = useUserIdentity();
+
+  // Debug logging
+  console.log("🔍 MiniAppWalletConnect state:", {
+    isInFarcaster,
+    isLoadingContext,
+    connectorsCount: connectors.length,
+    connectorNames: connectors.map((c) => c.name),
+    isConnected,
+    address: address?.slice(0, 10) + "...",
+  });
 
   // In Farcaster mini app, use custom connect button
   if (isInFarcaster) {
@@ -74,10 +84,29 @@ export default function MiniAppWalletConnect({
 
         <ActionButton
           onClick={() => {
-            // Use the first available connector (should be Farcaster mini app connector)
-            const connector = connectors[0];
+            console.log(
+              "🔗 Available connectors:",
+              connectors.map((c) => ({ name: c.name, id: c.id, type: c.type }))
+            );
+
+            // Look for Farcaster connector first, fallback to any available connector
+            const farcasterConnector = connectors.find(
+              (c) =>
+                c.name.toLowerCase().includes("farcaster") ||
+                c.id.toLowerCase().includes("farcaster")
+            );
+            const connector = farcasterConnector || connectors[0];
+
             if (connector) {
+              console.log("🔗 Attempting to connect with:", {
+                name: connector.name,
+                id: connector.id,
+                type: connector.type,
+                isFarcasterConnector: !!farcasterConnector,
+              });
               connect({ connector });
+            } else {
+              console.error("🔗 No connectors available");
             }
           }}
           disabled={isPending}
@@ -85,6 +114,21 @@ export default function MiniAppWalletConnect({
         >
           {isPending ? "Connecting..." : "Connect Wallet"}
         </ActionButton>
+
+        {/* Display connection error if any */}
+        {error && (
+          <div className="text-red-500 text-sm text-center">
+            Connection failed: {error.message}
+          </div>
+        )}
+
+        {/* Fallback option if Farcaster connection fails */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center mb-3">
+            Having trouble? Try regular wallet connection:
+          </p>
+          <ConnectButton />
+        </div>
       </div>
     );
   }

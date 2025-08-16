@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Contract addresses
-const LUB_TOKEN_ADDRESS = "0x5eb4dAF1637620aEC4244D6F95AA8FF65fc2B5F0";
+const LUB_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_LUB_TOKEN_ADDRESS;
 
 interface DistributionSummary {
   scanPeriod: {

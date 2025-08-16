@@ -24,8 +24,8 @@ const EVENT_REWARDS = {
 } as const;
 
 const CONTRACTS = {
-  lubToken: "0x5eb4dAF1637620aEC4244D6F95AA8FF65fc2B5F0",
-  heartNFT: "0x1db663b601aAfb926fAE305B236E4444E51f488d",
+  lubToken: process.env.NEXT_PUBLIC_LUB_TOKEN_ADDRESS,
+  heartNFT: process.env.NEXT_PUBLIC_HEART_NFT_ADDRESS,
   photoPairLeaderboard: process.env.NEXT_PUBLIC_PHOTO_PAIR_LEADERBOARD_ADDRESS,
   memoryGameRegistry: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS,
 } as const;
