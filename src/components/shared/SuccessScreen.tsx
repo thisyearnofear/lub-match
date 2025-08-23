@@ -5,6 +5,10 @@ import { motion } from "framer-motion";
 import ActionButton, { ButtonVariant } from "./ActionButton";
 import Confetti from "../Confetti";
 import { RewardsSummaryContent } from "../enhanced/SubtleRewardsIntegration";
+// NEW: Challenge and viral sharing imports (ENHANCEMENT FIRST)
+import { Challenge } from "@/services/challengeEngine";
+import { ViralDetection } from "@/services/viralDetectionService";
+import { getWhaleEmoji } from "@/hooks/useFarcasterUsers";
 
 export interface SuccessAction {
   label: string;
@@ -23,9 +27,19 @@ interface SuccessScreenProps {
   layout?: "single-column" | "two-column" | "grid";
   className?: string;
   showConfetti?: boolean;
-  celebrationLevel?: "standard" | "epic";
+  celebrationLevel?: "standard" | "epic" | "viral"; // NEW: Viral celebration level
   nftPreview?: ReactNode;
   sessionRewards?: Array<{ amount: bigint; description: string; type: string }>; // Optional earnings summary
+  // NEW: Challenge completion context (ENHANCEMENT FIRST)
+  challengeResult?: {
+    challenge: Challenge;
+    success: boolean;
+    viralDetected?: boolean;
+    totalReward: number;
+    bonuses: { whale: number; viral: number; speed: number };
+  };
+  // NEW: Viral detection context
+  viralDetection?: ViralDetection;
 }
 
 export default function SuccessScreen({
@@ -40,18 +54,79 @@ export default function SuccessScreen({
   celebrationLevel = "standard",
   nftPreview,
   sessionRewards,
+  challengeResult,
+  viralDetection,
 }: SuccessScreenProps) {
   const [triggerConfetti, setTriggerConfetti] = useState(false);
 
   useEffect(() => {
-    if (showConfetti) {
+    if (showConfetti || challengeResult?.success || viralDetection) {
       // Trigger confetti after a short delay for better visual impact
       const timer = setTimeout(() => {
         setTriggerConfetti(true);
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [showConfetti]);
+  }, [showConfetti, challengeResult, viralDetection]);
+
+  // NEW: Enhanced celebration logic for challenges and viral detection
+  const getCelebrationConfig = () => {
+    if (viralDetection) {
+      return {
+        icon: "🚀",
+        level: "viral" as const,
+        title: "Viral Success!",
+        message: `Your content went viral! Earned ${viralDetection.reward} LUB`
+      };
+    }
+
+    if (challengeResult) {
+      const { challenge, success, viralDetected, totalReward, bonuses } = challengeResult;
+      const whaleEmoji = getWhaleEmoji(challenge.targetUser.follower_count >= 50000 ? 'mega_whale' :
+                                      challenge.targetUser.follower_count >= 10000 ? 'whale' :
+                                      challenge.targetUser.follower_count >= 5000 ? 'shark' :
+                                      challenge.targetUser.follower_count >= 1000 ? 'fish' : 'minnow');
+
+      if (success && viralDetected) {
+        return {
+          icon: "🎯🚀",
+          level: "viral" as const,
+          title: "Epic Challenge Victory!",
+          message: `Challenge completed AND went viral! ${whaleEmoji} ${totalReward} LUB earned`
+        };
+      } else if (success && bonuses.whale > 0) {
+        return {
+          icon: `🎯${whaleEmoji}`,
+          level: "epic" as const,
+          title: "Whale Harpooned!",
+          message: `Successfully challenged a whale! ${totalReward} LUB earned`
+        };
+      } else if (success) {
+        return {
+          icon: "🎯",
+          level: "standard" as const,
+          title: "Challenge Complete!",
+          message: `Well done! ${totalReward} LUB earned`
+        };
+      } else {
+        return {
+          icon: "💪",
+          level: "standard" as const,
+          title: "Good Effort!",
+          message: "Challenge not completed, but you tried! Keep going!"
+        };
+      }
+    }
+
+    return {
+      icon: celebrationIcon,
+      level: celebrationLevel,
+      title,
+      message
+    };
+  };
+
+  const celebrationConfig = getCelebrationConfig();
   const getGridClasses = () => {
     switch (layout) {
       case "two-column":
@@ -67,8 +142,10 @@ export default function SuccessScreen({
 
   return (
     <>
-      {/* Confetti Effect */}
-      {showConfetti && <Confetti trigger={triggerConfetti} />}
+      {/* Enhanced Confetti Effect */}
+      {(showConfetti || challengeResult?.success || viralDetection) && (
+        <Confetti trigger={triggerConfetti} />
+      )}
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -85,7 +162,13 @@ export default function SuccessScreen({
           <motion.div
             className="text-6xl mb-4 relative"
             animate={
-              celebrationLevel === "epic"
+              celebrationConfig.level === "viral"
+                ? {
+                    scale: [1, 1.4, 1.2, 1],
+                    rotate: [0, 15, -15, 10, 0],
+                    y: [0, -15, 0],
+                  }
+                : celebrationConfig.level === "epic"
                 ? {
                     scale: [1, 1.3, 1.1, 1],
                     rotate: [0, 10, -10, 5, 0],
@@ -96,7 +179,12 @@ export default function SuccessScreen({
                   }
             }
             transition={
-              celebrationLevel === "epic"
+              celebrationConfig.level === "viral"
+                ? {
+                    duration: 1.5,
+                    ease: "easeOut",
+                  }
+                : celebrationConfig.level === "epic"
                 ? {
                     duration: 1.2,
                     ease: "easeOut",
@@ -108,20 +196,20 @@ export default function SuccessScreen({
                   }
             }
           >
-            {celebrationIcon}
-            {celebrationLevel === "epic" && (
+            {celebrationConfig.icon}
+            {(celebrationConfig.level === "epic" || celebrationConfig.level === "viral") && (
               <motion.div
                 className="absolute inset-0 text-6xl"
                 animate={{
-                  scale: [1, 1.5, 0],
+                  scale: [1, celebrationConfig.level === "viral" ? 2 : 1.5, 0],
                   opacity: [0.5, 0.8, 0],
                 }}
                 transition={{
-                  duration: 1,
+                  duration: celebrationConfig.level === "viral" ? 1.5 : 1,
                   ease: "easeOut",
                 }}
               >
-                {celebrationIcon}
+                {celebrationConfig.icon}
               </motion.div>
             )}
           </motion.div>
@@ -131,7 +219,7 @@ export default function SuccessScreen({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.3 }}
           >
-            {title}
+            {celebrationConfig.title}
           </motion.h2>
           <motion.p
             className="text-gray-600 mb-4"
@@ -139,7 +227,7 @@ export default function SuccessScreen({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.3 }}
           >
-            {message}
+            {celebrationConfig.message}
           </motion.p>
         </div>
 
@@ -155,13 +243,118 @@ export default function SuccessScreen({
           </motion.div>
         )}
 
+        {/* Challenge Result Details */}
+        {challengeResult && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: nftPreview ? 0.5 : 0.4, duration: 0.3 }}
+          >
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
+              <div className="flex items-center gap-3 mb-3">
+                <img
+                  src={challengeResult.challenge.targetUser.pfp_url}
+                  alt={challengeResult.challenge.targetUser.display_name}
+                  className="w-10 h-10 rounded-full"
+                />
+                <div>
+                  <h4 className="font-semibold text-gray-800">
+                    @{challengeResult.challenge.targetUser.username}
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    {challengeResult.challenge.targetUser.follower_count.toLocaleString()} followers
+                  </p>
+                </div>
+                <div className="ml-auto text-right">
+                  <div className="text-lg font-bold text-purple-600">
+                    {challengeResult.totalReward} LUB
+                  </div>
+                  {challengeResult.bonuses.whale > 0 && (
+                    <div className="text-xs text-purple-500">
+                      +{challengeResult.bonuses.whale} whale bonus
+                    </div>
+                  )}
+                  {challengeResult.bonuses.viral > 0 && (
+                    <div className="text-xs text-pink-500">
+                      +{challengeResult.bonuses.viral} viral bonus
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {challengeResult.viralDetected && (
+                <div className="bg-pink-100 rounded-lg p-3 border border-pink-200">
+                  <div className="flex items-center gap-2 text-pink-700">
+                    <span className="text-lg">🚀</span>
+                    <span className="font-semibold">Viral Detection!</span>
+                  </div>
+                  <p className="text-sm text-pink-600 mt-1">
+                    Target mentioned $LUB - viral bonus applied!
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Viral Detection Details */}
+        {viralDetection && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: challengeResult ? 0.6 : nftPreview ? 0.5 : 0.4, duration: 0.3 }}
+          >
+            <div className="bg-gradient-to-r from-pink-50 to-red-50 rounded-xl p-4 border border-pink-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🚀</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">Viral Content Detected!</h4>
+                  <p className="text-sm text-gray-600">
+                    {viralDetection.confidence}% confidence • {viralDetection.detectionType.replace('_', ' ')}
+                  </p>
+                </div>
+                <div className="ml-auto text-lg font-bold text-pink-600">
+                  {viralDetection.reward} LUB
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg p-3 border border-pink-100">
+                <p className="text-sm text-gray-700 italic">
+                  "{viralDetection.castContent.substring(0, 120)}
+                  {viralDetection.castContent.length > 120 ? '...' : ''}"
+                </p>
+              </div>
+
+              {(viralDetection.bonuses.whale > 0 || viralDetection.bonuses.engagement > 0) && (
+                <div className="mt-3 flex gap-2 text-xs">
+                  {viralDetection.bonuses.whale > 0 && (
+                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                      🐋 +{viralDetection.bonuses.whale} whale bonus
+                    </span>
+                  )}
+                  {viralDetection.bonuses.engagement > 0 && (
+                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                      💬 +{viralDetection.bonuses.engagement} engagement bonus
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Session Rewards Summary */}
         {sessionRewards && (
           <motion.div
             className="mb-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: nftPreview ? 0.5 : 0.4, duration: 0.3 }}
+            transition={{
+              delay: viralDetection ? 0.7 : challengeResult ? 0.6 : nftPreview ? 0.5 : 0.4,
+              duration: 0.3
+            }}
           >
             <RewardsSummaryContent rewards={sessionRewards} />
           </motion.div>

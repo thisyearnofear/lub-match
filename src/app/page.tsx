@@ -196,10 +196,11 @@ export default function Home() {
 
   const handleNFTMinterClose = () => {
     setShowHeartNFTMinter(false);
-    // After closing NFT minter, proceed to social games if available
+    // ENHANCED: After closing NFT minter, proceed to social games with challenge integration
     if (isClient && canPlayGames(users)) {
       setIsTransitioning(true);
       setTimeout(() => {
+        // Start social games which now includes challenge selection
         startSocialGames();
         setIsTransitioning(false);
       }, ANIM_DURATION * 1000);

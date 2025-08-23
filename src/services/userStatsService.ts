@@ -31,7 +31,7 @@ export class UserStatsService {
     }
   }
   
-  // Update stats based on event
+  // Update stats based on event (ENHANCED with challenge support)
   recordEvent(event: StatsEvent): UserStats {
     const current = this.getUserStats();
     const updated = { ...current };
@@ -79,6 +79,54 @@ export class UserStatsService {
       case 'social_game_result':
         // Update social game stats with new result
         this.updateSocialGameStats(updated, event.score, event.accuracy);
+        break;
+
+      // NEW: Challenge event handling (ENHANCEMENT FIRST)
+      case 'challenge_created':
+        updated.challengeStats.challengesCreated += 1;
+        if (event.whaleMultiplier > 2) {
+          updated.challengeStats.whalesTargeted += 1;
+        }
+        break;
+
+      case 'challenge_completed':
+        updated.challengeStats.challengesCompleted += 1;
+        if (event.success) {
+          updated.challengeStats.challengesSuccessful += 1;
+          updated.challengeStats.challengeStreak += 1;
+          updated.challengeStats.longestChallengeStreak = Math.max(
+            updated.challengeStats.longestChallengeStreak,
+            updated.challengeStats.challengeStreak
+          );
+        } else {
+          updated.challengeStats.challengeStreak = 0;
+        }
+
+        // Add rewards
+        updated.challengeStats.totalChallengeRewards += event.reward;
+        updated.challengeStats.whaleBonus += event.whaleBonus;
+        updated.challengeStats.viralBonus += event.viralBonus;
+
+        // Update LUB balance
+        updated.lubBalance += event.reward;
+        updated.totalLubEarned += event.reward;
+
+        if (event.viralDetected) {
+          updated.challengeStats.viralDetections += 1;
+        }
+        break;
+
+      case 'whale_harpooned':
+        updated.challengeStats.whalesHarpooned += 1;
+        updated.challengeStats.bestWhaleMultiplier = Math.max(
+          updated.challengeStats.bestWhaleMultiplier,
+          event.multiplier
+        );
+        break;
+
+      case 'viral_detected':
+        updated.challengeStats.viralDetections += 1;
+        updated.challengeStats.viralBonus += event.bonus;
         break;
         
       case 'photo_pair_leaderboard_submission':
@@ -156,6 +204,21 @@ export class UserStatsService {
       socialGameScore: stats.socialGameScore,
       socialGameAccuracy: `${stats.socialGameAccuracy.toFixed(1)}%`,
       socialGameLevel: this.getSocialGameLevel(stats),
+
+      // NEW: Challenge System Display (ENHANCEMENT FIRST)
+      challengeStats: {
+        challengesCreated: stats.challengeStats.challengesCreated,
+        challengesCompleted: stats.challengeStats.challengesCompleted,
+        successRate: stats.challengeStats.challengesCompleted > 0
+          ? `${((stats.challengeStats.challengesSuccessful / stats.challengeStats.challengesCompleted) * 100).toFixed(1)}%`
+          : '0%',
+        whalesHarpooned: stats.challengeStats.whalesHarpooned,
+        viralDetections: stats.challengeStats.viralDetections,
+        totalRewards: formatLubAmount(stats.challengeStats.totalChallengeRewards),
+        currentStreak: stats.challengeStats.challengeStreak,
+        longestStreak: stats.challengeStats.longestChallengeStreak,
+        whaleHunterLevel: this.getWhaleHunterLevel(stats.challengeStats),
+      },
       
       // Photo Pair Game Leaderboard Stats (Local)
       photoPairBestTime: stats.photoPairLeaderboard.bestTime > 0 ? `${stats.photoPairLeaderboard.bestTime}s` : 'N/A',
@@ -227,6 +290,22 @@ export class UserStatsService {
       socialGameScore: 0,
       socialGameAccuracy: 0,
       socialGameBestScore: 0,
+
+      // NEW: Challenge stats defaults (ENHANCEMENT FIRST)
+      challengeStats: {
+        challengesCreated: 0,
+        challengesCompleted: 0,
+        challengesSuccessful: 0,
+        whalesTargeted: 0,
+        whalesHarpooned: 0,
+        viralDetections: 0,
+        totalChallengeRewards: BigInt(0),
+        whaleBonus: BigInt(0),
+        viralBonus: BigInt(0),
+        bestWhaleMultiplier: 1,
+        challengeStreak: 0,
+        longestChallengeStreak: 0,
+      },
       photoPairLeaderboard: {
         // Local stats
         bestTime: 0,
@@ -525,6 +604,18 @@ export class UserStatsService {
     // This would need to be updated from the smart contract
     // For now, return a placeholder
     return 'TBD';
+  }
+
+  // NEW: Whale hunter level calculation (ENHANCEMENT FIRST)
+  private getWhaleHunterLevel(challengeStats: UserStats['challengeStats']): string {
+    const { whalesHarpooned, bestWhaleMultiplier } = challengeStats;
+
+    if (whalesHarpooned === 0) return 'Minnow';
+    if (whalesHarpooned < 5) return 'Fisher';
+    if (whalesHarpooned < 15) return 'Shark Hunter';
+    if (whalesHarpooned < 50) return 'Whale Hunter';
+    if (bestWhaleMultiplier >= 25) return 'Leviathan Slayer';
+    return 'Whale Master';
   }
 }
 

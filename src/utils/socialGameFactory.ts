@@ -1,14 +1,22 @@
 // Social game factory for creating different types of Farcaster-based games
 
-import { 
-  FarcasterUser, 
-  GameFactory, 
-  UsernameGuessingGame, 
-  PfpMatchingGame, 
-  SocialTriviaGame 
+import {
+  FarcasterUser,
+  GameFactory,
+  UsernameGuessingGame,
+  PfpMatchingGame,
+  SocialTriviaGame
 } from '@/types/socialGames';
 import { shuffleArray } from './mockData';
+// NEW: Whale classification integration (ENHANCEMENT FIRST)
+import {
+  classifyUserByFollowers,
+  getWhaleMultiplier,
+  getWhaleEmoji,
+  WhaleType
+} from '@/hooks/useFarcasterUsers';
 
+// ENHANCED: Social Game Factory with whale classification (ENHANCEMENT FIRST)
 export class SocialGameFactory implements GameFactory {
   
   createUsernameGuessingGame(
@@ -81,20 +89,107 @@ export class SocialGameFactory implements GameFactory {
     };
   }
 
+  // ENHANCED: Whale-aware user selection (ENHANCEMENT FIRST)
   private selectUsersByDifficulty(users: FarcasterUser[], difficulty: 'easy' | 'medium' | 'hard'): FarcasterUser[] {
     const counts = { easy: 4, medium: 8, hard: 12 };
     const count = Math.min(counts[difficulty], users.length);
-    
-    // For harder difficulties, include more diverse follower counts
+
+    // NEW: Whale-based selection for enhanced challenge progression
     if (difficulty === 'hard') {
-      // Mix of high and low follower users for more challenge
-      const sorted = [...users].sort((a, b) => b.follower_count - a.follower_count);
-      const highFollowers = sorted.slice(0, Math.floor(count / 2));
-      const lowFollowers = sorted.slice(-Math.floor(count / 2));
-      return shuffleArray([...highFollowers, ...lowFollowers]).slice(0, count);
+      return this.selectWhaleBalancedUsers(users, count);
+    } else if (difficulty === 'medium') {
+      return this.selectMixedWhaleUsers(users, count);
+    } else {
+      // Easy: Mostly minnows and fish for approachable gameplay
+      return this.selectEasyUsers(users, count);
     }
-    
-    return shuffleArray(users).slice(0, count);
+  }
+
+  // NEW: Whale-balanced selection for hard difficulty (MODULAR)
+  private selectWhaleBalancedUsers(users: FarcasterUser[], count: number): FarcasterUser[] {
+    const whaleGroups = this.groupUsersByWhaleType(users);
+    const selected: FarcasterUser[] = [];
+
+    // Hard difficulty: Include whales for high-stakes gameplay
+    // 25% whales/mega_whales, 25% sharks, 50% fish/minnows
+    const whaleCount = Math.max(1, Math.floor(count * 0.25));
+    const sharkCount = Math.max(1, Math.floor(count * 0.25));
+    const fishCount = count - whaleCount - sharkCount;
+
+    // Add whales (highest reward potential)
+    const whales = [...(whaleGroups.whale || []), ...(whaleGroups.mega_whale || [])];
+    selected.push(...shuffleArray(whales).slice(0, whaleCount));
+
+    // Add sharks (medium-high reward)
+    selected.push(...shuffleArray(whaleGroups.shark || []).slice(0, sharkCount));
+
+    // Fill remaining with fish and minnows
+    const smallFish = [...(whaleGroups.fish || []), ...(whaleGroups.minnow || [])];
+    selected.push(...shuffleArray(smallFish).slice(0, fishCount));
+
+    return shuffleArray(selected).slice(0, count);
+  }
+
+  // NEW: Mixed whale selection for medium difficulty (MODULAR)
+  private selectMixedWhaleUsers(users: FarcasterUser[], count: number): FarcasterUser[] {
+    const whaleGroups = this.groupUsersByWhaleType(users);
+    const selected: FarcasterUser[] = [];
+
+    // Medium difficulty: Balanced mix with some challenge
+    // 10% whales, 30% sharks, 60% fish/minnows
+    const whaleCount = Math.max(0, Math.floor(count * 0.1));
+    const sharkCount = Math.max(1, Math.floor(count * 0.3));
+    const fishCount = count - whaleCount - sharkCount;
+
+    if (whaleCount > 0) {
+      const whales = [...(whaleGroups.whale || []), ...(whaleGroups.mega_whale || [])];
+      selected.push(...shuffleArray(whales).slice(0, whaleCount));
+    }
+
+    selected.push(...shuffleArray(whaleGroups.shark || []).slice(0, sharkCount));
+
+    const smallFish = [...(whaleGroups.fish || []), ...(whaleGroups.minnow || [])];
+    selected.push(...shuffleArray(smallFish).slice(0, fishCount));
+
+    return shuffleArray(selected).slice(0, count);
+  }
+
+  // NEW: Easy user selection (MODULAR)
+  private selectEasyUsers(users: FarcasterUser[], count: number): FarcasterUser[] {
+    const whaleGroups = this.groupUsersByWhaleType(users);
+
+    // Easy difficulty: Mostly approachable users
+    // 80% minnows/fish, 20% sharks (no whales for easy mode)
+    const easyUsers = [...(whaleGroups.minnow || []), ...(whaleGroups.fish || [])];
+    const sharks = whaleGroups.shark || [];
+
+    const sharkCount = Math.min(Math.floor(count * 0.2), sharks.length);
+    const easyCount = count - sharkCount;
+
+    const selected = [
+      ...shuffleArray(easyUsers).slice(0, easyCount),
+      ...shuffleArray(sharks).slice(0, sharkCount)
+    ];
+
+    return shuffleArray(selected).slice(0, count);
+  }
+
+  // NEW: Group users by whale classification (PERFORMANT caching)
+  private groupUsersByWhaleType(users: FarcasterUser[]): Record<WhaleType, FarcasterUser[]> {
+    const groups: Record<WhaleType, FarcasterUser[]> = {
+      minnow: [],
+      fish: [],
+      shark: [],
+      whale: [],
+      mega_whale: []
+    };
+
+    users.forEach(user => {
+      const whaleType = classifyUserByFollowers(user.follower_count);
+      groups[whaleType].push(user);
+    });
+
+    return groups;
   }
 
   private generateTriviaQuestions(users: FarcasterUser[], difficulty: 'easy' | 'medium' | 'hard') {
@@ -154,7 +249,109 @@ export class SocialGameFactory implements GameFactory {
     }
     return count.toString();
   }
+
+  // NEW: Whale-aware reward calculation (ENHANCEMENT FIRST)
+  calculateGameReward(
+    users: FarcasterUser[],
+    difficulty: 'easy' | 'medium' | 'hard',
+    accuracy: number,
+    timeSpent: number
+  ): {
+    baseReward: number;
+    whaleBonus: number;
+    difficultyMultiplier: number;
+    accuracyBonus: number;
+    speedBonus: number;
+    totalReward: number;
+    breakdown: string[];
+  } {
+    // Base rewards by difficulty
+    const baseRewards = { easy: 10, medium: 25, hard: 50 };
+    const baseReward = baseRewards[difficulty];
+
+    // Calculate whale bonus based on users in game
+    const whaleBonus = this.calculateWhaleBonus(users);
+
+    // Difficulty multiplier
+    const difficultyMultipliers = { easy: 1, medium: 1.5, hard: 2 };
+    const difficultyMultiplier = difficultyMultipliers[difficulty];
+
+    // Accuracy bonus (perfect accuracy = 50% bonus)
+    const accuracyBonus = Math.floor(baseReward * (accuracy / 100) * 0.5);
+
+    // Speed bonus (under 30 seconds per user = 25% bonus)
+    const avgTimePerUser = timeSpent / users.length;
+    const speedBonus = avgTimePerUser < 30 ? Math.floor(baseReward * 0.25) : 0;
+
+    // Calculate total
+    const subtotal = Math.floor(baseReward * difficultyMultiplier);
+    const totalReward = subtotal + whaleBonus + accuracyBonus + speedBonus;
+
+    // Create breakdown for display
+    const breakdown = [
+      `Base reward: ${baseReward} LUB`,
+      `Difficulty (${difficulty}): ${Math.floor(baseReward * (difficultyMultiplier - 1))} LUB`,
+      ...(whaleBonus > 0 ? [`Whale bonus: ${whaleBonus} LUB`] : []),
+      ...(accuracyBonus > 0 ? [`Accuracy bonus: ${accuracyBonus} LUB`] : []),
+      ...(speedBonus > 0 ? [`Speed bonus: ${speedBonus} LUB`] : [])
+    ];
+
+    return {
+      baseReward,
+      whaleBonus,
+      difficultyMultiplier,
+      accuracyBonus,
+      speedBonus,
+      totalReward,
+      breakdown
+    };
+  }
+
+  // NEW: Calculate whale bonus for game (COMPOSABLE)
+  private calculateWhaleBonus(users: FarcasterUser[]): number {
+    let bonus = 0;
+    const whaleGroups = this.groupUsersByWhaleType(users);
+
+    // Bonus points for each whale type in the game
+    bonus += (whaleGroups.fish?.length || 0) * 2;      // 2 LUB per fish
+    bonus += (whaleGroups.shark?.length || 0) * 5;     // 5 LUB per shark
+    bonus += (whaleGroups.whale?.length || 0) * 15;    // 15 LUB per whale
+    bonus += (whaleGroups.mega_whale?.length || 0) * 40; // 40 LUB per mega whale
+
+    return bonus;
+  }
+
+  // NEW: Get whale statistics for game preview (PERFORMANT)
+  getWhaleStats(users: FarcasterUser[]): {
+    whaleCount: number;
+    totalMultiplier: number;
+    whaleBreakdown: Record<WhaleType, number>;
+    potentialBonus: number;
+  } {
+    const whaleGroups = this.groupUsersByWhaleType(users);
+    const whaleBreakdown: Record<WhaleType, number> = {
+      minnow: whaleGroups.minnow?.length || 0,
+      fish: whaleGroups.fish?.length || 0,
+      shark: whaleGroups.shark?.length || 0,
+      whale: whaleGroups.whale?.length || 0,
+      mega_whale: whaleGroups.mega_whale?.length || 0
+    };
+
+    const whaleCount = users.length - whaleBreakdown.minnow;
+    const totalMultiplier = users.reduce((sum, user) => {
+      return sum + getWhaleMultiplier(classifyUserByFollowers(user.follower_count));
+    }, 0) / users.length;
+
+    const potentialBonus = this.calculateWhaleBonus(users);
+
+    return {
+      whaleCount,
+      totalMultiplier,
+      whaleBreakdown,
+      potentialBonus
+    };
+  }
 }
 
-// Singleton instance
+// ENHANCED: Singleton instance with whale capabilities
 export const socialGameFactory = new SocialGameFactory();

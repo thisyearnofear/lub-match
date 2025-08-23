@@ -19,6 +19,9 @@ import { useLubToken } from "@/hooks/useLubToken";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import { formatLubAmount } from "@/utils/pricingEngine";
 import { UserDisplayFormatter } from "@/utils/userDisplay";
+// NEW: Challenge system imports (ENHANCEMENT FIRST)
+import { Challenge, challengeEngine } from "@/services/challengeEngine";
+import { socialInteractionService } from "@/services/socialInteractionService";
 
 // Simplified UserStats - remove placeholder values
 interface UserStats {
@@ -68,6 +71,15 @@ interface UserProfile {
   canPlaySocialGames: boolean;
   canEarnTokens: boolean;
   canSendLub: boolean;
+
+  // NEW: Challenge System State (ENHANCEMENT FIRST)
+  challengeState: {
+    activeChallenges: Challenge[];
+    completedChallengesCount: number;
+    currentStreak: number;
+    whalesHarpooned: number;
+    totalChallengeRewards: string; // formatted LUB amount
+  };
 }
 
 interface UserActions {
@@ -82,6 +94,10 @@ interface UserActions {
   // UI State
   refreshUserData: () => Promise<void>;
   resetUserData: () => void;
+
+  // NEW: Challenge Actions (ENHANCEMENT FIRST)
+  refreshChallengeState: () => Promise<void>;
+  cleanupExpiredChallenges: () => void;
 }
 
 interface UserContextValue {
@@ -102,6 +118,15 @@ export function UserProvider({ children }: UserProviderProps) {
   const [error, setError] = useState<string>();
   const [lubTransactionCount, setLubTransactionCount] = useState(0);
   const [totalLubEarned, setTotalLubEarned] = useState("0");
+
+  // NEW: Challenge state management (ENHANCEMENT FIRST)
+  const [activeChallenges, setActiveChallenges] = useState<Challenge[]>([]);
+  const [challengeStats, setChallengeStats] = useState({
+    completedCount: 0,
+    currentStreak: 0,
+    whalesHarpooned: 0,
+    totalRewards: "0"
+  });
 
   // Core hooks
   const { address, isConnected } = useAccount();
@@ -317,6 +342,15 @@ export function UserProvider({ children }: UserProviderProps) {
       canPlaySocialGames: features.socialGames,
       canEarnTokens: features.tokenEarning,
       canSendLub: features.lubCreation && isConnected,
+
+      // NEW: Challenge State (ENHANCEMENT FIRST)
+      challengeState: {
+        activeChallenges,
+        completedChallengesCount: challengeStats.completedCount,
+        currentStreak: challengeStats.currentStreak,
+        whalesHarpooned: challengeStats.whalesHarpooned,
+        totalChallengeRewards: formatLubAmount(BigInt(challengeStats.totalRewards || "0")),
+      },
     };
   }, [
     isConnected,
@@ -326,7 +360,72 @@ export function UserProvider({ children }: UserProviderProps) {
     progress,
     tier,
     features,
+    // NEW: Challenge state dependencies (CLEAN dependencies)
+    activeChallenges,
+    challengeStats,
   ]);
+
+  // NEW: Challenge management functions (ENHANCEMENT FIRST)
+  const refreshChallengeState = useCallback(async () => {
+    try {
+      // Get active challenges from engine
+      const active = challengeEngine.getActiveChallenges();
+      setActiveChallenges(active);
+
+      // Get challenge history for stats
+      const history = challengeEngine.getChallengeHistory(100);
+      const completed = history.filter(r => r.success).length;
+      const totalRewards = history.reduce((sum, r) => sum + r.actualReward, 0);
+
+      // Calculate current streak
+      let streak = 0;
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i].success) {
+          streak++;
+        } else {
+          break;
+        }
+      }
+
+      // Count whale harpoons
+      const whales = history.filter(r =>
+        r.success && challengeEngine.getChallenge(r.challengeId)?.whaleMultiplier > 2
+      ).length;
+
+      setChallengeStats({
+        completedCount: completed,
+        currentStreak: streak,
+        whalesHarpooned: whales,
+        totalRewards: totalRewards.toString()
+      });
+
+    } catch (error) {
+      console.error("Failed to refresh challenge state:", error);
+    }
+  }, []);
+
+  const cleanupExpiredChallenges = useCallback(() => {
+    const cleaned = challengeEngine.cleanupExpiredChallenges();
+    if (cleaned > 0) {
+      refreshChallengeState();
+    }
+  }, [refreshChallengeState]);
+
+  // Auto-refresh challenge state periodically
+  useEffect(() => {
+    refreshChallengeState();
+
+    // Refresh every 30 seconds to keep challenge state current
+    const interval = setInterval(refreshChallengeState, 30000);
+
+    // Cleanup expired challenges every 5 minutes
+    const cleanupInterval = setInterval(cleanupExpiredChallenges, 300000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(cleanupInterval);
+    };
+  }, [refreshChallengeState, cleanupExpiredChallenges]);
 
   // User actions
   const actions: UserActions = {
@@ -410,8 +509,19 @@ export function UserProvider({ children }: UserProviderProps) {
       setLubTransactionCount(0);
       setTotalLubEarned("0");
       setError(undefined);
-      // This would also reset progression data if needed
+      // Reset challenge state
+      setActiveChallenges([]);
+      setChallengeStats({
+        completedCount: 0,
+        currentStreak: 0,
+        whalesHarpooned: 0,
+        totalRewards: "0"
+      });
     }, []),
+
+    // NEW: Challenge actions (ENHANCEMENT FIRST)
+    refreshChallengeState,
+    cleanupExpiredChallenges,
   };
 
   // Handle loading state
@@ -567,5 +677,24 @@ export function useUserFeatures(): {
     canSendLub: profile.canSendLub,
     shouldShowTokenWidget: profile.canEarnTokens || profile.isConnected,
     shouldShowProfile: profile.tier !== "newcomer" || profile.isConnected,
+  };
+}
+
+// NEW: Challenge state hook (ENHANCEMENT FIRST)
+export function useUserChallenges(): {
+  activeChallenges: Challenge[];
+  completedChallengesCount: number;
+  currentStreak: number;
+  whalesHarpooned: number;
+  totalChallengeRewards: string;
+  refreshChallengeState: () => Promise<void>;
+  cleanupExpiredChallenges: () => void;
+} {
+  const { profile, actions } = useUser();
+
+  return {
+    ...profile.challengeState,
+    refreshChallengeState: actions.refreshChallengeState,
+    cleanupExpiredChallenges: actions.cleanupExpiredChallenges,
   };
 }

@@ -28,6 +28,22 @@ export interface UserStats {
   socialGameScore: number; // total score from social games
   socialGameAccuracy: number; // average accuracy
   socialGameBestScore: number; // highest single game score
+
+  // NEW: Challenge System Stats (ENHANCEMENT FIRST)
+  challengeStats: {
+    challengesCreated: number;
+    challengesCompleted: number;
+    challengesSuccessful: number;
+    whalesTargeted: number;
+    whalesHarpooned: number; // successful whale challenges
+    viralDetections: number; // times target mentioned $LUB
+    totalChallengeRewards: bigint;
+    whaleBonus: bigint;
+    viralBonus: bigint;
+    bestWhaleMultiplier: number;
+    challengeStreak: number; // current consecutive successful challenges
+    longestChallengeStreak: number;
+  };
   
   // Leaderboard Data for Photo Pair Game
   photoPairLeaderboard: {
@@ -90,6 +106,19 @@ export interface FormattedUserStats {
   socialGameScore: number;
   socialGameAccuracy: string; // formatted percentage
   socialGameLevel: string; // knowledge level
+
+  // NEW: Challenge System Display (ENHANCEMENT FIRST)
+  challengeStats: {
+    challengesCreated: number;
+    challengesCompleted: number;
+    successRate: string; // formatted percentage
+    whalesHarpooned: number;
+    viralDetections: number;
+    totalRewards: string; // formatted LUB amount
+    currentStreak: number;
+    longestStreak: number;
+    whaleHunterLevel: string; // based on whale success
+  };
   
   // Photo Pair Game Leaderboard Stats (Local)
   photoPairBestTime: string; // formatted time (e.g., "45s")
@@ -124,7 +153,7 @@ export interface FormattedUserStats {
   nextTierRequirement: string;
 }
 
-// Events for updating stats
+// Events for updating stats (ENHANCED with challenge events)
 export type StatsEvent =
   | { type: 'game_complete'; gameType: 'memory' | 'social' }
   | { type: 'lub_created'; mode: 'farcaster' | 'romance' }
@@ -134,6 +163,11 @@ export type StatsEvent =
   | { type: 'lub_earned'; amount: bigint }
   | { type: 'wallet_connected' }
   | { type: 'social_game_result'; score: number; accuracy: number; timeSpent: number }
+  // NEW: Challenge events (ENHANCEMENT FIRST)
+  | { type: 'challenge_created'; targetFid: number; difficulty: 'easy' | 'medium' | 'hard'; whaleMultiplier: number }
+  | { type: 'challenge_completed'; success: boolean; reward: bigint; whaleBonus: bigint; viralDetected: boolean; viralBonus: bigint }
+  | { type: 'whale_harpooned'; whaleType: string; multiplier: number; reward: bigint }
+  | { type: 'viral_detected'; bonus: bigint }
   | { type: 'photo_pair_leaderboard_submission'; time: number; accuracy: number; attempts: number; matches: number }
   | { type: 'global_leaderboard_submission'; time: number; accuracy: number; rank: number; lubEarned: number }
   | { type: 'global_achievement_unlocked'; achievement: string; lubReward: number }

@@ -4,6 +4,9 @@ import { useCallback } from "react";
 import { useAppNavigation } from "./useAppNavigation";
 import { ShareHelpers, GameShareData, AchievementShareData } from "@/utils/shareHelpers";
 import { SuccessAction } from "@/components/shared/SuccessScreen";
+// NEW: Challenge sharing imports (ENHANCEMENT FIRST)
+import { Challenge } from "@/services/challengeEngine";
+import { ViralDetection } from "@/services/viralDetectionService";
 
 interface UseSuccessActionsProps {
   onReset?: () => void;
@@ -151,6 +154,60 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
     icon: "🌊"
   }), []);
 
+  // NEW: Challenge-specific action creators (ENHANCEMENT FIRST)
+  const createShareChallengeSuccessAction = useCallback((
+    challenge: Challenge,
+    success: boolean,
+    reward: number,
+    viralDetected?: boolean
+  ): SuccessAction => ({
+    label: viralDetected ? "Share Viral Success!" : "Share Challenge",
+    onClick: () => {
+      const whaleEmoji = challenge.targetUser.follower_count >= 10000 ? '🐋' :
+                        challenge.targetUser.follower_count >= 5000 ? '🦈' :
+                        challenge.targetUser.follower_count >= 1000 ? '🐟' : '';
+
+      const shareText = success
+        ? `🎯 Just completed a ${challenge.difficulty} challenge with @${challenge.targetUser.username}! ${whaleEmoji} Earned ${reward} $LUB ${viralDetected ? '🚀 (VIRAL!)' : ''} \n\nTry Lub Match challenges: ${window.location.origin}`
+        : `💪 Attempted a challenge with @${challenge.targetUser.username}! ${whaleEmoji} The grind continues... \n\nJoin the challenge: ${window.location.origin}`;
+
+      ShareHelpers.shareWithFallback({
+        text: shareText,
+        url: window.location.origin
+      });
+    },
+    variant: viralDetected ? "gradient-pink" : success ? "gradient-purple" : "secondary",
+    icon: viralDetected ? "🚀" : success ? "🎯" : "💪"
+  }), []);
+
+  const createShareViralDetectionAction = useCallback((detection: ViralDetection): SuccessAction => ({
+    label: "Share Viral Moment",
+    onClick: () => {
+      const shareText = `🚀 My content just went viral on Lub Match! Earned ${detection.reward} $LUB for ${detection.detectionType.replace('_', ' ')} \n\n"${detection.castContent.substring(0, 100)}${detection.castContent.length > 100 ? '...' : ''}" \n\nJoin the viral fun: ${window.location.origin}`;
+
+      ShareHelpers.shareWithFallback({
+        text: shareText,
+        url: window.location.origin
+      });
+    },
+    variant: "gradient-pink",
+    icon: "🚀"
+  }), []);
+
+  const createNewChallengeAction = useCallback((): SuccessAction => ({
+    label: "New Challenge",
+    onClick: () => navigation.goToSocialGames(),
+    variant: "gradient-purple",
+    icon: "🎯"
+  }), [navigation]);
+
+  const createWhaleHuntAction = useCallback((): SuccessAction => ({
+    label: "Hunt Whales",
+    onClick: () => navigation.goToSocialGames(), // Will open in whale hunting mode
+    variant: "gradient-cyan",
+    icon: "🐋"
+  }), [navigation]);
+
   // Enhanced NFT mint success actions
   const getNFTMintSuccessActions = useCallback((
     txHash: string,
@@ -232,6 +289,63 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
     createCreateAnotherAction()
   ], [createViewLeaderboardAction, createPlayDemoAction, createCreateAnotherAction]);
 
+  // NEW: Challenge success action combinations (ENHANCEMENT FIRST)
+  const getChallengeSuccessActions = useCallback((
+    challenge: Challenge,
+    success: boolean,
+    reward: number,
+    viralDetected: boolean = false,
+    onNewChallenge: () => void,
+    onBackToMenu: () => void
+  ): SuccessAction[] => {
+    const actions = [];
+
+    // Primary action - share the success
+    actions.push(createShareChallengeSuccessAction(challenge, success, reward, viralDetected));
+
+    if (success) {
+      // Success-specific actions
+      if (challenge.whaleMultiplier > 2) {
+        actions.push(createWhaleHuntAction()); // More whale hunting
+      } else {
+        actions.push(createNewChallengeAction()); // Regular new challenge
+      }
+    } else {
+      // Failure recovery actions
+      actions.push({
+        label: "Try Again",
+        onClick: onNewChallenge,
+        variant: "gradient-purple",
+        icon: "🔄"
+      });
+    }
+
+    // Secondary actions
+    actions.push({
+      label: "Back to Menu",
+      onClick: onBackToMenu,
+      variant: "secondary",
+      icon: "🏠"
+    });
+
+    return actions;
+  }, [createShareChallengeSuccessAction, createWhaleHuntAction, createNewChallengeAction]);
+
+  const getViralDetectionActions = useCallback((
+    detection: ViralDetection,
+    onNewChallenge: () => void,
+    onBackToMenu: () => void
+  ): SuccessAction[] => [
+    createShareViralDetectionAction(detection),
+    createNewChallengeAction(),
+    {
+      label: "Back to Menu",
+      onClick: onBackToMenu,
+      variant: "secondary",
+      icon: "🏠"
+    }
+  ], [createShareViralDetectionAction, createNewChallengeAction]);
+
   const getErrorRecoveryActions = useCallback((
     onRetry: () => void
   ): SuccessAction[] => [
@@ -268,6 +382,14 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
     getNFTMintSuccessActions,
     getGameCreationSuccessActions,
     getSocialGameSuccessActions,
-    getErrorRecoveryActions
+    getErrorRecoveryActions,
+
+    // NEW: Challenge action combinations (ENHANCEMENT FIRST)
+    getChallengeSuccessActions,
+    getViralDetectionActions,
+    createShareChallengeSuccessAction,
+    createShareViralDetectionAction,
+    createNewChallengeAction,
+    createWhaleHuntAction
   };
 };

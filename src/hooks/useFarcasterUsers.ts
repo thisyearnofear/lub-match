@@ -9,15 +9,58 @@ import {
   FarcasterUser
 } from "@/utils/mockData";
 
-// Hook options interface
+// Whale classification utility functions
+export function classifyUserByFollowers(followerCount: number): WhaleType {
+  if (followerCount >= WHALE_THRESHOLDS.MEGA_WHALE) return 'mega_whale';
+  if (followerCount >= WHALE_THRESHOLDS.WHALE) return 'whale';
+  if (followerCount >= WHALE_THRESHOLDS.SHARK) return 'shark';
+  if (followerCount >= WHALE_THRESHOLDS.FISH) return 'fish';
+  return 'minnow';
+}
+
+export function getWhaleMultiplier(whaleType: WhaleType): number {
+  const multipliers = {
+    minnow: 1,
+    fish: 2,
+    shark: 5,
+    whale: 10,
+    mega_whale: 25
+  };
+  return multipliers[whaleType];
+}
+
+export function getWhaleEmoji(whaleType: WhaleType): string {
+  const emojis = {
+    minnow: '🐟',
+    fish: '🐠',
+    shark: '🦈',
+    whale: '🐋',
+    mega_whale: '🌊'
+  };
+  return emojis[whaleType];
+}
+
+// Whale classification thresholds
+export const WHALE_THRESHOLDS = {
+  FISH: 1000,      // 1k+ followers
+  SHARK: 5000,     // 5k+ followers
+  WHALE: 10000,    // 10k+ followers
+  MEGA_WHALE: 50000 // 50k+ followers
+} as const;
+
+export type WhaleType = 'fish' | 'shark' | 'whale' | 'mega_whale' | 'minnow';
+
+// Enhanced hook options interface
 interface UseFarcasterUsersOptions {
   count?: number;
   minFollowers?: number;
   refreshInterval?: number;
   enableAutoRefresh?: boolean;
+  whaleFilter?: WhaleType | 'all'; // NEW: Filter by whale type
+  challengeMode?: boolean; // NEW: Optimize for challenge targets
 }
 
-// Hook return interface
+// Enhanced hook return interface
 interface UseFarcasterUsersReturn {
   users: FarcasterUser[];
   loading: boolean;
@@ -27,6 +70,11 @@ interface UseFarcasterUsersReturn {
   isUsingMockData: boolean;
   hasApiKey: boolean | null; // null = checking, true/false = determined
   apiCheckComplete: boolean;
+  // NEW: Whale detection utilities
+  getWhalesByType: (type: WhaleType) => FarcasterUser[];
+  getTopWhales: (limit?: number) => FarcasterUser[];
+  classifyUser: (user: FarcasterUser) => WhaleType;
+  getChallengeTargets: (difficulty: 'easy' | 'medium' | 'hard') => FarcasterUser[];
 }
 
 // API response interface
@@ -51,6 +99,8 @@ export function useFarcasterUsers(
     minFollowers = MIN_FOLLOWERS,
     refreshInterval = REFRESH_INTERVAL,
     enableAutoRefresh = false,
+    whaleFilter = 'all',
+    challengeMode = false,
   } = options;
 
   const [users, setUsers] = useState<FarcasterUser[]>([]);
@@ -287,6 +337,34 @@ export function useFarcasterUsers(
     return () => clearInterval(interval);
   }, [enableAutoRefresh, refreshInterval, refreshUsers, isClient]);
 
+  // Whale detection utility functions
+  const getWhalesByType = useCallback((type: WhaleType): FarcasterUser[] => {
+    return users.filter(user => classifyUserByFollowers(user.follower_count) === type);
+  }, [users]);
+
+  const getTopWhales = useCallback((limit: number = 10): FarcasterUser[] => {
+    return [...users]
+      .sort((a, b) => b.follower_count - a.follower_count)
+      .slice(0, limit);
+  }, [users]);
+
+  const classifyUser = useCallback((user: FarcasterUser): WhaleType => {
+    return classifyUserByFollowers(user.follower_count);
+  }, []);
+
+  const getChallengeTargets = useCallback((difficulty: 'easy' | 'medium' | 'hard'): FarcasterUser[] => {
+    const difficultyMap = {
+      easy: ['minnow', 'fish'] as WhaleType[],
+      medium: ['fish', 'shark'] as WhaleType[],
+      hard: ['shark', 'whale', 'mega_whale'] as WhaleType[]
+    };
+
+    const targetTypes = difficultyMap[difficulty];
+    return users.filter(user =>
+      targetTypes.includes(classifyUserByFollowers(user.follower_count))
+    );
+  }, [users]);
+
   return {
     users,
     loading,
@@ -296,6 +374,11 @@ export function useFarcasterUsers(
     isUsingMockData,
     hasApiKey,
     apiCheckComplete,
+    // NEW: Whale detection utilities
+    getWhalesByType,
+    getTopWhales,
+    classifyUser,
+    getChallengeTargets,
   };
 }
 

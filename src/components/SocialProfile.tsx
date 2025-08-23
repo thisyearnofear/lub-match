@@ -4,20 +4,38 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
 import { FarcasterUserLegacy, normalizeFarcasterUser } from "@/types/user";
+import { socialInteractionService } from "@/services/socialInteractionService";
+import { classifyUserByFollowers, getWhaleEmoji } from "@/hooks/useFarcasterUsers";
 
+// ENHANCED: Consolidated interface supporting all profile variants
 interface SocialProfileProps {
   user: FarcasterUserLegacy;
+  variant?: "full" | "compact" | "minimal" | "challenge"; // NEW: Multiple variants
   gameCreator?: boolean;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;
+  onChallengeTarget?: (user: FarcasterUserLegacy) => void; // NEW: Challenge targeting
+  showWhaleStatus?: boolean; // NEW: Show whale classification
+  showFollowerCount?: boolean;
+  showChallengeActions?: boolean; // NEW: Challenge-specific actions
+  showReportAction?: boolean; // NEW: Community reporting
+  onReport?: (user: FarcasterUserLegacy) => void; // NEW: Report callback
   className?: string;
 }
 
+// ENHANCED: Single component handling all profile variants (ENHANCEMENT FIRST)
 export default function SocialProfile({
   user,
+  variant = "full",
   gameCreator = false,
   onFollow,
   onCast,
+  onChallengeTarget,
+  showWhaleStatus = false,
+  showFollowerCount = true,
+  showChallengeActions = false,
+  showReportAction = false,
+  onReport,
   className = "",
 }: SocialProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
@@ -26,17 +44,49 @@ export default function SocialProfile({
   // Normalize user data for consistent property access
   const normalizedUser = normalizeFarcasterUser(user);
 
+  // NEW: Whale classification for enhanced social targeting
+  const whaleType = classifyUserByFollowers(user.follower_count);
+  const whaleEmoji = getWhaleEmoji(whaleType);
+
+  // ENHANCED: Consolidated interaction handlers using socialInteractionService
   const handleFollow = async () => {
     if (!onFollow || isLoading) return;
 
     setIsLoading(true);
     try {
-      await onFollow(user.fid);
-      setIsFollowing(!isFollowing);
+      const result = await socialInteractionService.followUser(user.fid);
+      if (result.success) {
+        await onFollow(user.fid);
+        setIsFollowing(!isFollowing);
+      }
     } catch (error) {
       console.error("Follow action failed:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCast = async () => {
+    if (!onCast) return;
+
+    const message = `Hey @${user.username}! 👋`;
+    const result = await socialInteractionService.castToUser(user.fid, message);
+    if (result.success && onCast) {
+      onCast(message);
+    }
+  };
+
+  // NEW: Challenge targeting handler
+  const handleChallengeTarget = () => {
+    if (onChallengeTarget) {
+      onChallengeTarget(user);
+    }
+  };
+
+  // NEW: Report handler
+  const handleReport = () => {
+    if (onReport) {
+      onReport(user);
     }
   };
 
@@ -59,12 +109,124 @@ export default function SocialProfile({
     return count.toString();
   };
 
+  // ENHANCED: Variant-based styling (CLEAN separation of concerns)
+  const getVariantStyles = () => {
+    switch (variant) {
+      case "compact":
+        return {
+          container: "flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-lg p-2",
+          avatar: "w-8 h-8",
+          content: "flex-1 min-w-0",
+          actions: "flex gap-1"
+        };
+      case "minimal":
+        return {
+          container: "flex items-center gap-2 bg-purple-800/20 backdrop-blur-sm rounded-lg p-2 border border-purple-600/30",
+          avatar: "w-6 h-6",
+          content: "flex-1 min-w-0",
+          actions: "flex gap-1"
+        };
+      case "challenge":
+        return {
+          container: "bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl shadow-lg p-4 border border-purple-200",
+          avatar: "w-12 h-12",
+          content: "flex-1",
+          actions: "flex gap-2"
+        };
+      default: // "full"
+        return {
+          container: "bg-white rounded-xl shadow-lg p-4",
+          avatar: "w-12 h-12",
+          content: "flex-1",
+          actions: "flex gap-2"
+        };
+    }
+  };
+
+  const styles = getVariantStyles();
+
+  // ENHANCED: Render different layouts based on variant
+  if (variant === "compact" || variant === "minimal") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
+        className={`${styles.container} ${className}`}
+      >
+        {user.pfp_url ? (
+          <Image
+            src={user.pfp_url}
+            alt={user.display_name}
+            width={variant === "compact" ? 32 : 24}
+            height={variant === "compact" ? 32 : 24}
+            className="rounded-full object-cover"
+          />
+        ) : (
+          <div className={`${styles.avatar} bg-gray-200 rounded-full flex items-center justify-center`}>
+            <span className="text-gray-400 text-sm">👤</span>
+          </div>
+        )}
+
+        <div className={styles.content}>
+          <div className="flex items-center gap-1">
+            <span className="font-medium text-gray-900 truncate">
+              {user.display_name}
+            </span>
+            {showWhaleStatus && whaleType !== 'minnow' && (
+              <span className="text-sm">{whaleEmoji}</span>
+            )}
+            {gameCreator && <span className="text-xs">💝</span>}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>@{user.username}</span>
+            {showFollowerCount && (
+              <span>{formatCount(user.follower_count)} followers</span>
+            )}
+          </div>
+        </div>
+
+        {(onFollow || showChallengeActions || showReportAction) && (
+          <div className={styles.actions}>
+            {onFollow && (
+              <button
+                onClick={handleFollow}
+                disabled={isLoading}
+                className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 disabled:opacity-50"
+              >
+                {isLoading ? "..." : isFollowing ? "Following" : "Follow"}
+              </button>
+            )}
+            {showChallengeActions && onChallengeTarget && (
+              <button
+                onClick={handleChallengeTarget}
+                className="px-2 py-1 bg-pink-500 text-white text-xs rounded hover:bg-pink-600"
+              >
+                🎯
+              </button>
+            )}
+            {showReportAction && onReport && (
+              <button
+                onClick={handleReport}
+                className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                title="Report user"
+              >
+                🚨
+              </button>
+            )}
+          </div>
+        )}
+      </motion.div>
+    );
+  }
+
+  // Full and challenge variants (ENHANCED layout)
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`bg-white rounded-xl shadow-lg p-4 ${className}`}
+      className={`${styles.container} ${className}`}
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
@@ -182,89 +344,28 @@ export default function SocialProfile({
   );
 }
 
-// Compact version for game completion
-export function CompactSocialProfile({
-  user,
-  gameCreator = false,
-  onFollow,
-  className = "",
-}: {
-  user: FarcasterUserLegacy;
-  gameCreator?: boolean;
-  onFollow?: (fid: number) => void;
-  className?: string;
-}) {
-  const [isFollowing, setIsFollowing] = useState(false);
+// REMOVED: CompactSocialProfile - now handled by variant="compact" (AGGRESSIVE CONSOLIDATION)
 
-  const handleFollow = async () => {
-    if (!onFollow) return;
-    try {
-      await onFollow(user.fid);
-      setIsFollowing(!isFollowing);
-    } catch (error) {
-      console.error("Follow action failed:", error);
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.2 }}
-      className={`flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-lg p-2 ${className}`}
-    >
-      {user.pfp_url ? (
-        <Image
-          src={user.pfp_url}
-          alt={user.display_name}
-          width={32}
-          height={32}
-          className="rounded-full object-cover"
-        />
-      ) : (
-        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-          <span className="text-gray-400 text-sm">👤</span>
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
-          {user.display_name}
-        </p>
-        <p className="text-xs text-gray-600">@{user.username}</p>
-      </div>
-      {gameCreator && (
-        <span className="text-xs bg-pink-100 text-pink-700 px-2 py-1 rounded-full">
-          Creator
-        </span>
-      )}
-      {onFollow && (
-        <button
-          onClick={handleFollow}
-          className={`px-2 py-1 text-xs rounded-full transition-colors ${
-            isFollowing
-              ? "bg-gray-200 text-gray-700"
-              : "bg-pink-500 text-white hover:bg-pink-600"
-          }`}
-        >
-          {isFollowing ? "✓" : "+"}
-        </button>
-      )}
-    </motion.div>
-  );
-}
-
-// Grid layout for multiple users
+// ENHANCED: Grid layout with variant support (ENHANCEMENT FIRST)
 export function SocialProfileGrid({
   users,
   gameCreatorFid,
   onFollow,
   onCast,
+  onChallengeTarget,
+  variant = "full",
+  showWhaleStatus = false,
+  showChallengeActions = false,
   className = "",
 }: {
   users: FarcasterUserLegacy[];
   gameCreatorFid?: number;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;
+  onChallengeTarget?: (user: FarcasterUserLegacy) => void; // NEW
+  variant?: "full" | "compact" | "minimal" | "challenge"; // NEW
+  showWhaleStatus?: boolean; // NEW
+  showChallengeActions?: boolean; // NEW
   className?: string;
 }) {
   return (
@@ -273,11 +374,24 @@ export function SocialProfileGrid({
         <SocialProfile
           key={user.fid}
           user={user}
+          variant={variant}
           gameCreator={user.fid === gameCreatorFid}
           onFollow={onFollow}
           onCast={onCast}
+          onChallengeTarget={onChallengeTarget}
+          showWhaleStatus={showWhaleStatus}
+          showChallengeActions={showChallengeActions}
         />
       ))}
     </div>
   );
+}
+
+// ENHANCED: Convenience components for common use cases (DRY)
+export function CompactSocialProfile(props: Omit<SocialProfileProps, 'variant'>) {
+  return <SocialProfile {...props} variant="compact" />;
+}
+
+export function ChallengeSocialProfile(props: Omit<SocialProfileProps, 'variant' | 'showWhaleStatus' | 'showChallengeActions'>) {
+  return <SocialProfile {...props} variant="challenge" showWhaleStatus={true} showChallengeActions={true} />;
 }

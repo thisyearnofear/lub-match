@@ -89,6 +89,36 @@ export function useUnifiedStats() {
     return recordEvent({ type: 'social_game_result', score, accuracy, timeSpent });
   }, [recordEvent]);
 
+  // NEW: Challenge tracking methods (ENHANCEMENT FIRST)
+  const recordChallengeCreated = useCallback((targetFid: number, difficulty: 'easy' | 'medium' | 'hard', whaleMultiplier: number) => {
+    return recordEvent({ type: 'challenge_created', targetFid, difficulty, whaleMultiplier });
+  }, [recordEvent]);
+
+  const recordChallengeCompleted = useCallback((
+    success: boolean,
+    reward: bigint,
+    whaleBonus: bigint,
+    viralDetected: boolean,
+    viralBonus: bigint
+  ) => {
+    return recordEvent({
+      type: 'challenge_completed',
+      success,
+      reward,
+      whaleBonus,
+      viralDetected,
+      viralBonus
+    });
+  }, [recordEvent]);
+
+  const recordWhaleHarpooned = useCallback((whaleType: string, multiplier: number, reward: bigint) => {
+    return recordEvent({ type: 'whale_harpooned', whaleType, multiplier, reward });
+  }, [recordEvent]);
+
+  const recordViralDetected = useCallback((bonus: bigint) => {
+    return recordEvent({ type: 'viral_detected', bonus });
+  }, [recordEvent]);
+
   return {
     // Raw stats
     stats,
@@ -110,6 +140,12 @@ export function useUnifiedStats() {
     recordReferral,
     recordLubEarning,
     recordSocialGameResult,
+
+    // NEW: Challenge methods (ENHANCEMENT FIRST)
+    recordChallengeCreated,
+    recordChallengeCompleted,
+    recordWhaleHarpooned,
+    recordViralDetected,
     
     // Computed properties for easy access
     tier: stats.tier,
@@ -135,6 +171,16 @@ export function useUnifiedStats() {
     socialGameScore: stats.socialGameScore,
     socialGameAccuracy: formattedStats.socialGameAccuracy,
     socialGameLevel: formattedStats.socialGameLevel,
-    socialGameBestScore: stats.socialGameBestScore
+    socialGameBestScore: stats.socialGameBestScore,
+
+    // NEW: Challenge stats (ENHANCEMENT FIRST)
+    challengeStats: formattedStats.challengeStats,
+    challengesCreated: stats.challengeStats.challengesCreated,
+    challengesCompleted: stats.challengeStats.challengesCompleted,
+    challengeSuccessRate: formattedStats.challengeStats.successRate,
+    whalesHarpooned: stats.challengeStats.whalesHarpooned,
+    viralDetections: stats.challengeStats.viralDetections,
+    challengeStreak: stats.challengeStats.challengeStreak,
+    whaleHunterLevel: formattedStats.challengeStats.whaleHunterLevel
   };
 }

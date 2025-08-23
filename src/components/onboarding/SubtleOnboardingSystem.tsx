@@ -164,15 +164,22 @@ export const createSubtleOnboardingSteps = (options: {
 }): OnboardingStep[] => [
   {
     id: "welcome",
-    title: "Welcome to Lub! 💝",
-    message: "Match trending Farcaster users in this heart-shaped puzzle game!",
-    icon: "👋",
-    duration: 5000,
+    title: "Welcome to Lub Match! 💝",
+    message: "A viral social gaming platform with memory games, AI challenges, and whale hunting!",
+    icon: "🚀",
+    duration: 6000,
+  },
+  {
+    id: "three-ways-to-play",
+    title: "Three Ways to Earn",
+    message: "🧠 Memory Games • 🤖 AI Challenges • 🐋 Whale Hunting - All with real LUB rewards!",
+    icon: "🎮",
+    duration: 8000,
   },
   {
     id: "farcaster",
-    title: "Trending Users",
-    message: "These photos belong to popular users on Farcaster, a decentralized social network.",
+    title: "Real Social Users",
+    message: "Challenge actual Farcaster users and earn when they mention $LUB!",
     icon: "👥",
     actionButton: {
       text: "Learn More",
@@ -181,16 +188,23 @@ export const createSubtleOnboardingSteps = (options: {
     duration: 7000,
   },
   {
+    id: "whale-preview",
+    title: "🐋 Whale Hunting Preview",
+    message: "Target users with 10k+ followers for up to 25x reward multipliers!",
+    icon: "🐋",
+    duration: 7000,
+  },
+  {
     id: "rewards",
     title: "Earn LUB Tokens",
-    message: "Complete games to earn tokens, mint NFTs, and unlock premium features!",
+    message: "Memory games: 25 LUB • Challenges: 50-2500+ LUB • Viral bonuses: 25% extra!",
     icon: "✨",
-    duration: 6000,
+    duration: 8000,
   },
   {
     id: "connect",
     title: "Connect Wallet",
-    message: "Optional: Connect a wallet to access the full Web3 experience.",
+    message: "Optional: Connect a wallet to mint NFTs and access premium features.",
     icon: "🔗",
     actionButton: {
       text: "Connect",
@@ -213,6 +227,7 @@ export const createQuickIntro = (): OnboardingStep[] => [
 export const createGameCompleteSteps = (options: {
   onMintNFT?: () => void;
   onPlayMore?: () => void;
+  onTryChallenges?: () => void;
 }): OnboardingStep[] => [
   {
     id: "congratulations",
@@ -226,12 +241,23 @@ export const createGameCompleteSteps = (options: {
     duration: 8000,
   },
   {
+    id: "level-up-opportunity",
+    title: "🚀 Ready for Bigger Rewards?",
+    message: "Try AI challenges for 10x-25x more LUB! Challenge real Farcaster users.",
+    icon: "⬆️",
+    actionButton: {
+      text: "Try Challenges",
+      onClick: () => options.onTryChallenges?.(),
+    },
+    duration: 8000,
+  },
+  {
     id: "next-steps",
     title: "What's Next?",
-    message: "Explore social games, create custom puzzles, or challenge friends!",
-    icon: "🚀",
+    message: "Explore whale hunting, create custom puzzles, or share your success!",
+    icon: "🌟",
     actionButton: {
-      text: "Explore",
+      text: "Explore More",
       onClick: () => options.onPlayMore?.(),
     },
     duration: 7000,
