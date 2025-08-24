@@ -3,19 +3,19 @@
 import { ReactNode, MouseEventHandler } from "react";
 import { motion } from "framer-motion";
 
-export type ButtonVariant = 
-  | 'primary' 
-  | 'secondary' 
-  | 'success' 
-  | 'share' 
-  | 'danger' 
-  | 'ghost'
-  | 'gradient-pink'
-  | 'gradient-purple'
-  | 'gradient-blue'
-  | 'gradient-green';
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "success"
+  | "share"
+  | "danger"
+  | "ghost"
+  | "gradient-pink"
+  | "gradient-purple"
+  | "gradient-blue"
+  | "gradient-green";
 
-export type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonSize = "sm" | "md" | "lg";
 
 interface ActionButtonProps {
   variant?: ButtonVariant;
@@ -27,14 +27,15 @@ interface ActionButtonProps {
   animate?: boolean;
   disabled?: boolean;
   onClick?: MouseEventHandler<HTMLButtonElement>;
-  type?: 'button' | 'submit' | 'reset';
-  'aria-label'?: string;
+  type?: "button" | "submit" | "reset";
+  "aria-label"?: string;
   id?: string;
   name?: string;
   value?: string;
   form?: string;
   autoFocus?: boolean;
   tabIndex?: number;
+  className?: string;
 }
 
 const buttonVariants: Record<ButtonVariant, string> = {
@@ -43,11 +44,16 @@ const buttonVariants: Record<ButtonVariant, string> = {
   success: "bg-green-600 hover:bg-green-700 text-white",
   share: "bg-purple-600 hover:bg-purple-700 text-white",
   danger: "bg-red-600 hover:bg-red-700 text-white",
-  ghost: "bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300",
-  'gradient-pink': "bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white",
-  'gradient-purple': "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white",
-  'gradient-blue': "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white",
-  'gradient-green': "bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white",
+  ghost:
+    "bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300",
+  "gradient-pink":
+    "bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white",
+  "gradient-purple":
+    "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white",
+  "gradient-blue":
+    "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white",
+  "gradient-green":
+    "bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white",
 };
 
 const buttonSizes: Record<ButtonSize, string> = {
@@ -57,8 +63,8 @@ const buttonSizes: Record<ButtonSize, string> = {
 };
 
 export default function ActionButton({
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   children,
   icon,
   loading = false,
@@ -66,8 +72,8 @@ export default function ActionButton({
   animate = true,
   disabled = false,
   onClick,
-  type = 'button',
-  'aria-label': ariaLabel,
+  type = "button",
+  "aria-label": ariaLabel,
   id,
   name,
   value,
@@ -75,19 +81,23 @@ export default function ActionButton({
   autoFocus,
   tabIndex,
 }: ActionButtonProps) {
-  const baseClasses = "rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2";
+  const baseClasses =
+    "rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2";
   const variantClasses = buttonVariants[variant];
   const sizeClasses = buttonSizes[size];
   const widthClasses = fullWidth ? "w-full" : "";
-  const disabledClasses = (disabled || loading) ? "opacity-50 cursor-not-allowed" : "";
-  const hoverClasses = animate && !disabled && !loading ? "transform hover:scale-105" : "";
+  const disabledClasses =
+    disabled || loading ? "opacity-50 cursor-not-allowed" : "";
+  const hoverClasses =
+    animate && !disabled && !loading ? "transform hover:scale-105" : "";
 
-  const className = `${baseClasses} ${variantClasses} ${sizeClasses} ${widthClasses} ${disabledClasses} ${hoverClasses}`.trim();
+  const className =
+    `${baseClasses} ${variantClasses} ${sizeClasses} ${widthClasses} ${disabledClasses} ${hoverClasses}`.trim();
 
   const content = (
     <>
       {loading && (
-        <motion.div 
+        <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
@@ -110,7 +120,7 @@ export default function ActionButton({
     disabled: disabled || loading,
     onClick,
     type,
-    'aria-label': ariaLabel,
+    "aria-label": ariaLabel,
     id,
     name,
     value,
@@ -131,9 +141,5 @@ export default function ActionButton({
     );
   }
 
-  return (
-    <button {...buttonProps}>
-      {content}
-    </button>
-  );
+  return <button {...buttonProps}>{content}</button>;
 }

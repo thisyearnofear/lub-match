@@ -36,17 +36,17 @@ const getCacheHeaders = (type: string = 'default') => {
 interface FarcasterUser {
   fid: number;
   username: string;
-  display_name: string;
-  pfp_url: string;
+  displayName: string;
+  pfpUrl: string;
   bio?: string;
-  follower_count: number;
-  following_count: number;
-  verified_addresses?: {
-    eth_addresses: string[];
-    sol_addresses: string[];
+  followerCount: number;
+  followingCount: number;
+  verifiedAddresses?: {
+    ethAddresses: string[];
+    solAddresses: string[];
   };
   // Enhanced fields for quality scoring
-  power_badge?: boolean;
+  powerBadge?: boolean;
   active_status?: 'active' | 'inactive';
   profile?: {
     bio?: {
@@ -140,9 +140,9 @@ async function fetchTrendingUsers(count: number, minFollowers: number): Promise<
   data.casts.forEach((cast) => {
     const user = cast.author;
     if (
-      user.follower_count >= minFollowers &&
-      user.pfp_url &&
-      user.pfp_url.trim() !== '' &&
+      user.followerCount >= minFollowers &&
+      user.pfpUrl &&
+      user.pfpUrl.trim() !== '' &&
       user.username &&
       !uniqueUsers.has(user.fid)
     ) {
@@ -186,8 +186,8 @@ async function searchUsers(query: string, limit: number = 10): Promise<Farcaster
   
   // Filter and validate users
   return users.filter((user: FarcasterUser) => 
-    user.pfp_url && 
-    user.pfp_url.trim() !== '' && 
+    user.pfpUrl && 
+    user.pfpUrl.trim() !== '' && 
     user.username
   );
 }
@@ -197,17 +197,17 @@ function calculateUserQualityScore(user: FarcasterUser, castData?: any): number 
   let score = 0;
   
   // Base follower score (logarithmic to prevent dominance by mega-accounts)
-  const followerScore = Math.log10(Math.max(user.follower_count, 1)) * 10;
+  const followerScore = Math.log10(Math.max(user.followerCount, 1)) * 10;
   score += Math.min(followerScore, 50); // Cap at 50 points
   
   // Engagement ratio (following/follower ratio - sweet spot around 0.1-2.0)
-  const engagementRatio = user.following_count / Math.max(user.follower_count, 1);
+  const engagementRatio = user.followingCount / Math.max(user.followerCount, 1);
   if (engagementRatio >= 0.05 && engagementRatio <= 3.0) {
     score += 20; // Good engagement ratio
   }
   
   // Power badge bonus
-  if (user.power_badge) {
+  if (user.powerBadge) {
     score += 25;
   }
   
@@ -225,12 +225,12 @@ function calculateUserQualityScore(user: FarcasterUser, castData?: any): number 
   }
   
   // Verified addresses bonus (shows commitment to platform)
-  if (user.verified_addresses?.eth_addresses && user.verified_addresses.eth_addresses.length > 0) {
+  if (user.verifiedAddresses?.ethAddresses && user.verifiedAddresses.ethAddresses.length > 0) {
     score += 10;
   }
   
   // Penalize very new or very inactive accounts
-  if (user.follower_count < 10) {
+  if (user.followerCount < 10) {
     score -= 20; // Likely new/inactive
   }
   
@@ -323,9 +323,9 @@ async function fetchRecentActiveUsers(count: number, minFollowers: number): Prom
     data.casts.forEach((cast) => {
       const user = cast.author;
       if (
-        user.follower_count >= minFollowers &&
-        user.pfp_url &&
-        user.pfp_url.trim() !== '' &&
+        user.followerCount >= minFollowers &&
+        user.pfpUrl &&
+        user.pfpUrl.trim() !== '' &&
         user.username &&
         !uniqueUsers.has(user.fid)
       ) {

@@ -362,7 +362,7 @@ class ViralDetectionService {
     };
     
     // Whale bonus
-    if (user.follower_count >= 10000) {
+    if (user.followerCount >= 10000) {
       bonuses.whale = Math.floor(baseReward * (VIRAL_CONFIG.whaleViralMultiplier - 1));
     }
     
@@ -384,7 +384,7 @@ class ViralDetectionService {
     score += detection.confidence * 0.4;
     
     // User credibility (30% weight)
-    const followerScore = Math.min(detection.targetUser.follower_count / 1000, 30);
+    const followerScore = Math.min(detection.targetUser.followerCount / 1000, 30);
     score += followerScore;
     
     // Content quality (30% weight)
@@ -436,6 +436,3 @@ class ViralDetectionService {
 
 // Export singleton instance
 export const viralDetectionService = new ViralDetectionService();
-
-// Export types for use in other modules
-export type { ViralDetection, DetectionStats };

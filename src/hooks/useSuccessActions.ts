@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useAppNavigation } from "./useAppNavigation";
 import { ShareHelpers, GameShareData, AchievementShareData } from "@/utils/shareHelpers";
 import { SuccessAction } from "@/components/shared/SuccessScreen";
+import { ButtonVariant } from "@/components/shared/ActionButton";
 // NEW: Challenge sharing imports (ENHANCEMENT FIRST)
 import { Challenge } from "@/services/challengeEngine";
 import { ViralDetection } from "@/services/viralDetectionService";
@@ -163,9 +164,9 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
   ): SuccessAction => ({
     label: viralDetected ? "Share Viral Success!" : "Share Challenge",
     onClick: () => {
-      const whaleEmoji = challenge.targetUser.follower_count >= 10000 ? '🐋' :
-                        challenge.targetUser.follower_count >= 5000 ? '🦈' :
-                        challenge.targetUser.follower_count >= 1000 ? '🐟' : '';
+      const whaleEmoji = challenge.targetUser.followerCount >= 10000 ? '🐋' :
+                        challenge.targetUser.followerCount >= 5000 ? '🦈' :
+                        challenge.targetUser.followerCount >= 1000 ? '🐟' : '';
 
       const shareText = success
         ? `🎯 Just completed a ${challenge.difficulty} challenge with @${challenge.targetUser.username}! ${whaleEmoji} Earned ${reward} $LUB ${viralDetected ? '🚀 (VIRAL!)' : ''} \n\nTry Lub Match challenges: ${window.location.origin}`
@@ -204,7 +205,7 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
   const createWhaleHuntAction = useCallback((): SuccessAction => ({
     label: "Hunt Whales",
     onClick: () => navigation.goToSocialGames(), // Will open in whale hunting mode
-    variant: "gradient-cyan",
+    variant: "gradient-blue",
     icon: "🐋"
   }), [navigation]);
 
@@ -315,7 +316,7 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
       actions.push({
         label: "Try Again",
         onClick: onNewChallenge,
-        variant: "gradient-purple",
+        variant: "gradient-purple" as ButtonVariant,
         icon: "🔄"
       });
     }
@@ -324,7 +325,7 @@ export const useSuccessActions = ({ onReset }: UseSuccessActionsProps = {}) => {
     actions.push({
       label: "Back to Menu",
       onClick: onBackToMenu,
-      variant: "secondary",
+      variant: "secondary" as ButtonVariant,
       icon: "🏠"
     });
 

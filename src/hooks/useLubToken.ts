@@ -127,9 +127,7 @@ export function useLubToken() {
     return pricingEngine.getRomanceLubCost(pricingState);
   };
 
-  const getNFTMintPricing = (useLubDiscount: boolean = false) => {
-    return pricingEngine.getNFTMintPrice(useLubDiscount, balance);
-  };
+  // NFT pricing is now handled by useNFTPricing hook for real-time contract data
 
   // Note: Exchange rate is now handled by useNFTPricing hook to avoid duplicate calls
 
@@ -254,7 +252,7 @@ export function useLubToken() {
     // Pricing functions
     canCreateFarcasterLub,
     getRomanceLubCost,
-    getNFTMintPricing,
+    // getNFTMintPricing removed - use useNFTPricing hook instead
     exchangeRate: BigInt(1000), // Default to 1000 LUB per ETH (real rate from useNFTPricing)
 
     // Actions

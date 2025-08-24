@@ -84,7 +84,7 @@ export default function ProfileLinkButton({
         )}
         {showFollowerCount && (
           <span className="text-xs opacity-80">
-            {formatFollowerCount(user.follower_count)} followers
+            {formatFollowerCount(user.followerCount)} followers
           </span>
         )}
       </div>

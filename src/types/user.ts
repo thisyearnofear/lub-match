@@ -5,21 +5,23 @@
 
 // Core Farcaster User interface - matches SDK context
 export interface FarcasterUser {
-  fid?: number; // Optional for compatibility with existing code
-  username?: string;
-  displayName?: string;
-  pfpUrl?: string;
+  fid: number;
+  username: string;
+  displayName: string;
+  pfpUrl: string;
   bio?: string;
+  followerCount: number;
+  followingCount: number;
+  powerBadge?: boolean;
+  verifiedAddresses?: {
+    ethAddresses: string[];
+    solAddresses: string[];
+  };
 }
 
 // Extended Farcaster User with social data (for API responses)
 export interface FarcasterUserExtended extends FarcasterUser {
-  follower_count: number;
-  following_count: number;
-  verified_addresses?: {
-    eth_addresses: string[];
-    sol_addresses: string[];
-  };
+  // All properties are already included from FarcasterUser
 }
 
 // Legacy support - maps old property names to new ones
@@ -31,6 +33,7 @@ export interface FarcasterUserLegacy {
   bio?: string;
   follower_count: number;
   following_count: number;
+  power_badge?: boolean; // Legacy: use powerBadge instead
   verified_addresses?: {
     eth_addresses: string[];
     sol_addresses: string[];
@@ -59,29 +62,24 @@ export interface UserDisplayConfig {
 }
 
 // Helper function to normalize legacy user data
-export function normalizeFarcasterUser(user: FarcasterUserLegacy | FarcasterUser): FarcasterUser {
-  // If it's already normalized, return as-is
-  if ('displayName' in user && 'pfpUrl' in user) {
-    return user as FarcasterUser;
-  }
-  
-  // Normalize legacy format
-  const legacy = user as FarcasterUserLegacy;
+export function normalizeFarcasterUser(user: FarcasterUserLegacy): FarcasterUser {
   return {
-    fid: legacy.fid,
-    username: legacy.username,
-    displayName: legacy.display_name,
-    pfpUrl: legacy.pfp_url,
-    bio: legacy.bio,
+    fid: user.fid,
+    username: user.username,
+    displayName: user.display_name,
+    pfpUrl: user.pfp_url,
+    bio: user.bio,
+    followerCount: user.follower_count,
+    followingCount: user.following_count,
+    powerBadge: user.power_badge,
+    verifiedAddresses: user.verified_addresses ? {
+      ethAddresses: user.verified_addresses.eth_addresses,
+      solAddresses: user.verified_addresses.sol_addresses
+    } : undefined
   };
 }
 
 // Helper function to convert to extended format
-export function toExtendedFarcasterUser(user: FarcasterUserLegacy): FarcasterUserExtended {
-  return {
-    ...normalizeFarcasterUser(user),
-    follower_count: user.follower_count,
-    following_count: user.following_count,
-    verified_addresses: user.verified_addresses,
-  };
+export function toExtendedFarcasterUser(user: FarcasterUserLegacy): FarcasterUser {
+  return normalizeFarcasterUser(user);
 }

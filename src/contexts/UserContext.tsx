@@ -53,10 +53,13 @@ interface UserProfile {
   isConnected: boolean;
   walletAddress?: string;
   farcasterUser?: {
+    fid: number;
     username: string;
     displayName: string;
     pfpUrl: string;
     bio?: string;
+    followerCount: number;
+    followingCount: number;
   };
 
   // Stats
@@ -220,10 +223,13 @@ export function UserProvider({ children }: UserProviderProps) {
     if (!web3Profile) return undefined;
 
     return {
+      fid: 0, // Default to 0 if fid is not available
       username: web3Profile.username,
       displayName: web3Profile.displayName,
       pfpUrl: web3Profile.pfpUrl,
       bio: web3Profile.bio,
+      followerCount: 0, // Default to 0 if followerCount is not available
+      followingCount: 0, // Default to 0 if followingCount is not available
     };
   }, [web3Profile]);
 
@@ -389,7 +395,7 @@ export function UserProvider({ children }: UserProviderProps) {
 
       // Count whale harpoons
       const whales = history.filter(r =>
-        r.success && challengeEngine.getChallenge(r.challengeId)?.whaleMultiplier > 2
+        r.success && (challengeEngine.getChallenge(r.challengeId)?.whaleMultiplier ?? 0) > 2
       ).length;
 
       setChallengeStats({

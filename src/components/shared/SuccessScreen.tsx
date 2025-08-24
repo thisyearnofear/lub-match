@@ -4,7 +4,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import ActionButton, { ButtonVariant } from "./ActionButton";
 import Confetti from "../Confetti";
-import { RewardsSummaryContent } from "../enhanced/SubtleRewardsIntegration";
+// Removed enhanced rewards (AGGRESSIVE CONSOLIDATION)
 // NEW: Challenge and viral sharing imports (ENHANCEMENT FIRST)
 import { Challenge } from "@/services/challengeEngine";
 import { ViralDetection } from "@/services/viralDetectionService";
@@ -82,10 +82,10 @@ export default function SuccessScreen({
 
     if (challengeResult) {
       const { challenge, success, viralDetected, totalReward, bonuses } = challengeResult;
-      const whaleEmoji = getWhaleEmoji(challenge.targetUser.follower_count >= 50000 ? 'mega_whale' :
-                                      challenge.targetUser.follower_count >= 10000 ? 'whale' :
-                                      challenge.targetUser.follower_count >= 5000 ? 'shark' :
-                                      challenge.targetUser.follower_count >= 1000 ? 'fish' : 'minnow');
+      const whaleEmoji = getWhaleEmoji(challenge.targetUser.followerCount >= 50000 ? 'mega_whale' :
+                                      challenge.targetUser.followerCount >= 10000 ? 'whale' :
+                                      challenge.targetUser.followerCount >= 5000 ? 'shark' :
+                                      challenge.targetUser.followerCount >= 1000 ? 'fish' : 'minnow');
 
       if (success && viralDetected) {
         return {
@@ -254,8 +254,8 @@ export default function SuccessScreen({
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200">
               <div className="flex items-center gap-3 mb-3">
                 <img
-                  src={challengeResult.challenge.targetUser.pfp_url}
-                  alt={challengeResult.challenge.targetUser.display_name}
+                  src={challengeResult.challenge.targetUser.pfpUrl}
+                  alt={challengeResult.challenge.targetUser.displayName}
                   className="w-10 h-10 rounded-full"
                 />
                 <div>
@@ -263,7 +263,7 @@ export default function SuccessScreen({
                     @{challengeResult.challenge.targetUser.username}
                   </h4>
                   <p className="text-sm text-gray-600">
-                    {challengeResult.challenge.targetUser.follower_count.toLocaleString()} followers
+                    {challengeResult.challenge.targetUser.followerCount.toLocaleString()} followers
                   </p>
                 </div>
                 <div className="ml-auto text-right">
@@ -356,7 +356,7 @@ export default function SuccessScreen({
               duration: 0.3
             }}
           >
-            <RewardsSummaryContent rewards={sessionRewards} />
+            {/* Removed RewardsSummaryContent (AGGRESSIVE CONSOLIDATION) */}
           </motion.div>
         )}
 

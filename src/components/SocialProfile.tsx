@@ -3,23 +3,23 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
-import { FarcasterUserLegacy, normalizeFarcasterUser } from "@/types/user";
+import { FarcasterUser } from "@/types/user";
 import { socialInteractionService } from "@/services/socialInteractionService";
 import { classifyUserByFollowers, getWhaleEmoji } from "@/hooks/useFarcasterUsers";
 
-// ENHANCED: Consolidated interface supporting all profile variants
+// Updated to use modern FarcasterUser interface
 interface SocialProfileProps {
-  user: FarcasterUserLegacy;
-  variant?: "full" | "compact" | "minimal" | "challenge"; // NEW: Multiple variants
+  user: FarcasterUser;
+  variant?: "full" | "compact" | "minimal" | "challenge";
   gameCreator?: boolean;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;
-  onChallengeTarget?: (user: FarcasterUserLegacy) => void; // NEW: Challenge targeting
-  showWhaleStatus?: boolean; // NEW: Show whale classification
+  onChallengeTarget?: (user: FarcasterUser) => void;
+  showWhaleStatus?: boolean;
   showFollowerCount?: boolean;
-  showChallengeActions?: boolean; // NEW: Challenge-specific actions
-  showReportAction?: boolean; // NEW: Community reporting
-  onReport?: (user: FarcasterUserLegacy) => void; // NEW: Report callback
+  showChallengeActions?: boolean;
+  showReportAction?: boolean;
+  onReport?: (user: FarcasterUser) => void;
   className?: string;
 }
 
@@ -41,11 +41,8 @@ export default function SocialProfile({
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Normalize user data for consistent property access
-  const normalizedUser = normalizeFarcasterUser(user);
-
   // NEW: Whale classification for enhanced social targeting
-  const whaleType = classifyUserByFollowers(user.follower_count);
+  const whaleType = classifyUserByFollowers(user.followerCount);
   const whaleEmoji = getWhaleEmoji(whaleType);
 
   // ENHANCED: Consolidated interaction handlers using socialInteractionService
@@ -54,10 +51,13 @@ export default function SocialProfile({
 
     setIsLoading(true);
     try {
-      const result = await socialInteractionService.followUser(user.fid);
-      if (result.success) {
-        await onFollow(user.fid);
-        setIsFollowing(!isFollowing);
+      // Check if fid exists before calling the service
+      if (user.fid) {
+        const result = await socialInteractionService.followUser(user.fid);
+        if (result.success) {
+          await onFollow(user.fid);
+          setIsFollowing(!isFollowing);
+        }
       }
     } catch (error) {
       console.error("Follow action failed:", error);
@@ -70,22 +70,25 @@ export default function SocialProfile({
     if (!onCast) return;
 
     const message = `Hey @${user.username}! 👋`;
-    const result = await socialInteractionService.castToUser(user.fid, message);
-    if (result.success && onCast) {
-      onCast(message);
+    // Check if fid exists before calling the service
+    if (user.fid) {
+      const result = await socialInteractionService.castToUser(user.fid, message);
+      if (result.success && onCast) {
+        onCast(message);
+      }
     }
   };
 
   // NEW: Challenge targeting handler
   const handleChallengeTarget = () => {
-    if (onChallengeTarget) {
+    if (onChallengeTarget && user.fid) {
       onChallengeTarget(user);
     }
   };
 
   // NEW: Report handler
   const handleReport = () => {
-    if (onReport) {
+    if (onReport && user.fid) {
       onReport(user);
     }
   };
@@ -154,10 +157,10 @@ export default function SocialProfile({
         transition={{ duration: 0.2 }}
         className={`${styles.container} ${className}`}
       >
-        {user.pfp_url ? (
+        {user.pfpUrl ? (
           <Image
-            src={user.pfp_url}
-            alt={user.display_name}
+            src={user.pfpUrl}
+            alt={user.displayName}
             width={variant === "compact" ? 32 : 24}
             height={variant === "compact" ? 32 : 24}
             className="rounded-full object-cover"
@@ -171,7 +174,7 @@ export default function SocialProfile({
         <div className={styles.content}>
           <div className="flex items-center gap-1">
             <span className="font-medium text-gray-900 truncate">
-              {user.display_name}
+              {user.displayName}
             </span>
             {showWhaleStatus && whaleType !== 'minnow' && (
               <span className="text-sm">{whaleEmoji}</span>
@@ -181,7 +184,7 @@ export default function SocialProfile({
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span>@{user.username}</span>
             {showFollowerCount && (
-              <span>{formatCount(user.follower_count)} followers</span>
+              <span>{formatCount(user.followerCount)} followers</span>
             )}
           </div>
         </div>
@@ -231,10 +234,10 @@ export default function SocialProfile({
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
         <div className="relative">
-          {user.pfp_url ? (
+          {user.pfpUrl ? (
             <Image
-              src={user.pfp_url}
-              alt={`${user.display_name}'s profile`}
+              src={user.pfpUrl}
+              alt={`${user.displayName}'s profile`}
               width={48}
               height={48}
               className="rounded-full object-cover"
@@ -254,10 +257,10 @@ export default function SocialProfile({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-gray-900 truncate">
-              {user.display_name}
+              {user.displayName}
             </h3>
-            {user.verified_addresses?.eth_addresses &&
-              user.verified_addresses.eth_addresses.length > 0 && (
+            {user.verifiedAddresses?.ethAddresses &&
+              user.verifiedAddresses.ethAddresses.length > 0 && (
                 <span className="text-blue-500 text-sm">✓</span>
               )}
           </div>
@@ -310,13 +313,13 @@ export default function SocialProfile({
       <div className="flex items-center gap-4 text-xs text-gray-500">
         <span>
           <strong className="text-gray-900">
-            {formatCount(user.follower_count)}
+            {formatCount(user.followerCount)}
           </strong>{" "}
           followers
         </span>
         <span>
           <strong className="text-gray-900">
-            {formatCount(user.following_count)}
+            {formatCount(user.followingCount)}
           </strong>{" "}
           following
         </span>
@@ -344,8 +347,6 @@ export default function SocialProfile({
   );
 }
 
-// REMOVED: CompactSocialProfile - now handled by variant="compact" (AGGRESSIVE CONSOLIDATION)
-
 // ENHANCED: Grid layout with variant support (ENHANCEMENT FIRST)
 export function SocialProfileGrid({
   users,
@@ -358,11 +359,11 @@ export function SocialProfileGrid({
   showChallengeActions = false,
   className = "",
 }: {
-  users: FarcasterUserLegacy[];
+  users: FarcasterUser[];
   gameCreatorFid?: number;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;
-  onChallengeTarget?: (user: FarcasterUserLegacy) => void; // NEW
+  onChallengeTarget?: (user: FarcasterUser) => void; // NEW
   variant?: "full" | "compact" | "minimal" | "challenge"; // NEW
   showWhaleStatus?: boolean; // NEW
   showChallengeActions?: boolean; // NEW
@@ -388,10 +389,6 @@ export function SocialProfileGrid({
 }
 
 // ENHANCED: Convenience components for common use cases (DRY)
-export function CompactSocialProfile(props: Omit<SocialProfileProps, 'variant'>) {
-  return <SocialProfile {...props} variant="compact" />;
-}
-
 export function ChallengeSocialProfile(props: Omit<SocialProfileProps, 'variant' | 'showWhaleStatus' | 'showChallengeActions'>) {
   return <SocialProfile {...props} variant="challenge" showWhaleStatus={true} showChallengeActions={true} />;
 }

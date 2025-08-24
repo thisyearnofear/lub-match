@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { ShareHelpers } from "@/utils/shareHelpers";
 import ActionButton from "./shared/ActionButton";
 import { useAccount } from "wagmi";
+import { useState } from "react";
+import HelpSystem from "@/components/help/HelpSystem";
 
 interface NavigationFooterProps {
   currentPage?: "home" | "create" | "game" | "social" | "analytics";
@@ -12,12 +14,13 @@ interface NavigationFooterProps {
   onWalletClick?: () => void;
 }
 
-export default function NavigationFooter({ 
-  currentPage = "home", 
+export default function NavigationFooter({
+  currentPage = "home",
   className = "",
   onWalletClick
 }: NavigationFooterProps) {
   const { address, isConnected } = useAccount();
+  const [showHelp, setShowHelp] = useState(false);
   const navItems = [
     {
       key: "home",
@@ -96,15 +99,25 @@ export default function NavigationFooter({
                 <span className="text-gray-300">•</span>
               </>
             )}
-            <Link 
-              href="/analytics" 
+            <Link
+              href="/analytics"
               className="text-gray-500 hover:text-gray-600"
             >
               📊 Stats
             </Link>
+            <span className="text-gray-300">•</span>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="text-blue-500 hover:text-blue-600 font-medium"
+            >
+              ❓ Help
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Help System Modal */}
+      <HelpSystem isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </motion.div>
   );
 }

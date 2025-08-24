@@ -60,7 +60,7 @@ const WalletDrawer = dynamic(() => import("@/components/shared/WalletDrawer"), {
 });
 
 import ClientOnly from "@/components/ClientOnly";
-import { MainPageSubtleOnboarding } from "@/components/onboarding/SubtleOnboardingIntegration";
+import UnifiedOnboardingIntegration from "@/components/onboarding/UnifiedOnboardingIntegration";
 import {
   AnimatedTile,
   AnimatedTileContainer,
@@ -98,7 +98,6 @@ export default function Home() {
     socialDiscoveries: number;
   } | null>(null);
 
-
   // Dynamic Farcaster users for social experience - only on client
   const {
     users,
@@ -132,7 +131,7 @@ export default function Home() {
     const uniqueUserCount = Math.min(users.length, 8);
     const userNames = users
       .slice(0, 3)
-      .map((user) => user.display_name || user.username)
+      .map((user) => user.displayName || user.username)
       .join(", ");
     const remainingCount = Math.max(0, uniqueUserCount - 3);
 
@@ -557,12 +556,10 @@ export default function Home() {
         onClose={() => setShowWalletDrawer(false)}
       />
 
-      {/* Subtle Onboarding System */}
-      <MainPageSubtleOnboarding
-        handlers={{
-          onWalletConnect: () => setShowWalletDrawer(true),
-          onExploreGames: () => startSocialGames(),
-        }}
+      {/* Unified Onboarding System */}
+      <UnifiedOnboardingIntegration
+        sequence="welcome"
+        onExploreGames={() => startSocialGames()}
       />
     </div>
   );

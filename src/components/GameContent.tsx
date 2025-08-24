@@ -11,12 +11,8 @@ import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import ActionButton from "@/components/shared/ActionButton";
-import { GamePageSubtleOnboarding, GameCompletionSubtleOnboarding } from "@/components/onboarding/SubtleOnboardingIntegration";
-import { 
-  useSubtleRewards, 
-  SubtleRewardNotification,
-  EnhancedLubBalanceWidget 
-} from "@/components/enhanced/SubtleRewardsIntegration";
+import UnifiedOnboardingIntegration from "@/components/onboarding/UnifiedOnboardingIntegration";
+// Removed enhanced rewards integration (AGGRESSIVE CONSOLIDATION)
 
 interface GameContentProps {
   pairUrls: string[];
@@ -67,11 +63,11 @@ export default function GameContent({
     setGameStats(stats);
     onGameComplete?.(stats);
 
-    // Enhanced rewards recording
-    recordGameCompletionWithRewards({
+    // Enhanced rewards recording removed (AGGRESSIVE CONSOLIDATION)
+    console.log("Game completed:", {
       completionTime: stats.completionTime,
       accuracy: stats.accuracy,
-      isFirstToday: formattedStats.gamesCompleted === 0 // Simple check for first game
+      isFirstToday: formattedStats.gamesCompleted === 0,
     });
 
     // Record leaderboard submission if user is eligible (engaged tier or higher)
@@ -93,13 +89,7 @@ export default function GameContent({
 
   // User progression integration
   const { recordGameShare, recordEvent, formattedStats } = useUnifiedStats();
-  const { 
-    recordGameCompletionWithRewards, 
-    showNotification, 
-    notificationRewards, 
-    handleNotificationComplete 
-  } = useSubtleRewards();
-
+  // Removed useSubtleRewards destructuring (AGGRESSIVE CONSOLIDATION)
 
   useEffect(() => {
     setIsClient(true);
@@ -169,12 +159,6 @@ export default function GameContent({
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
-      <EnhancedLubBalanceWidget />
-      <SubtleRewardNotification 
-        show={showNotification} 
-        rewards={notificationRewards} 
-        onComplete={handleNotificationComplete} 
-      />
       {/* Heart NFT Minter Modal (only after demo game) */}
       {showHeartMinter && (
         <HeartNFTMinter
@@ -259,20 +243,13 @@ export default function GameContent({
         </motion.div>
       )}
 
-      {/* Subtle Onboarding for Game Pages */}
-      <GamePageSubtleOnboarding
-        handlers={{
-          onExploreGames: () => goToSocialGames(),
-        }}
-      />
 
-      {/* Game Completion Subtle Onboarding */}
+      {/* Game Completion Unified Onboarding */}
       {demoGameFinished && (
-        <GameCompletionSubtleOnboarding
-          handlers={{
-            onMintNFT: () => setShowHeartMinter(true),
-            onExploreGames: () => goToSocialGames(),
-          }}
+        <UnifiedOnboardingIntegration
+          sequence="game-complete"
+          onMintNFT={() => setShowHeartMinter(true)}
+          onPlayMore={() => goToSocialGames()}
         />
       )}
     </div>

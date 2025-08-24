@@ -2,14 +2,14 @@
 
 import { motion } from "framer-motion";
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
-import { useNFTPricing } from "@/hooks/useNFTPricing";
+import { PaymentMethodSelector, PaymentMethod } from "@/components/shared/PaymentMethodSelector";
 import {
   pricingEngine,
   LubMode,
   formatLubAmount,
-  formatEthAmount,
 } from "@/utils/pricingEngine";
 import { WEB3_CONFIG } from "@/config";
+import React from "react";
 
 interface PricingDisplayProps {
   mode: LubMode | "nft";
@@ -17,7 +17,9 @@ interface PricingDisplayProps {
   showEarningHints?: boolean;
   onGetLub?: () => void;
   onConnectWallet?: () => void;
-  useDiscount?: boolean; // If true and discount available, highlight discount pricing
+  // NFT-specific props (for external control of PaymentMethodSelector)
+  selectedPaymentMethod?: PaymentMethod;
+  onPaymentMethodChange?: (method: PaymentMethod) => void;
 }
 
 export function PricingDisplay({
@@ -26,10 +28,17 @@ export function PricingDisplay({
   showEarningHints = true,
   onGetLub,
   onConnectWallet,
-  useDiscount = false,
+  selectedPaymentMethod,
+  onPaymentMethodChange,
 }: PricingDisplayProps) {
   const { stats, tier, gamesCompleted } = useUnifiedStats();
-  const nftPricing = useNFTPricing();
+
+  // Internal state for NFT payment method if not controlled externally
+  const [internalPaymentMethod, setInternalPaymentMethod] = React.useState<PaymentMethod>("eth");
+
+  // Use external or internal payment method state
+  const paymentMethod = selectedPaymentMethod || internalPaymentMethod;
+  const setPaymentMethod = onPaymentMethodChange || setInternalPaymentMethod;
 
   // Create pricing state for pricing engine
   const pricingState = {
@@ -45,60 +54,8 @@ export function PricingDisplay({
     return null;
   }
 
-  // Get pricing information based on mode
-  const getPricingInfo = () => {
-    if (mode === "nft") {
-      // Use new unified pricing hook for accurate contract data
-      if (nftPricing.isLoading) {
-        return {
-          type: "nft" as const,
-          regular: {
-            cost: BigInt(0),
-            costFormatted: "Loading...",
-            canAfford: false,
-            message: "Loading pricing...",
-          },
-          discount: null,
-        };
-      }
-
-      return {
-        type: "nft" as const,
-        regular: {
-          cost: nftPricing.regularPrice.ethCost,
-          costFormatted: nftPricing.regularPrice.totalCostFormatted,
-          canAfford: true, // We'll assume they can afford ETH for now
-          message: "Mint your completed heart as an NFT",
-        },
-        discount: nftPricing.canAffordDiscount
-          ? {
-              cost: nftPricing.discountedPrice.ethCost,
-              lubCost: nftPricing.discountedPrice.lubCost,
-              costFormatted: nftPricing.discountedPrice.totalCostFormatted,
-              savings: nftPricing.discountedPrice.savingsFormatted,
-              canAfford: true,
-              message: `Save ${nftPricing.discountedPrice.discountPercentage}% with LUB tokens!`,
-            }
-          : null,
-      };
-    } else {
-      const pricing = pricingEngine.getLubPricing(mode, pricingState);
-      const needsLub = pricingEngine.needsLubAcquisition(mode, pricingState);
-
-      return {
-        type: mode,
-        pricing,
-        needsLub,
-      };
-    }
-  };
-
-  const pricingInfo = getPricingInfo();
-
-  if (pricingInfo.type === "nft") {
-    const discountAvailable = !!pricingInfo.discount;
-    const highlightDiscount = useDiscount && discountAvailable;
-
+  // NFT mode - delegate to PaymentMethodSelector (single responsibility)
+  if (mode === "nft") {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -110,66 +67,26 @@ export function PricingDisplay({
             💎 Mint as NFT
           </h3>
 
-          {/* Regular pricing */}
-          <div
-            className={`rounded-lg p-4 border ${
-              highlightDiscount
-                ? "bg-white border-gray-200 opacity-70"
-                : "bg-white border-gray-200 ring-2 ring-pink-300"
-            }`}
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Regular Price</span>
-              <span className="font-semibold text-gray-800">
-                {pricingInfo.regular.costFormatted}
-              </span>
-            </div>
+          {/* Use the new PaymentMethodSelector for better UX */}
+          <div className="bg-white rounded-lg p-4">
+            <PaymentMethodSelector
+              selectedMethod={paymentMethod}
+              onMethodChange={setPaymentMethod}
+            />
           </div>
 
-          {/* Discount pricing */}
-          {pricingInfo.discount && (
-            <div
-              className={`rounded-lg p-4 border ${
-                highlightDiscount
-                  ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 ring-2 ring-green-300"
-                  : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
-              }`}
-            >
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-green-700 font-medium flex items-center gap-2">
-                  With LUB Discount
-                  {highlightDiscount && (
-                    <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
-                      Active
-                    </span>
-                  )}
-                </span>
-                <span className="font-semibold text-green-800">
-                  {pricingInfo.discount.costFormatted}
-                </span>
+          {/* Help text for earning LUB */}
+          {onGetLub && (
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <div className="text-sm text-blue-700 mb-2">
+                💡 Earn LUB tokens to unlock discounts and payment options
               </div>
-              <div className="text-sm text-green-600">
-                {pricingInfo.discount.savings}
-              </div>
-            </div>
-          )}
-
-          {/* No discount available */}
-          {!pricingInfo.discount && tier !== "newcomer" && (
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div className="text-sm text-gray-600 mb-2">
-                Need{" "}
-                {formatLubAmount(WEB3_CONFIG.pricing.farcasterHoldRequirement)}{" "}
-                LUB for discount
-              </div>
-              {onGetLub && (
-                <button
-                  onClick={onGetLub}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Get LUB tokens →
-                </button>
-              )}
+              <button
+                onClick={onGetLub}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Learn how to earn LUB →
+              </button>
             </div>
           )}
         </div>
@@ -178,7 +95,8 @@ export function PricingDisplay({
   }
 
   // Lub creation pricing
-  const { pricing, needsLub } = pricingInfo;
+  const pricing = pricingEngine.getLubPricing(mode, pricingState);
+  const needsLub = pricingEngine.needsLubAcquisition(mode, pricingState);
 
   return (
     <motion.div

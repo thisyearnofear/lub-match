@@ -7,19 +7,19 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FarcasterUser } from "@/utils/mockData";
+import { FarcasterUser } from "@/types/user";
 import { antiSpamService } from "@/services/antiSpamService";
 import ActionButton from "./shared/ActionButton";
 
 interface CommunityReportingProps {
   targetUser: FarcasterUser;
-  contentType: 'challenge' | 'cast' | 'user';
+  contentType: "challenge" | "cast" | "user";
   contentId?: string;
   onClose: () => void;
   onReportSubmitted?: (reportId: string) => void;
 }
 
-type ReportType = 'spam' | 'abuse' | 'fake' | 'inappropriate';
+type ReportType = "spam" | "abuse" | "fake" | "inappropriate";
 
 const REPORT_TYPES: Array<{
   type: ReportType;
@@ -28,29 +28,29 @@ const REPORT_TYPES: Array<{
   icon: string;
 }> = [
   {
-    type: 'spam',
-    label: 'Spam',
-    description: 'Repetitive, unwanted, or promotional content',
-    icon: '🚫'
+    type: "spam",
+    label: "Spam",
+    description: "Repetitive, unwanted, or promotional content",
+    icon: "🚫",
   },
   {
-    type: 'abuse',
-    label: 'Abuse',
-    description: 'Harassment, threats, or harmful behavior',
-    icon: '⚠️'
+    type: "abuse",
+    label: "Abuse",
+    description: "Harassment, threats, or harmful behavior",
+    icon: "⚠️",
   },
   {
-    type: 'fake',
-    label: 'Fake Content',
-    description: 'Misleading information or impersonation',
-    icon: '🎭'
+    type: "fake",
+    label: "Fake Content",
+    description: "Misleading information or impersonation",
+    icon: "🎭",
   },
   {
-    type: 'inappropriate',
-    label: 'Inappropriate',
-    description: 'Content that violates community guidelines',
-    icon: '🔞'
-  }
+    type: "inappropriate",
+    label: "Inappropriate",
+    description: "Content that violates community guidelines",
+    icon: "🔞",
+  },
 ];
 
 export default function CommunityReporting({
@@ -58,18 +58,18 @@ export default function CommunityReporting({
   contentType,
   contentId,
   onClose,
-  onReportSubmitted
+  onReportSubmitted,
 }: CommunityReportingProps) {
   const [selectedType, setSelectedType] = useState<ReportType | null>(null);
-  const [description, setDescription] = useState('');
-  const [evidence, setEvidence] = useState('');
+  const [description, setDescription] = useState("");
+  const [evidence, setEvidence] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!selectedType || !description.trim()) {
-      setError('Please select a report type and provide a description');
+      setError("Please select a report type and provide a description");
       return;
     }
 
@@ -79,7 +79,7 @@ export default function CommunityReporting({
     try {
       // In a real implementation, we'd get the current user's ID
       const reporterId = 1; // Placeholder - would come from user context
-      
+
       const result = antiSpamService.submitReport(
         reporterId,
         targetUser.fid,
@@ -91,17 +91,17 @@ export default function CommunityReporting({
       if (result.success && result.reportId) {
         setSubmitted(true);
         onReportSubmitted?.(result.reportId);
-        
+
         // Auto-close after 2 seconds
         setTimeout(() => {
           onClose();
         }, 2000);
       } else {
-        setError(result.error || 'Failed to submit report');
+        setError(result.error || "Failed to submit report");
       }
     } catch (err) {
-      setError('An error occurred while submitting the report');
-      console.error('Report submission error:', err);
+      setError("An error occurred while submitting the report");
+      console.error("Report submission error:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,7 +121,8 @@ export default function CommunityReporting({
             Report Submitted
           </h3>
           <p className="text-gray-600">
-            Thank you for helping keep our community safe. We'll review your report shortly.
+            Thank you for helping keep our community safe. We'll review your
+            report shortly.
           </p>
         </div>
       </motion.div>
@@ -157,13 +158,13 @@ export default function CommunityReporting({
         {/* Target User Info */}
         <div className="flex items-center gap-3 mb-6 p-3 bg-gray-50 rounded-lg">
           <img
-            src={targetUser.pfp_url}
-            alt={targetUser.display_name}
+            src={targetUser.pfpUrl}
+            alt={targetUser.displayName}
             className="w-10 h-10 rounded-full"
           />
           <div>
             <h4 className="font-semibold text-gray-800">
-              {targetUser.display_name}
+              {targetUser.displayName}
             </h4>
             <p className="text-sm text-gray-600">@{targetUser.username}</p>
           </div>
@@ -184,15 +185,19 @@ export default function CommunityReporting({
                 onClick={() => setSelectedType(type.type)}
                 className={`p-3 rounded-lg border-2 text-left transition-colors ${
                   selectedType === type.type
-                    ? 'border-red-500 bg-red-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? "border-red-500 bg-red-50"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-xl">{type.icon}</span>
                   <div>
-                    <div className="font-medium text-gray-800">{type.label}</div>
-                    <div className="text-sm text-gray-600">{type.description}</div>
+                    <div className="font-medium text-gray-800">
+                      {type.label}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {type.description}
+                    </div>
                   </div>
                 </div>
               </button>
@@ -248,26 +253,28 @@ export default function CommunityReporting({
           <ActionButton
             onClick={onClose}
             variant="secondary"
-            className="flex-1"
+            fullWidth
             disabled={isSubmitting}
           >
             Cancel
           </ActionButton>
           <ActionButton
             onClick={handleSubmit}
-            variant="gradient-red"
-            className="flex-1"
+            variant="danger"
+            fullWidth
             disabled={isSubmitting || !selectedType || !description.trim()}
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Report'}
+            {isSubmitting ? "Submitting..." : "Submit Report"}
           </ActionButton>
         </div>
 
         {/* Disclaimer */}
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
           <p className="text-xs text-gray-600">
-            Reports are reviewed by our community moderation team. False reports may result in restrictions on your account. 
-            By submitting this report, you confirm that the information provided is accurate to the best of your knowledge.
+            Reports are reviewed by our community moderation team. False reports
+            may result in restrictions on your account. By submitting this
+            report, you confirm that the information provided is accurate to the
+            best of your knowledge.
           </p>
         </div>
       </motion.div>
@@ -280,13 +287,13 @@ export function useReporting() {
   const [showReporting, setShowReporting] = useState(false);
   const [reportTarget, setReportTarget] = useState<{
     user: FarcasterUser;
-    contentType: 'challenge' | 'cast' | 'user';
+    contentType: "challenge" | "cast" | "user";
     contentId?: string;
   } | null>(null);
 
   const openReport = (
     user: FarcasterUser,
-    contentType: 'challenge' | 'cast' | 'user',
+    contentType: "challenge" | "cast" | "user",
     contentId?: string
   ) => {
     setReportTarget({ user, contentType, contentId });
@@ -307,7 +314,7 @@ export function useReporting() {
           contentId={reportTarget.contentId}
           onClose={closeReport}
           onReportSubmitted={(reportId) => {
-            console.log('Report submitted:', reportId);
+            console.log("Report submitted:", reportId);
             // Could trigger additional actions here
           }}
         />
@@ -319,6 +326,6 @@ export function useReporting() {
     openReport,
     closeReport,
     ReportingModal,
-    isReporting: showReporting
+    isReporting: showReporting,
   };
 }

@@ -12,7 +12,6 @@ import { shuffleArray } from './mockData';
 import {
   classifyUserByFollowers,
   getWhaleMultiplier,
-  getWhaleEmoji,
   WhaleType
 } from '@/hooks/useFarcasterUsers';
 
@@ -65,7 +64,7 @@ export class SocialGameFactory implements GameFactory {
       maxUsers: 16,
       estimatedDuration: gameUsers.length * (difficulty === 'easy' ? 8 : difficulty === 'medium' ? 12 : 18),
       users: gameUsers,
-      shuffledPfps: shuffleArray(gameUsers.map(u => u.pfp_url)),
+      shuffledPfps: shuffleArray(gameUsers.map(u => u.pfpUrl)),
       shuffledUsernames: shuffleArray(gameUsers.map(u => u.username))
     };
   }
@@ -185,7 +184,7 @@ export class SocialGameFactory implements GameFactory {
     };
 
     users.forEach(user => {
-      const whaleType = classifyUserByFollowers(user.follower_count);
+      const whaleType = classifyUserByFollowers(user.followerCount);
       groups[whaleType].push(user);
     });
 
@@ -199,15 +198,15 @@ export class SocialGameFactory implements GameFactory {
     for (const user of users.slice(0, 3)) {
       const otherUsers = users.filter(u => u.fid !== user.fid);
       const options = shuffleArray([
-        this.formatFollowerCount(user.follower_count),
-        ...otherUsers.slice(0, 3).map(u => this.formatFollowerCount(u.follower_count))
+        this.formatFollowerCount(user.followerCount),
+        ...otherUsers.slice(0, 3).map(u => this.formatFollowerCount(u.followerCount))
       ]);
       
       questions.push({
         id: `followers-${user.fid}`,
         question: `How many followers does @${user.username} have?`,
         options,
-        correctAnswer: this.formatFollowerCount(user.follower_count),
+        correctAnswer: this.formatFollowerCount(user.followerCount),
         difficulty,
         category: 'followers' as const,
         relatedUsers: [user]
@@ -339,7 +338,7 @@ export class SocialGameFactory implements GameFactory {
 
     const whaleCount = users.length - whaleBreakdown.minnow;
     const totalMultiplier = users.reduce((sum, user) => {
-      return sum + getWhaleMultiplier(classifyUserByFollowers(user.follower_count));
+      return sum + getWhaleMultiplier(classifyUserByFollowers(user.followerCount));
     }, 0) / users.length;
 
     const potentialBonus = this.calculateWhaleBonus(users);

@@ -3,19 +3,14 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NFTPreview from "@/components/shared/NFTPreview";
-import { PricingDisplay } from "@/components/PricingDisplay";
 import MiniAppWalletConnect from "@/components/MiniAppWalletConnect";
 import ActionButton from "@/components/shared/ActionButton";
 import { useAccount, useChainId } from "wagmi";
 import { useHeartNFT } from "@/hooks/useHeartNFT";
 import { useNFTPricing } from "@/hooks/useNFTPricing";
 import { useLubToken } from "@/hooks/useLubToken";
-import { NFTPricingDisplay } from "@/components/shared/NFTPricingDisplay";
-import {
-  formatEthAmount,
-  formatLubAmount,
-  pricingEngine,
-} from "@/utils/pricingEngine";
+import { PaymentMethodSelector, PaymentMethod } from "@/components/shared/PaymentMethodSelector";
+import { formatEthAmount } from "@/utils/pricingEngine";
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import { trackNFTMinted } from "@/utils/analytics";
 import { useOnboardingContext } from "@/components/onboarding/OnboardingProvider";
@@ -74,14 +69,67 @@ export default function HeartNFTMinter({
   // Use the new unified pricing hook for accurate contract data
   const nftPricing = useNFTPricing();
 
-  const [useDiscount, setUseDiscount] = React.useState(false);
-  const [useFullLub, setUseFullLub] = React.useState(false);
+  // Payment method state - default to ETH if no LUB options available
+  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>(() => {
+    if (nftPricing.canAffordFullLub) return "full-lub";
+    if (nftPricing.canAffordDiscount) return "eth-lub-discount";
+    return "eth";
+  });
 
-  // Determine payment options eligibility using real contract data
-  const canUseDiscount =
-    isConnected && nftPricing.canAffordDiscount && !nftPricing.isLoading;
-  const canUseFullLub =
-    isConnected && nftPricing.canAffordFullLub && !nftPricing.isLoading;
+  // Update payment method when pricing data changes
+  React.useEffect(() => {
+    if (!nftPricing.isLoading) {
+      // If current method is not available, switch to best available option
+      if (paymentMethod === "full-lub" && !nftPricing.canAffordFullLub) {
+        setPaymentMethod(nftPricing.canAffordDiscount ? "eth-lub-discount" : "eth");
+      } else if (paymentMethod === "eth-lub-discount" && !nftPricing.canAffordDiscount) {
+        setPaymentMethod("eth");
+      }
+    }
+  }, [nftPricing.canAffordDiscount, nftPricing.canAffordFullLub, nftPricing.isLoading, paymentMethod]);
+
+  // Derive legacy flags for existing mint logic
+  const useDiscount = paymentMethod === "eth-lub-discount";
+  const useFullLub = paymentMethod === "full-lub";
+
+  // Payment method validation
+  const validatePaymentMethod = () => {
+    switch (paymentMethod) {
+      case "eth":
+        return { isValid: true, message: "" };
+
+      case "eth-lub-discount":
+        if (!nftPricing.canAffordDiscount) {
+          return {
+            isValid: false,
+            message: `You need ${nftPricing.discountedPrice.lubCostFormatted} LUB tokens to use the discount option.`
+          };
+        }
+        return { isValid: true, message: "" };
+
+      case "full-lub":
+        if (!nftPricing.canAffordFullLub) {
+          return {
+            isValid: false,
+            message: `You need ${nftPricing.fullLubPrice.lubCostFormatted} LUB tokens to pay with LUB only.`
+          };
+        }
+        return { isValid: true, message: "" };
+
+      default:
+        return { isValid: false, message: "Invalid payment method selected." };
+    }
+  };
+
+  // Helper function for display names
+  const getPaymentMethodDisplayName = (method: PaymentMethod) => {
+    switch (method) {
+      case "eth": return "ETH";
+      case "eth-lub-discount": return "ETH + LUB discount";
+      case "full-lub": return "LUB tokens only";
+      default: return "Unknown method";
+    }
+  };
 
   const handleMint = async () => {
     try {
@@ -89,6 +137,24 @@ export default function HeartNFTMinter({
 
       // Refresh LUB balance to ensure we have the latest data
       await refetchBalance();
+
+      // Validate payment method before proceeding
+      const validationResult = validatePaymentMethod();
+      if (!validationResult.isValid) {
+        showToast(
+          "❌ Payment Method Error",
+          validationResult.message,
+          { icon: "⚠️", duration: 5000 }
+        );
+        return;
+      }
+
+      // Show payment method confirmation
+      showToast(
+        "🔄 Processing Payment",
+        `Minting NFT using ${getPaymentMethodDisplayName(paymentMethod)}...`,
+        { icon: "💳", duration: 3000 }
+      );
 
       // Prepare heart data for metadata/mint
       const completedAt = BigInt(Math.floor(Date.now() / 1000));
@@ -115,12 +181,14 @@ export default function HeartNFTMinter({
           ? nftPricing.discountedPrice.lubCost 
           : BigInt(0);
       
-      console.log('💰 Minting with:', {
+      console.log('💰 Minting with payment method:', {
+        paymentMethod,
         useDiscount,
         useFullLub,
         totalLubCost: totalLubCost.toString(),
-        discountPrice: nftPricing.discountedPrice.lubCost.toString(),
-        fullLubPrice: nftPricing.fullLubPrice.lubCost.toString(),
+        ethCost: paymentMethod === "full-lub" ? "0" :
+                 paymentMethod === "eth-lub-discount" ? nftPricing.discountedPrice.ethCost.toString() :
+                 nftPricing.regularPrice.ethCost.toString(),
       });
 
       const tx = await mintCompletedHeartWithMetadata(
@@ -153,12 +221,16 @@ export default function HeartNFTMinter({
         tx as `0x`
       );
 
-      // Show success toast with a CTA to view collection
+      // Show success toast with payment method info
+      const paymentMethodText = paymentMethod === "eth" ? "ETH" :
+                               paymentMethod === "full-lub" ? "LUB tokens" :
+                               "ETH + LUB discount";
+
       showToast(
         "💎 NFT Minted!",
         tokenId
-          ? `Your NFT #${tokenId.toString()} has been minted successfully.`
-          : "Your NFT has been minted successfully.",
+          ? `Your NFT #${tokenId.toString()} has been minted successfully using ${paymentMethodText}.`
+          : `Your NFT has been minted successfully using ${paymentMethodText}.`,
         {
           icon: "🎉",
           duration: 6000,
@@ -184,7 +256,28 @@ export default function HeartNFTMinter({
     } catch (e: any) {
       console.error("Mint failed:", e);
 
-      // Use the new Web3 error handler for better UX
+      // Enhanced error handling with payment method context
+      let errorMessage = "An error occurred while minting your NFT.";
+
+      if (e.message?.includes("insufficient")) {
+        if (paymentMethod === "eth") {
+          errorMessage = "Insufficient ETH balance to complete the mint.";
+        } else if (paymentMethod === "eth-lub-discount") {
+          errorMessage = "Insufficient balance for ETH + LUB discount payment.";
+        } else if (paymentMethod === "full-lub") {
+          errorMessage = "Insufficient LUB tokens to complete the mint.";
+        }
+      } else if (e.message?.includes("rejected")) {
+        errorMessage = `Transaction rejected. Your ${getPaymentMethodDisplayName(paymentMethod)} payment was not processed.`;
+      }
+
+      showToast(
+        "❌ Mint Failed",
+        errorMessage,
+        { icon: "⚠️", duration: 6000 }
+      );
+
+      // Use the new Web3 error handler for additional context
       await handleWeb3Error(e);
     } finally {
       setIsMinting(false);
@@ -223,16 +316,30 @@ export default function HeartNFTMinter({
               gameStats={gameStats}
             />
 
-            <NFTPricingDisplay
-              useDiscount={useDiscount}
-              onToggleDiscount={setUseDiscount}
-              canUseDiscount={canUseDiscount}
-              useFullLub={useFullLub}
-              onToggleFullLub={setUseFullLub}
-              canUseFullLub={canUseFullLub}
-            />
+            {isConnected ? (
+              <>
+                <PaymentMethodSelector
+                  selectedMethod={paymentMethod}
+                  onMethodChange={setPaymentMethod}
+                />
 
-            {!isConnected && (
+                {/* Show validation warning if current method is invalid */}
+                {!validatePaymentMethod().isValid && (
+                  <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-yellow-300 mb-2">
+                      <span>⚠️</span>
+                      <span className="font-medium">Payment Method Unavailable</span>
+                    </div>
+                    <p className="text-yellow-200/80 text-sm">
+                      {validatePaymentMethod().message}
+                    </p>
+                    <div className="mt-3 text-xs text-yellow-200/60">
+                      💡 Tip: Play social discovery games to earn more LUB tokens!
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
               <div className="rounded-lg bg-white/5 p-3">
                 <MiniAppWalletConnect />
               </div>
@@ -262,13 +369,15 @@ export default function HeartNFTMinter({
               variant="gradient-pink"
               size="sm"
               onClick={handleMint}
-              disabled={isMinting || isPending || !isConnected}
+              disabled={isMinting || isPending || !isConnected || !validatePaymentMethod().isValid}
             >
               {isMinting || isPending
                 ? "Minting..."
-                : isConnected
-                ? "Mint NFT"
-                : "Connect Wallet"}
+                : !isConnected
+                ? "Connect Wallet"
+                : !validatePaymentMethod().isValid
+                ? "Insufficient Balance"
+                : `Mint with ${getPaymentMethodDisplayName(paymentMethod)}`}
             </ActionButton>
           </div>
         </motion.div>

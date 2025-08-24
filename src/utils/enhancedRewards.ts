@@ -5,7 +5,6 @@
  * and create compelling reasons to return to the game every day.
  */
 
-import { pricingEngine } from "./pricingEngine";
 import { WEB3_CONFIG } from "@/config";
 
 export interface DailyReward {

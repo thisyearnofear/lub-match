@@ -231,13 +231,3 @@ export function useUserDisplay(config: Partial<UserDisplayConfig> = {}) {
   };
 }
 
-// Helper function to get tier display name (moved from UserContext for reusability)
-function getTierDisplayName(tier: string): string {
-  switch (tier) {
-    case 'newcomer': return 'New Player';
-    case 'engaged': return 'Engaged Player';
-    case 'web3-ready': return 'Web3 Ready';
-    case 'power-user': return 'Power User';
-    default: return 'Player';
-  }
-}

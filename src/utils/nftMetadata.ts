@@ -52,7 +52,7 @@ export async function uploadNFTMetadata(
       socialDiscoveries: number; // new profiles discovered
     };
   },
-  userApiKey?: string // Currently unused, but kept for API compatibility
+  _userApiKey?: string // Currently unused, but kept for API compatibility
 ): Promise<NFTUploadResult> {
   try {
     // Convert bigint to ISO string for API

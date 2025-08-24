@@ -5,22 +5,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNFTPricing } from "@/hooks/useNFTPricing";
 import { useLubToken } from "@/hooks/useLubToken";
 import { useHeartNFT } from "@/hooks/useHeartNFT";
-import { pricingEngine, formatEthAmount, formatLubAmount } from "@/utils/pricingEngine";
+import {
+  pricingEngine,
+  formatEthAmount,
+  formatLubAmount,
+} from "@/utils/pricingEngine";
 
 export function PricingDebugPanel() {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // New unified pricing
   const nftPricing = useNFTPricing();
-  
+
   // LUB token data
   const lubToken = useLubToken();
-  
+
   // Heart NFT data
   const heartNFT = useHeartNFT();
-  
-  // Legacy pricing engine (for comparison)
-  const legacyPricing = pricingEngine.getNFTMintPrice(true, lubToken.balance);
+
+  // Legacy pricing removed - now using unified useNFTPricing hook
 
   if (process.env.NODE_ENV === "production") {
     return null; // Don't show in production
@@ -60,8 +63,12 @@ export function PricingDebugPanel() {
               <div className="bg-gray-800 rounded p-3">
                 <h4 className="font-semibold mb-2">📄 Contract Addresses</h4>
                 <div className="text-xs space-y-1 font-mono">
-                  <div>Heart NFT: {process.env.NEXT_PUBLIC_HEART_NFT_ADDRESS}</div>
-                  <div>LUB Token: {process.env.NEXT_PUBLIC_LUB_TOKEN_ADDRESS}</div>
+                  <div>
+                    Heart NFT: {process.env.NEXT_PUBLIC_HEART_NFT_ADDRESS}
+                  </div>
+                  <div>
+                    LUB Token: {process.env.NEXT_PUBLIC_LUB_TOKEN_ADDRESS}
+                  </div>
                 </div>
               </div>
 
@@ -75,24 +82,32 @@ export function PricingDebugPanel() {
                 ) : (
                   <div className="text-xs space-y-1">
                     <div>Base Price: {nftPricing.basePriceFormatted}</div>
-                    <div>Regular: {nftPricing.regularPrice.totalCostFormatted}</div>
-                    <div>Discount: {nftPricing.discountedPrice.totalCostFormatted}</div>
-                    <div>Savings: {nftPricing.discountedPrice.savingsFormatted} ({nftPricing.discountedPrice.discountPercentage}%)</div>
+                    <div>
+                      Regular: {nftPricing.regularPrice.totalCostFormatted}
+                    </div>
+                    <div>
+                      Discount: {nftPricing.discountedPrice.totalCostFormatted}
+                    </div>
+                    <div>
+                      Savings: {nftPricing.discountedPrice.savingsFormatted} (
+                      {nftPricing.discountedPrice.discountPercentage}%)
+                    </div>
                     <div>Exchange Rate: {nftPricing.exchangeRateFormatted}</div>
-                    <div>Can Afford: {nftPricing.canAffordDiscount ? "✅" : "❌"}</div>
+                    <div>
+                      Can Afford: {nftPricing.canAffordDiscount ? "✅" : "❌"}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Legacy Pricing Engine */}
-              <div className="bg-yellow-900/30 rounded p-3">
-                <h4 className="font-semibold mb-2">⚠️ Legacy Pricing Engine</h4>
-                <div className="text-xs space-y-1">
-                  <div>ETH Cost: {formatEthAmount(legacyPricing.ethPrice)}</div>
-                  <div>LUB Cost: {formatLubAmount(legacyPricing.lubCost)}</div>
-                  <div>Total: {legacyPricing.totalCostFormatted}</div>
-                  <div>Can Afford: {legacyPricing.canAffordDiscount ? "✅" : "❌"}</div>
-                  <div>Savings: {legacyPricing.discountSavings || "N/A"}</div>
+              {/* Legacy Pricing Engine - DEPRECATED */}
+              <div className="bg-red-900/30 rounded p-3">
+                <h4 className="font-semibold mb-2">
+                  ❌ Legacy Pricing Engine (DEPRECATED)
+                </h4>
+                <div className="text-xs text-red-300">
+                  Legacy pricing has been removed. Use the unified pricing
+                  system above.
                 </div>
               </div>
 
@@ -102,7 +117,9 @@ export function PricingDebugPanel() {
                 <div className="text-xs space-y-1">
                   <div>Pending: {heartNFT.isPending ? "✅" : "❌"}</div>
                   <div>Enabled: {heartNFT.enabled ? "✅" : "❌"}</div>
-                  <div>NFT Balance: {heartNFT.nftBalance?.toString() || "0"}</div>
+                  <div>
+                    NFT Balance: {heartNFT.nftBalance?.toString() || "0"}
+                  </div>
                 </div>
               </div>
 
@@ -111,38 +128,62 @@ export function PricingDebugPanel() {
                 <h4 className="font-semibold mb-2">🪙 LUB Token</h4>
                 <div className="text-xs space-y-1">
                   <div>Balance: {formatLubAmount(lubToken.balance)}</div>
-                  <div>Exchange Rate: {lubToken.exchangeRate?.toString() || "Loading..."} LUB/ETH</div>
-                  <div>Hold Requirement: {formatLubAmount(lubToken.holdRequirement)}</div>
-                  <div>Can Create Game: {lubToken.canCreateFarcasterLub() ? "✅" : "❌"}</div>
+                  <div>
+                    Exchange Rate:{" "}
+                    {lubToken.exchangeRate?.toString() || "Loading..."} LUB/ETH
+                  </div>
+                  <div>
+                    Hold Requirement:{" "}
+                    {formatLubAmount(lubToken.holdRequirement)}
+                  </div>
+                  <div>
+                    Can Create Game:{" "}
+                    {lubToken.canCreateFarcasterLub() ? "✅" : "❌"}
+                  </div>
                 </div>
               </div>
 
-              {/* Consistency Check */}
+              {/* System Status */}
               <div className="bg-gray-800 rounded p-3">
-                <h4 className="font-semibold mb-2">🔍 Consistency Check</h4>
-                {!nftPricing.isLoading && !nftPricing.error && (
-                  <div className="text-xs space-y-1">
-                    {/* Compare new vs legacy pricing */}
-                    <div className="flex justify-between">
-                      <span>ETH Match:</span>
-                      <span className={
-                        nftPricing.discountedPrice.ethCost === legacyPricing.ethPrice 
-                          ? "text-green-400" : "text-red-400"
-                      }>
-                        {nftPricing.discountedPrice.ethCost === legacyPricing.ethPrice ? "✅" : "❌"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>LUB Match:</span>
-                      <span className={
-                        nftPricing.discountedPrice.lubCost === legacyPricing.lubCost 
-                          ? "text-green-400" : "text-red-400"
-                      }>
-                        {nftPricing.discountedPrice.lubCost === legacyPricing.lubCost ? "✅" : "❌"}
-                      </span>
-                    </div>
+                <h4 className="font-semibold mb-2">🔍 System Status</h4>
+                <div className="text-xs space-y-1">
+                  <div className="flex justify-between">
+                    <span>Pricing Loaded:</span>
+                    <span
+                      className={
+                        !nftPricing.isLoading && !nftPricing.error
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }
+                    >
+                      {!nftPricing.isLoading && !nftPricing.error ? "✅" : "❌"}
+                    </span>
                   </div>
-                )}
+                  <div className="flex justify-between">
+                    <span>LUB Token:</span>
+                    <span
+                      className={
+                        lubToken.balance > 0
+                          ? "text-green-400"
+                          : "text-yellow-400"
+                      }
+                    >
+                      {lubToken.balance > 0 ? "✅" : "⚠️"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Heart NFT:</span>
+                    <span
+                      className={
+                        !heartNFT.isPending
+                          ? "text-green-400"
+                          : "text-yellow-400"
+                      }
+                    >
+                      {!heartNFT.isPending ? "✅" : "⏳"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Recommendations */}

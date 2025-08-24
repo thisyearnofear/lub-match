@@ -13,11 +13,14 @@ import { WEB3_CONFIG } from "@/config";
 import { useEarningNotifications } from "./EarningToast";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 // NEW: Challenge system imports (ENHANCEMENT FIRST)
-import { challengeEngine, Challenge, ChallengeDifficulty } from "@/services/challengeEngine";
-import { socialInteractionService } from "@/services/socialInteractionService";
+import {
+  challengeEngine,
+  Challenge,
+  ChallengeDifficulty,
+} from "@/services/challengeEngine";
 import { ChallengeSocialProfile } from "./SocialProfile";
 import { useReporting } from "./CommunityReporting";
-import { SocialGamesEnhancedOnboarding, ChallengeSuccessOnboarding } from "./onboarding/EnhancedOnboardingIntegration";
+import UnifiedOnboardingIntegration from "./onboarding/UnifiedOnboardingIntegration";
 
 import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
@@ -39,10 +42,10 @@ type GameMode =
   | "pfp-matching"
   | "social-trivia"
   | "global-leaderboard"
-  | "challenge-selection"  // NEW: Challenge target selection
-  | "challenge-creation"   // NEW: AI challenge generation
-  | "challenge-active"     // NEW: Active challenge tracking
-  | "whale-hunting"        // NEW: Whale-specific challenges
+  | "challenge-selection" // NEW: Challenge target selection
+  | "challenge-creation" // NEW: AI challenge generation
+  | "challenge-active" // NEW: Active challenge tracking
+  | "whale-hunting" // NEW: Whale-specific challenges
   | "results";
 
 export default function SocialGamesHub({
@@ -58,9 +61,14 @@ export default function SocialGamesHub({
   );
 
   // NEW: Challenge system state (ENHANCEMENT FIRST)
-  const [selectedTarget, setSelectedTarget] = useState<FarcasterUser | null>(null);
-  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
-  const [challengeDifficulty, setChallengeDifficulty] = useState<ChallengeDifficulty>("medium");
+  const [selectedTarget, setSelectedTarget] = useState<FarcasterUser | null>(
+    null
+  );
+  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(
+    null
+  );
+  const [challengeDifficulty, setChallengeDifficulty] =
+    useState<ChallengeDifficulty>("medium");
 
   // Wallet integration
   const { isConnected } = useAccount();
@@ -87,7 +95,7 @@ export default function SocialGamesHub({
 
   // Filter users to only include those with valid profile pictures and usernames
   const validUsers = users.filter(
-    (user) => user.pfp_url && user.username && user.pfp_url.trim() !== ""
+    (user) => user.pfpUrl && user.username && user.pfpUrl.trim() !== ""
   );
 
   // ENHANCED: Unified stats system with challenge tracking
@@ -114,7 +122,8 @@ export default function SocialGamesHub({
   const { showEarning, ToastContainer } = useEarningNotifications();
 
   // Use shared success actions hook
-  const { getSocialGameSuccessActions, getChallengeSuccessActions } = useSuccessActions();
+  const { getSocialGameSuccessActions, getChallengeSuccessActions } =
+    useSuccessActions();
   const { openReport, ReportingModal } = useReporting();
 
   // No need to load separate player data - using unified stats
@@ -162,18 +171,21 @@ export default function SocialGamesHub({
 
       // Show earning notification for challenge creation
       if (lubTokenEnabled) {
-        showEarning(10, "Challenge Created!");
+        showEarning(BigInt(10), "Challenge Created!");
       }
-
     } catch (error) {
       console.error("Failed to create challenge:", error);
 
       // Show user-friendly error message for anti-spam blocks
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       if (errorMessage.includes("Challenge blocked")) {
         // Show anti-spam notification
         if (lubTokenEnabled) {
-          showEarning(0, "Challenge blocked - please wait before creating another challenge");
+          showEarning(
+            BigInt(0),
+            "Challenge blocked - please wait before creating another challenge"
+          );
         }
       }
 
@@ -208,10 +220,19 @@ export default function SocialGamesHub({
 
       // Record whale harpooning if applicable
       if (success && activeChallenge.whaleMultiplier > 2) {
-        const whaleType = activeChallenge.targetUser.follower_count >= 50000 ? 'mega_whale' :
-                         activeChallenge.targetUser.follower_count >= 10000 ? 'whale' :
-                         activeChallenge.targetUser.follower_count >= 5000 ? 'shark' : 'fish';
-        recordWhaleHarpooned(whaleType, activeChallenge.whaleMultiplier, BigInt(result.actualReward));
+        const whaleType =
+          activeChallenge.targetUser.followerCount >= 50000
+            ? "mega_whale"
+            : activeChallenge.targetUser.followerCount >= 10000
+            ? "whale"
+            : activeChallenge.targetUser.followerCount >= 5000
+            ? "shark"
+            : "fish";
+        recordWhaleHarpooned(
+          whaleType,
+          activeChallenge.whaleMultiplier,
+          BigInt(result.actualReward)
+        );
       }
 
       // Record viral detection if applicable
@@ -221,26 +242,35 @@ export default function SocialGamesHub({
 
       // Show earning notification
       if (lubTokenEnabled && success) {
-        showEarning(result.actualReward, `Challenge ${success ? 'Completed' : 'Failed'}!`);
+        showEarning(
+          BigInt(result.actualReward),
+          `Challenge ${success ? "Completed" : "Failed"}!`
+        );
       }
 
       // Update game result for display with enhanced challenge context
       setGameResult({
+        gameId: "challenge-" + activeChallenge.id,
         score: result.actualReward,
+        maxScore: result.actualReward * 2,
         accuracy: success ? 100 : 0,
-        timeSpent: Math.floor((result.completedAt.getTime() - activeChallenge.createdAt.getTime()) / 1000),
+        timeSpent: Math.floor(
+          (result.completedAt.getTime() - activeChallenge.createdAt.getTime()) /
+            1000
+        ),
+        completedAt: result.completedAt,
+        gameData: {},
         challengeResult: {
           challenge: activeChallenge,
           success,
           viralDetected,
           totalReward: result.actualReward,
-          bonuses: result.bonuses
-        }
+          bonuses: result.bonuses,
+        },
       });
 
       setCurrentMode("results");
       setActiveChallenge(null);
-
     } catch (error) {
       console.error("Failed to complete challenge:", error);
     }
@@ -552,10 +582,12 @@ export default function SocialGamesHub({
                     AI Challenges
                   </h3>
                   <p className="text-pink-100 text-sm">
-                    AI generates custom challenges to complete with Farcaster users. Earn LUB rewards!
+                    AI generates custom challenges to complete with Farcaster
+                    users. Earn LUB rewards!
                   </p>
                   <div className="mt-2 text-xs text-pink-200">
-                    {challengeStats.challengesCompleted} completed • {challengeStats.successRate} success rate
+                    {challengeStats.challengesCompleted} completed •{" "}
+                    {challengeStats.successRate} success rate
                   </div>
                 </motion.button>
 
@@ -571,10 +603,12 @@ export default function SocialGamesHub({
                     Whale Hunting
                   </h3>
                   <p className="text-cyan-100 text-sm">
-                    Target high-follower users for massive LUB rewards. Risk vs reward!
+                    Target high-follower users for massive LUB rewards. Risk vs
+                    reward!
                   </p>
                   <div className="mt-2 text-xs text-cyan-200">
-                    {challengeStats.whalesHarpooned} whales harpooned • {whaleHunterLevel} level
+                    {challengeStats.whalesHarpooned} whales harpooned •{" "}
+                    {whaleHunterLevel} level
                   </div>
                   <div className="mt-4 text-xs text-purple-200">
                     Earn LUB tokens & achievements!
@@ -687,24 +721,27 @@ export default function SocialGamesHub({
 
               <div className="mb-6">
                 <p className="text-purple-200 mb-4">
-                  Select a Farcaster user to challenge. AI will generate a custom challenge based on their profile.
+                  Select a Farcaster user to challenge. AI will generate a
+                  custom challenge based on their profile.
                 </p>
 
                 {/* Difficulty Selection */}
                 <div className="flex gap-2 mb-4">
-                  {(['easy', 'medium', 'hard'] as ChallengeDifficulty[]).map((diff) => (
-                    <button
-                      key={diff}
-                      onClick={() => setChallengeDifficulty(diff)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        challengeDifficulty === diff
-                          ? 'bg-pink-600 text-white'
-                          : 'bg-purple-800/50 text-purple-200 hover:bg-purple-700/50'
-                      }`}
-                    >
-                      {diff.charAt(0).toUpperCase() + diff.slice(1)}
-                    </button>
-                  ))}
+                  {(["easy", "medium", "hard"] as ChallengeDifficulty[]).map(
+                    (diff) => (
+                      <button
+                        key={diff}
+                        onClick={() => setChallengeDifficulty(diff)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          challengeDifficulty === diff
+                            ? "bg-pink-600 text-white"
+                            : "bg-purple-800/50 text-purple-200 hover:bg-purple-700/50"
+                        }`}
+                      >
+                        {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
 
@@ -715,10 +752,7 @@ export default function SocialGamesHub({
                     key={user.fid}
                     user={user}
                     onChallengeTarget={handleTargetSelection}
-                    onReport={(user) => openReport(user, 'user')}
-                    showWhaleStatus={true}
-                    showChallengeActions={true}
-                    showReportAction={true}
+                    onReport={(user) => openReport(user, "user")}
                   />
                 ))}
               </div>
@@ -749,11 +783,14 @@ export default function SocialGamesHub({
 
               <div className="mb-6">
                 <p className="text-cyan-200 mb-4">
-                  Target high-follower users for massive rewards. The bigger the whale, the bigger the reward!
+                  Target high-follower users for massive rewards. The bigger the
+                  whale, the bigger the reward!
                 </p>
 
                 <div className="bg-cyan-900/30 rounded-lg p-4 mb-4">
-                  <h3 className="text-cyan-300 font-semibold mb-2">Whale Classifications:</h3>
+                  <h3 className="text-cyan-300 font-semibold mb-2">
+                    Whale Classifications:
+                  </h3>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>🐟 Fish: 1k+ followers (2x reward)</div>
                     <div>🦈 Shark: 5k+ followers (5x reward)</div>
@@ -766,17 +803,14 @@ export default function SocialGamesHub({
               {/* Whale User Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {validUsers
-                  .filter(user => user.follower_count >= 1000)
-                  .sort((a, b) => b.follower_count - a.follower_count)
+                  .filter((user) => user.followerCount >= 1000)
+                  .sort((a, b) => b.followerCount - a.followerCount)
                   .map((user) => (
                     <ChallengeSocialProfile
                       key={user.fid}
                       user={user}
                       onChallengeTarget={handleTargetSelection}
-                      onReport={(user) => openReport(user, 'user')}
-                      showWhaleStatus={true}
-                      showChallengeActions={true}
-                      showReportAction={true}
+                      onReport={(user) => openReport(user, "user")}
                     />
                   ))}
               </div>
@@ -808,8 +842,8 @@ export default function SocialGamesHub({
               <div className="bg-gradient-to-r from-pink-900/50 to-purple-900/50 rounded-xl p-6 mb-6">
                 <div className="flex items-center gap-4 mb-4">
                   <img
-                    src={activeChallenge.targetUser.pfp_url}
-                    alt={activeChallenge.targetUser.display_name}
+                    src={activeChallenge.targetUser.pfpUrl}
+                    alt={activeChallenge.targetUser.displayName}
                     className="w-16 h-16 rounded-full"
                   />
                   <div>
@@ -817,7 +851,8 @@ export default function SocialGamesHub({
                       @{activeChallenge.targetUser.username}
                     </h3>
                     <p className="text-purple-200">
-                      {activeChallenge.targetUser.follower_count.toLocaleString()} followers
+                      {activeChallenge.targetUser.followerCount.toLocaleString()}{" "}
+                      followers
                     </p>
                   </div>
                   <div className="ml-auto text-right">
@@ -849,14 +884,18 @@ export default function SocialGamesHub({
                       Give Up
                     </ActionButton>
                     <ActionButton
-                      onClick={() => handleChallengeComplete(true, undefined, false)}
+                      onClick={() =>
+                        handleChallengeComplete(true, undefined, false)
+                      }
                       variant="primary"
                       size="sm"
                     >
                       Completed!
                     </ActionButton>
                     <ActionButton
-                      onClick={() => handleChallengeComplete(true, undefined, true)}
+                      onClick={() =>
+                        handleChallengeComplete(true, undefined, true)
+                      }
                       variant="gradient-purple"
                       size="sm"
                     >
@@ -910,55 +949,55 @@ export default function SocialGamesHub({
                       <div>
                         <div className="text-3xl font-bold text-pink-400">
                           {gameResult.score}
+                        </div>
+                        <div className="text-purple-200">Final Score</div>
+                      </div>
+                      <div>
+                        <div className="text-3xl font-bold text-green-400">
+                          {gameResult.accuracy.toFixed(1)}%
+                        </div>
+                        <div className="text-purple-200">Accuracy</div>
+                      </div>
+                      <div>
+                        <div className="text-3xl font-bold text-blue-400">
+                          {gameResult.timeSpent.toFixed(1)}s
+                        </div>
+                        <div className="text-purple-200">Time</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-yellow-400">
+                          {socialGameLevel}
+                        </div>
+                        <div className="text-purple-200">Level</div>
+                      </div>
                     </div>
-                    <div className="text-purple-200">Final Score</div>
                   </div>
-                  <div>
-                    <div className="text-3xl font-bold text-green-400">
-                      {gameResult.accuracy.toFixed(1)}%
-                    </div>
-                    <div className="text-purple-200">Accuracy</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-blue-400">
-                      {gameResult.timeSpent.toFixed(1)}s
-                    </div>
-                    <div className="text-purple-200">Time</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-yellow-400">
-                      {socialGameLevel}
-                    </div>
-                    <div className="text-purple-200">Level</div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Wallet Connection Prompt for Rewards */}
-              {!isConnected && WEB3_CONFIG.features.socialEarning && (
-                <div className="mb-6">
-                  <ConnectionIncentive
-                    tier={tier}
-                    context="game-complete"
-                    compact={false}
-                  />
-                </div>
-              )}
+                  {/* Wallet Connection Prompt for Rewards */}
+                  {!isConnected && WEB3_CONFIG.features.socialEarning && (
+                    <div className="mb-6">
+                      <ConnectionIncentive
+                        tier={tier}
+                        context="game-complete"
+                        compact={false}
+                      />
+                    </div>
+                  )}
 
-              {/* LUB Balance Display for Connected Users */}
-              {isConnected && lubTokenEnabled && (
-                <div className="bg-green-500 bg-opacity-20 border border-green-400 rounded-xl p-4 mb-6">
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">🎉</div>
-                    <p className="text-green-400 font-medium">
-                      Current Balance: {balanceFormatted} LUB
-                    </p>
-                    <p className="text-green-200 text-sm">
-                      Keep playing to earn more tokens!
-                    </p>
-                  </div>
-                </div>
-              )}
+                  {/* LUB Balance Display for Connected Users */}
+                  {isConnected && lubTokenEnabled && (
+                    <div className="bg-green-500 bg-opacity-20 border border-green-400 rounded-xl p-4 mb-6">
+                      <div className="text-center">
+                        <div className="text-2xl mb-2">🎉</div>
+                        <p className="text-green-400 font-medium">
+                          Current Balance: {balanceFormatted} LUB
+                        </p>
+                        <p className="text-green-200 text-sm">
+                          Keep playing to earn more tokens!
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-6">
                     <SuccessScreen
@@ -988,34 +1027,18 @@ export default function SocialGamesHub({
       {/* Community Reporting Modal */}
       {ReportingModal}
 
-      {/* Enhanced Onboarding System */}
-      <SocialGamesEnhancedOnboarding
-        context={{
-          isFirstChallenge: currentMode === "challenge-selection" && !activeChallenge,
-          totalChallengesCompleted: Object.keys(challengeStats.completedChallenges).length,
-          totalLUBEarned: lubBalance
-        }}
-        handlers={{
-          onWalletConnect: () => {/* wallet connection logic */},
-          onTryChallenges: startChallengeSelection,
-          onExploreGames: backToMenu,
-          onLearnWhales: () => setCurrentMode("whale-hunting")
-        }}
+      {/* Unified Onboarding System */}
+      <UnifiedOnboardingIntegration
+        sequence="advanced-features"
+        onTryChallenges={startChallengeSelection}
+        onExploreGames={backToMenu}
       />
 
       {/* Challenge Success Onboarding */}
       {gameResult?.challengeResult && (
-        <ChallengeSuccessOnboarding
-          challengeResult={gameResult.challengeResult}
-          handlers={{
-            onShareSuccess: () => {
-              // Share challenge success
-              const shareText = `🎯 Just completed a challenge and earned ${gameResult.challengeResult?.totalReward} LUB! ${gameResult.challengeResult?.viralDetected ? '🚀 (VIRAL!)' : ''}\n\nTry Lub Match: ${window.location.origin}`;
-              navigator.share?.({ text: shareText, url: window.location.origin }) ||
-              navigator.clipboard?.writeText(shareText);
-            },
-            onTryHarder: startChallengeSelection
-          }}
+        <UnifiedOnboardingIntegration
+          sequence="game-complete"
+          onPlayMore={startChallengeSelection}
         />
       )}
     </div>

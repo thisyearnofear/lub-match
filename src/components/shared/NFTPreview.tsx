@@ -40,9 +40,9 @@ export default function NFTPreview({
   
   const featuredUsers = uniqueUsers.slice(0, 8);
   const verifiedUsers = uniqueUsers.filter(
-    (u) => u.verified_addresses?.eth_addresses && u.verified_addresses.eth_addresses.length > 0
+    (u) => u.verifiedAddresses?.ethAddresses && u.verifiedAddresses.ethAddresses.length > 0
   );
-  const totalFollowers = uniqueUsers.reduce((sum, u) => sum + u.follower_count, 0);
+  const totalFollowers = uniqueUsers.reduce((sum, u) => sum + u.followerCount, 0);
 
   return (
     <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 rounded-3xl p-6 border border-pink-200 shadow-xl">
@@ -171,7 +171,7 @@ export default function NFTPreview({
                   >
                     <div className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-white shadow-md">
                       <img
-                        src={user.pfp_url}
+                        src={user.pfpUrl}
                         alt={user.username}
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -179,7 +179,7 @@ export default function NFTPreview({
                     </div>
 
                     {/* Verified Address Indicator */}
-                    {user.verified_addresses?.eth_addresses && user.verified_addresses.eth_addresses.length > 0 && (
+                    {user.verifiedAddresses?.ethAddresses && user.verifiedAddresses.ethAddresses.length > 0 && (
                       <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center text-xs shadow-lg">
                         ✓
                       </div>
@@ -196,7 +196,7 @@ export default function NFTPreview({
                         >
                           @{user.username}
                           <div className="text-gray-300">
-                            {user.follower_count.toLocaleString()} followers
+                            {user.followerCount.toLocaleString()} followers
                           </div>
                         </motion.div>
                       )}

@@ -204,7 +204,7 @@ class ChallengeEngine {
       }
     }
     // Classify target user
-    const whaleType = classifyUserByFollowers(targetUser.follower_count);
+    const whaleType = classifyUserByFollowers(targetUser.followerCount);
     const whaleMultiplier = getWhaleMultiplier(whaleType);
     
     // Select appropriate challenge type
@@ -261,8 +261,8 @@ class ChallengeEngine {
   ): ChallengeType {
     const availableTypes = Array.from(this.challengeTypes.values()).filter(type => {
       // Filter by follower requirements
-      if (targetUser.follower_count < type.minFollowers) return false;
-      if (type.maxFollowers && targetUser.follower_count > type.maxFollowers) return false;
+      if (targetUser.followerCount < type.minFollowers) return false;
+      if (type.maxFollowers && targetUser.followerCount > type.maxFollowers) return false;
       
       // Filter by difficulty appropriateness
       if (difficulty === 'easy' && type.baseReward > 100) return false;
@@ -300,7 +300,7 @@ class ChallengeEngine {
     
     // Add user context
     const contextualPrompt = `Challenge: ${baseTemplate}\n\n` +
-      `Target: @${targetUser.username} (${targetUser.follower_count} followers)\n` +
+      `Target: @${targetUser.username} (${targetUser.followerCount} followers)\n` +
       `Difficulty: ${difficulty}\n` +
       `Time Limit: ${challengeType.timeLimit} minutes\n\n` +
       `Success Criteria: ${challengeType.successCriteria.join(', ')}\n\n` +
@@ -314,7 +314,7 @@ class ChallengeEngine {
    * MODULAR: Composable strategy system
    */
   private getStrategyTip(challengeType: ChallengeType, targetUser: FarcasterUser): string {
-    const whaleType = classifyUserByFollowers(targetUser.follower_count);
+    const whaleType = classifyUserByFollowers(targetUser.followerCount);
     
     if (whaleType === 'mega_whale' || whaleType === 'whale') {
       return "Whales get hundreds of mentions daily. Be genuinely interesting, not spammy.";
@@ -435,6 +435,3 @@ class ChallengeEngine {
 
 // Export singleton instance
 export const challengeEngine = new ChallengeEngine();
-
-// Export types for use in other modules
-export type { Challenge, ChallengeResult, ChallengeType };

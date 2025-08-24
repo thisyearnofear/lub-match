@@ -11,7 +11,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FarcasterUser } from "@/utils/mockData";
 import { ChallengeDifficulty } from "@/services/challengeEngine";
-import { classifyUserByFollowers, getWhaleEmoji } from "@/hooks/useFarcasterUsers";
+import {
+  classifyUserByFollowers,
+  getWhaleEmoji,
+} from "@/hooks/useFarcasterUsers";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 import ActionButton from "../shared/ActionButton";
 
@@ -30,20 +33,22 @@ export default function MobileOptimizedChallengeSelection({
   onTargetSelect,
   onDifficultyChange,
   onBack,
-  className = ""
+  className = "",
 }: MobileOptimizedChallengeSelectionProps) {
   const { isInFarcaster, context } = useMiniAppReady();
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'whales' | 'rising'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<
+    "all" | "whales" | "rising"
+  >("all");
   const [isLoading, setIsLoading] = useState(false);
 
   // Haptic feedback for Farcaster mini-app
-  const triggerHaptic = (type: 'light' | 'medium' | 'heavy' = 'light') => {
+  const triggerHaptic = (type: "light" | "medium" | "heavy" = "light") => {
     if (isInFarcaster && context?.features?.haptics) {
       try {
         // Farcaster SDK haptic feedback (if available)
         (window as any).fc?.haptic?.(type);
       } catch (error) {
-        console.log('Haptic feedback not available:', error);
+        console.log("Haptic feedback not available:", error);
       }
     }
   };
@@ -53,16 +58,16 @@ export default function MobileOptimizedChallengeSelection({
     let filtered = users;
 
     // Filter by category
-    if (selectedCategory === 'whales') {
-      filtered = filtered.filter(user => user.follower_count >= 10000);
-    } else if (selectedCategory === 'rising') {
-      filtered = filtered.filter(user => 
-        user.follower_count >= 1000 && user.follower_count < 10000
+    if (selectedCategory === "whales") {
+      filtered = filtered.filter((user) => user.followerCount >= 10000);
+    } else if (selectedCategory === "rising") {
+      filtered = filtered.filter(
+        (user) => user.followerCount >= 1000 && user.followerCount < 10000
       );
     }
 
     // Sort by follower count for better mobile display
-    filtered.sort((a, b) => b.follower_count - a.follower_count);
+    filtered.sort((a, b) => b.followerCount - a.followerCount);
 
     // Limit results for mobile performance
     return filtered.slice(0, 20);
@@ -71,9 +76,9 @@ export default function MobileOptimizedChallengeSelection({
   const filteredUsers = getFilteredUsers();
 
   const handleTargetSelect = async (user: FarcasterUser) => {
-    triggerHaptic('medium');
+    triggerHaptic("medium");
     setIsLoading(true);
-    
+
     // Small delay for better UX feedback
     setTimeout(() => {
       onTargetSelect(user);
@@ -82,17 +87,19 @@ export default function MobileOptimizedChallengeSelection({
   };
 
   const handleDifficultyChange = (newDifficulty: ChallengeDifficulty) => {
-    triggerHaptic('light');
+    triggerHaptic("light");
     onDifficultyChange(newDifficulty);
   };
 
-  const handleCategoryChange = (category: 'all' | 'whales' | 'rising') => {
-    triggerHaptic('light');
+  const handleCategoryChange = (category: "all" | "whales" | "rising") => {
+    triggerHaptic("light");
     setSelectedCategory(category);
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-rose-900 ${className}`}>
+    <div
+      className={`min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-rose-900 ${className}`}
+    >
       {/* Mobile Header */}
       <div className="sticky top-0 z-10 bg-black/20 backdrop-blur-md border-b border-white/10">
         <div className="flex items-center justify-between p-4">
@@ -103,28 +110,28 @@ export default function MobileOptimizedChallengeSelection({
             <span className="text-lg">←</span>
             <span className="text-sm font-medium">Back</span>
           </button>
-          
           <h1 className="text-lg font-bold text-white">Choose Target</h1>
-          
           <div className="w-16" /> {/* Spacer for center alignment */}
         </div>
 
         {/* Mobile Difficulty Selector */}
         <div className="px-4 pb-4">
           <div className="flex gap-2">
-            {(['easy', 'medium', 'hard'] as ChallengeDifficulty[]).map((diff) => (
-              <button
-                key={diff}
-                onClick={() => handleDifficultyChange(diff)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  difficulty === diff
-                    ? 'bg-white text-purple-900 shadow-lg'
-                    : 'bg-white/10 text-white/80 hover:bg-white/20'
-                }`}
-              >
-                {diff.charAt(0).toUpperCase() + diff.slice(1)}
-              </button>
-            ))}
+            {(["easy", "medium", "hard"] as ChallengeDifficulty[]).map(
+              (diff) => (
+                <button
+                  key={diff}
+                  onClick={() => handleDifficultyChange(diff)}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    difficulty === diff
+                      ? "bg-white text-purple-900 shadow-lg"
+                      : "bg-white/10 text-white/80 hover:bg-white/20"
+                  }`}
+                >
+                  {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                </button>
+              )
+            )}
           </div>
         </div>
 
@@ -132,17 +139,17 @@ export default function MobileOptimizedChallengeSelection({
         <div className="px-4 pb-4">
           <div className="flex gap-1 bg-black/20 rounded-lg p-1">
             {[
-              { key: 'all', label: 'All', icon: '👥' },
-              { key: 'rising', label: 'Rising', icon: '📈' },
-              { key: 'whales', label: 'Whales', icon: '🐋' }
+              { key: "all", label: "All", icon: "👥" },
+              { key: "rising", label: "Rising", icon: "📈" },
+              { key: "whales", label: "Whales", icon: "🐋" },
             ].map((category) => (
               <button
                 key={category.key}
                 onClick={() => handleCategoryChange(category.key as any)}
                 className={`flex-1 py-2 px-2 rounded-md text-xs font-medium transition-all ${
                   selectedCategory === category.key
-                    ? 'bg-white text-purple-900'
-                    : 'text-white/70 hover:text-white'
+                    ? "bg-white text-purple-900"
+                    : "text-white/70 hover:text-white"
                 }`}
               >
                 <div className="flex flex-col items-center gap-1">
@@ -166,12 +173,18 @@ export default function MobileOptimizedChallengeSelection({
             className="grid grid-cols-1 gap-3"
           >
             {filteredUsers.map((user, index) => {
-              const whaleType = classifyUserByFollowers(user.follower_count);
+              const whaleType = classifyUserByFollowers(user.followerCount);
               const whaleEmoji = getWhaleEmoji(whaleType);
-              const rewardMultiplier = whaleType === 'mega_whale' ? '25x' :
-                                     whaleType === 'whale' ? '10x' :
-                                     whaleType === 'shark' ? '5x' :
-                                     whaleType === 'fish' ? '2x' : '1x';
+              const rewardMultiplier =
+                whaleType === "mega_whale"
+                  ? "25x"
+                  : whaleType === "whale"
+                  ? "10x"
+                  : whaleType === "shark"
+                  ? "5x"
+                  : whaleType === "fish"
+                  ? "2x"
+                  : "1x";
 
               return (
                 <motion.button
@@ -188,11 +201,11 @@ export default function MobileOptimizedChallengeSelection({
                     {/* Profile Image */}
                     <div className="relative">
                       <img
-                        src={user.pfp_url}
-                        alt={user.display_name}
+                        src={user.pfpUrl}
+                        alt={user.displayName}
                         className="w-12 h-12 rounded-full border-2 border-white/30"
                       />
-                      {whaleType !== 'minnow' && (
+                      {whaleType !== "minnow" && (
                         <div className="absolute -top-1 -right-1 text-lg">
                           {whaleEmoji}
                         </div>
@@ -202,13 +215,13 @@ export default function MobileOptimizedChallengeSelection({
                     {/* User Info */}
                     <div className="flex-1 text-left">
                       <h3 className="text-white font-semibold text-sm truncate">
-                        {user.display_name}
+                        {user.displayName}
                       </h3>
                       <p className="text-white/70 text-xs truncate">
                         @{user.username}
                       </p>
                       <p className="text-white/50 text-xs">
-                        {user.follower_count.toLocaleString()} followers
+                        {user.followerCount.toLocaleString()} followers
                       </p>
                     </div>
 
@@ -218,9 +231,12 @@ export default function MobileOptimizedChallengeSelection({
                         {rewardMultiplier}
                       </div>
                       <p className="text-white/50 text-xs mt-1">
-                        {difficulty === 'easy' ? '50-100' :
-                         difficulty === 'medium' ? '200-500' :
-                         '500-2500'} LUB
+                        {difficulty === "easy"
+                          ? "50-100"
+                          : difficulty === "medium"
+                          ? "200-500"
+                          : "500-2500"}{" "}
+                        LUB
                       </p>
                     </div>
                   </div>
@@ -250,19 +266,17 @@ export default function MobileOptimizedChallengeSelection({
           <ActionButton
             onClick={onBack}
             variant="secondary"
-            className="flex-1"
+            fullWidth
             disabled={isLoading}
           >
             Cancel
           </ActionButton>
-          
+
           <div className="flex-2 text-center">
             <p className="text-white/70 text-xs">
               {filteredUsers.length} targets available
             </p>
-            <p className="text-white text-sm font-medium">
-              Tap to challenge
-            </p>
+            <p className="text-white text-sm font-medium">Tap to challenge</p>
           </div>
         </div>
       </div>
@@ -279,7 +293,9 @@ export default function MobileOptimizedChallengeSelection({
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span className="text-white font-medium">Creating challenge...</span>
+                <span className="text-white font-medium">
+                  Creating challenge...
+                </span>
               </div>
             </div>
           </motion.div>

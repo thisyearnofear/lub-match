@@ -315,7 +315,7 @@ export function useFarcasterUsers(
     }
 
     // Take first 8 users and use their profile pictures
-    return users.slice(0, 8).map((user) => user.pfp_url);
+    return users.slice(0, 8).map((user) => user.pfpUrl);
   }, [users]);
 
   // Set client-side flag
@@ -339,17 +339,17 @@ export function useFarcasterUsers(
 
   // Whale detection utility functions
   const getWhalesByType = useCallback((type: WhaleType): FarcasterUser[] => {
-    return users.filter(user => classifyUserByFollowers(user.follower_count) === type);
+    return users.filter(user => classifyUserByFollowers(user.followerCount) === type);
   }, [users]);
 
   const getTopWhales = useCallback((limit: number = 10): FarcasterUser[] => {
     return [...users]
-      .sort((a, b) => b.follower_count - a.follower_count)
+      .sort((a, b) => b.followerCount - a.followerCount)
       .slice(0, limit);
   }, [users]);
 
   const classifyUser = useCallback((user: FarcasterUser): WhaleType => {
-    return classifyUserByFollowers(user.follower_count);
+    return classifyUserByFollowers(user.followerCount);
   }, []);
 
   const getChallengeTargets = useCallback((difficulty: 'easy' | 'medium' | 'hard'): FarcasterUser[] => {
@@ -361,7 +361,7 @@ export function useFarcasterUsers(
 
     const targetTypes = difficultyMap[difficulty];
     return users.filter(user =>
-      targetTypes.includes(classifyUserByFollowers(user.follower_count))
+      targetTypes.includes(classifyUserByFollowers(user.followerCount))
     );
   }, [users]);
 

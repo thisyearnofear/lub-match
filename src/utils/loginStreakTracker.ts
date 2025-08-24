@@ -1,17 +1,51 @@
 /**
- * Onchain Login Streak Tracking System
- * 
- * Uses contract events to track daily login streaks persistently across
- * devices and sessions. Replaces localStorage with true onchain data.
+ * Login Streak Tracking System - Simplified
+ *
+ * Following AGGRESSIVE CONSOLIDATION principles, this provides a minimal
+ * interface for compatibility while removing complex onchain dependencies.
  */
 
-// Re-export from the new onchain implementation
-export {
-  useOnchainLoginStreak as useLoginStreak,
-  useStreakRewards,
-  onchainStreakTracker as loginStreakTracker,
-  type OnchainActivity
-} from './onchainLoginStreak';
+// Simple types for compatibility
+export interface OnchainActivity {
+  timestamp: number;
+  activityType: string;
+}
 
-// Export the onchain type directly
-export type { OnchainStreakData as LoginStreakData } from './onchainLoginStreak';
+export interface LoginStreakData {
+  currentStreak: number;
+  totalActiveDays: number;
+  lastActivityDate: string;
+}
+
+// Simplified hook that returns minimal data
+export function useLoginStreak() {
+  return {
+    currentStreak: 0,
+    totalActiveDays: 0,
+    lastActivityDate: new Date().toISOString(),
+    recordActivity: () => {},
+    isLoading: false,
+  };
+}
+
+// Simplified streak rewards hook
+export function useStreakRewards() {
+  return {
+    currentStreak: 0,
+    totalActiveDays: 0,
+    availableRewards: [],
+    claimReward: () => Promise.resolve(false),
+    isLoading: false,
+  };
+}
+
+// Simplified tracker object
+export const loginStreakTracker = {
+  recordActivity: () => {},
+  getStreakData: () => ({
+    currentStreak: 0,
+    totalActiveDays: 0,
+    lastActivityDate: new Date().toISOString(),
+  }),
+  isEnabled: false,
+};

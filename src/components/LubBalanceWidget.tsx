@@ -5,23 +5,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLubToken } from "@/hooks/useLubToken";
 import { useUserProgression } from "@/utils/userProgression";
 import { useAccount } from "wagmi";
-import { formatLubAmount } from "@/utils/pricingEngine";
+
 import WalletModal from "./WalletModal";
 import OnboardingTooltip from "./shared/OnboardingTooltip";
 import { UserDisplayFormatter } from "@/utils/userDisplay";
 import { useOptimizedAnimation } from "@/utils/animations";
 import { useUserIdentity } from "@/contexts/UserContext";
 import { PulseIndicator } from "./shared/AnimatedTile";
-import { MinimalMarketplace, useMarketplace } from "./enhanced/MinimalMarketplace";
-import { useStreakRewards } from '@/utils/onchainLoginStreak';
-import { Flame } from 'lucide-react';
+// Removed enhanced components (AGGRESSIVE CONSOLIDATION)
+import { Flame } from "lucide-react";
 
 export default function LubBalanceWidget() {
   const { balanceFormatted, enabled, history } = useLubToken();
   const { progress } = useUserProgression();
   const { isConnected } = useAccount();
   const [showModal, setShowModal] = useState(false);
-  const { showMarketplace, openMarketplace, closeMarketplace } = useMarketplace();
+  // Removed marketplace functionality (AGGRESSIVE CONSOLIDATION)
   const [recentEarning, setRecentEarning] = useState<{
     amount: number;
     timestamp: number;
@@ -29,11 +28,7 @@ export default function LubBalanceWidget() {
   const [showPortfolioSummary, setShowPortfolioSummary] = useState(false);
 
   // NEW: Get user identity for personalized display
-  const { farcasterUser, displayName, avatarUrl } = useUserIdentity();
-
-  // NEW: Onchain streak data (only load for connected web3-ready+ users)
-  const streakData = useStreakRewards();
-  const showStreak = isConnected && progress.tier !== "newcomer" && progress.tier !== "engaged" && streakData.currentStreak > 0;
+  const { farcasterUser } = useUserIdentity();
 
   // NEW: Get display configuration
   const diamondDisplay = UserDisplayFormatter.getDiamondDisplay(
@@ -155,20 +150,6 @@ export default function LubBalanceWidget() {
                 {diamondDisplay.subtitle || `${balanceFormatted} LUB`}
               </motion.span>
             </div>
-            
-            {/* NEW: Streak badge for web3-ready+ users */}
-            {showStreak && (
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="flex items-center gap-1 bg-orange-100/20 backdrop-blur-sm px-2 py-1 rounded-full border border-orange-200/30"
-              >
-                <Flame className="w-3 h-3 text-orange-300" />
-                <span className="text-xs font-medium text-orange-100">
-                  {streakData.currentStreak}
-                </span>
-              </motion.div>
-            )}
           </motion.button>
         </PulseIndicator>
       </OnboardingTooltip>
@@ -229,23 +210,6 @@ export default function LubBalanceWidget() {
                       {getPortfolioSummary().tier}
                     </span>
                   </div>
-                  {showStreak && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Streak:</span>
-                      <span className="font-bold text-orange-600 flex items-center gap-1">
-                        <Flame className="w-3 h-3" />
-                        {streakData.currentStreak} days
-                      </span>
-                    </div>
-                  )}
-                  {showStreak && streakData.totalActiveDays > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Active Days:</span>
-                      <span className="font-bold text-blue-600">
-                        {streakData.totalActiveDays}
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <div className="text-xs text-gray-500 mt-2 text-center">
                   Click to view details
@@ -257,11 +221,12 @@ export default function LubBalanceWidget() {
       )}
 
       {showModal && <WalletModal onClose={() => setShowModal(false)} />}
-      
+
       {/* Marketplace Modal for Power Users */}
-      {progress.tier === 'power-user' && (
-        <MinimalMarketplace show={showMarketplace} onClose={closeMarketplace} />
-      )}
+      {progress.tier === "power-user" &&
+        {
+          /* Removed MinimalMarketplace (AGGRESSIVE CONSOLIDATION) */
+        }}
     </>
   );
 }

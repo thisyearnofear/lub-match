@@ -15,7 +15,7 @@ import { useUnifiedStats } from './useUnifiedStats';
 import { useEarningNotifications } from '@/components/EarningToast';
 import { useLubApproval } from './useLubApproval';
 import { Tournament } from '@/utils/tournamentManager';
-import { useStreakRewards } from '@/utils/onchainLoginStreak';
+
 
 // PhotoPairLeaderboard ABI
 const PHOTO_PAIR_LEADERBOARD_ABI = parseAbi([
@@ -100,8 +100,7 @@ export interface UseGlobalLeaderboardReturn {
 
 export function useGlobalLeaderboard(): UseGlobalLeaderboardReturn {
   const { address, isConnected } = useAccount();
-  const { formattedStats, recordEvent } = useUnifiedStats();
-  const { showEarning } = useEarningNotifications();
+  const { recordEvent } = useUnifiedStats();
   const { writeContractAsync, isPending: isSubmitting } = useWriteContract();
   const { ensureApproval } = useLubApproval();
 

@@ -4,14 +4,15 @@
 export interface FarcasterUser {
   fid: number;
   username: string;
-  display_name: string;
-  pfp_url: string;
+  displayName: string;
+  pfpUrl: string;
   bio?: string;
-  follower_count: number;
-  following_count: number;
-  verified_addresses?: {
-    eth_addresses: string[];
-    sol_addresses: string[];
+  followerCount: number;
+  followingCount: number;
+  powerBadge?: boolean;
+  verifiedAddresses?: {
+    ethAddresses: string[];
+    solAddresses: string[];
   };
 }
 

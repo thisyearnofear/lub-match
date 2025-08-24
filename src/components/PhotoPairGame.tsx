@@ -7,7 +7,11 @@ import { useGameZoom, useAutoZoom } from "@/hooks/useGameZoom";
 import { SimpleMobileZoomControls } from "./MobileZoomControls";
 import MatchNotification from "./shared/MatchNotification";
 import { FarcasterUser } from "@/types/socialGames";
-import { useInteractiveHints, getOnboardingDelay, getSwayTiming } from "@/hooks/useInteractiveHints";
+import {
+  useInteractiveHints,
+  getOnboardingDelay,
+  getSwayTiming,
+} from "@/hooks/useInteractiveHints";
 
 const shuffleArray = (array: string[]) => {
   for (let i = array.length - 1; i > 0; i--) {
@@ -32,7 +36,12 @@ type PhotoPairGameProps = {
   images: string[]; // requires exactly 8 IPFS image URLs
   users?: FarcasterUser[]; // Optional: Farcaster user data for enhanced social features
   handleShowProposalAction: () => void;
-  onGameComplete?: (stats: { completionTime: number; accuracy: number; totalAttempts: number; totalMatches: number }) => void;
+  onGameComplete?: (stats: {
+    completionTime: number;
+    accuracy: number;
+    totalAttempts: number;
+    totalMatches: number;
+  }) => void;
 };
 
 const PhotoPairGame = memo(function PhotoPairGame({
@@ -41,25 +50,13 @@ const PhotoPairGame = memo(function PhotoPairGame({
   handleShowProposalAction,
   onGameComplete,
 }: PhotoPairGameProps) {
-  // Validate that we have exactly 8 images
-  if (!imagesProp || imagesProp.length !== 8) {
-    return (
-      <div className="text-center p-8">
-        <div className="text-4xl mb-4">🚫</div>
-        <h3 className="text-xl font-bold text-white mb-2">Game Unavailable</h3>
-        <p className="text-purple-200">
-          Need exactly 8 images to play. Got {imagesProp?.length || 0}.
-        </p>
-      </div>
-    );
-  }
-
-  // Create stable references with memoization
+  // Create stable references with memoization (moved before validation)
   const imagePairs = useMemo(
-    () => imagesProp.flatMap((img) => [img, img]),
+    () => imagesProp?.flatMap((img) => [img, img]) || [],
     [imagesProp]
   );
 
+  // Initialize all hooks before any conditional logic
   const [shuffledPairs, setShuffledPairs] = useState<string[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
   const [matched, setMatched] = useState<number[]>([]);
@@ -67,17 +64,10 @@ const PhotoPairGame = memo(function PhotoPairGame({
   const [justMatched, setJustMatched] = useState<number[]>([]);
   const [matchedUser, setMatchedUser] = useState<FarcasterUser | null>(null);
   const [showMatchNotification, setShowMatchNotification] = useState(false);
-
   const [isComplete, setIsComplete] = useState(false);
-  
-  // Game stats tracking
   const [startTime] = useState(Date.now());
   const [totalAttempts, setTotalAttempts] = useState(0);
   const [totalMatches, setTotalMatches] = useState(0);
-
-  // Interactive hints for engaging idle users
-  const isGameActive = selected.length > 0 || matched.length > 0 || isComplete;
-  const isGameIdle = !isGameActive;
 
   // Initialize zoom system
   const zoomControls = useGameZoom({
@@ -89,6 +79,23 @@ const PhotoPairGame = memo(function PhotoPairGame({
 
   // Auto-zoom behavior
   useAutoZoom(selected, matched, zoomControls, 1500);
+
+  // Interactive hints for engaging idle users
+  const isGameActive = selected.length > 0 || matched.length > 0 || isComplete;
+  const isGameIdle = !isGameActive;
+
+  // Validate that we have exactly 8 images (after hooks are initialized)
+  if (!imagesProp || imagesProp.length !== 8) {
+    return (
+      <div className="text-center p-8">
+        <div className="text-4xl mb-4">🚫</div>
+        <h3 className="text-xl font-bold text-white mb-2">Game Unavailable</h3>
+        <p className="text-purple-200">
+          Need exactly 8 images to play. Got {imagesProp?.length || 0}.
+        </p>
+      </div>
+    );
+  }
 
   // Initialize game when images change
   useEffect(() => {
@@ -103,49 +110,52 @@ const PhotoPairGame = memo(function PhotoPairGame({
     }
   }, [imagePairs]);
 
-  const handleClick = useCallback(async (index: number) => {
-    if (
-      selected.length === 2 ||
-      matched.includes(index) ||
-      selected.includes(index)
-    )
-      return;
+  const handleClick = useCallback(
+    async (index: number) => {
+      if (
+        selected.length === 2 ||
+        matched.includes(index) ||
+        selected.includes(index)
+      )
+        return;
 
-    setSelected((prev) => [...prev, index]);
+      setSelected((prev) => [...prev, index]);
 
-    if (selected.length === 1) {
-      // Increment total attempts when second card is selected
-      setTotalAttempts(prev => prev + 1);
-      
-      const firstIndex = selected[0];
-      if (shuffledPairs[firstIndex] === shuffledPairs[index]) {
-        // Increment total matches when cards match
-        setTotalMatches(prev => prev + 1);
-        
-        setJustMatched([firstIndex, index]);
+      if (selected.length === 1) {
+        // Increment total attempts when second card is selected
+        setTotalAttempts((prev) => prev + 1);
 
-        // Show match notification with user profile if available
-        if (usersProp && usersProp.length > 0) {
-          const matchedImageUrl = shuffledPairs[firstIndex];
-          const user = usersProp.find((u) => u.pfp_url === matchedImageUrl);
-          if (user) {
-            setMatchedUser(user);
-            setShowMatchNotification(true);
+        const firstIndex = selected[0];
+        if (shuffledPairs[firstIndex] === shuffledPairs[index]) {
+          // Increment total matches when cards match
+          setTotalMatches((prev) => prev + 1);
+
+          setJustMatched([firstIndex, index]);
+
+          // Show match notification with user profile if available
+          if (usersProp && usersProp.length > 0) {
+            const matchedImageUrl = shuffledPairs[firstIndex];
+            const user = usersProp.find((u) => u.pfpUrl === matchedImageUrl);
+            if (user) {
+              setMatchedUser(user);
+              setShowMatchNotification(true);
+            }
           }
-        }
 
-        setTimeout(() => {
-          setMatched((prev) => [...prev, firstIndex, index]);
-          setJustMatched([]);
-        }, 500);
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setIncorrect([firstIndex, index]);
-        setTimeout(() => setIncorrect([]), 1000);
+          setTimeout(() => {
+            setMatched((prev) => [...prev, firstIndex, index]);
+            setJustMatched([]);
+          }, 500);
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          setIncorrect([firstIndex, index]);
+          setTimeout(() => setIncorrect([]), 1000);
+        }
+        setTimeout(() => setSelected([]), 1000);
       }
-      setTimeout(() => setSelected([]), 1000);
-    }
-  }, [selected, matched, shuffledPairs, usersProp]);
+    },
+    [selected, matched, shuffledPairs, usersProp]
+  );
 
   const handleCloseMatchNotification = useCallback(() => {
     setShowMatchNotification(false);
@@ -155,17 +165,20 @@ const PhotoPairGame = memo(function PhotoPairGame({
   useEffect(() => {
     if (matched.length === 16 && !isComplete) {
       setIsComplete(true);
-      
+
       // Calculate game stats
       const completionTime = Math.floor((Date.now() - startTime) / 1000); // in seconds
-      const accuracy = totalAttempts > 0 ? Math.round((totalMatches / totalAttempts) * 100) : 0;
-      
+      const accuracy =
+        totalAttempts > 0
+          ? Math.round((totalMatches / totalAttempts) * 100)
+          : 0;
+
       // Call the callback with game stats
       onGameComplete?.({
         completionTime,
         accuracy,
         totalAttempts,
-        totalMatches
+        totalMatches,
       });
 
       // Show proposal after a delay
@@ -175,7 +188,14 @@ const PhotoPairGame = memo(function PhotoPairGame({
       }, 3500); // Give users time to process their success
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [matched, isComplete, onGameComplete, startTime, totalAttempts, totalMatches]);
+  }, [
+    matched,
+    isComplete,
+    onGameComplete,
+    startTime,
+    totalAttempts,
+    totalMatches,
+  ]);
 
   return (
     <div className="relative flex justify-center items-center w-full px-4 sm:px-6 py-8">
@@ -227,7 +247,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
           // Interactive hints for this tile
           const hints = useInteractiveHints(cell, isGameActive, isGameIdle);
           const swayTiming = getSwayTiming(cell);
-          
+
           // Record interaction when tile is clicked
           const handleTileClick = () => {
             if (!isComplete) {
@@ -241,13 +261,17 @@ const PhotoPairGame = memo(function PhotoPairGame({
               key={i}
               className="relative cursor-pointer"
               style={{ width: cellSize, height: cellSize }}
-              whileHover={{ 
+              whileHover={{
                 scale: isComplete ? 1 : 1.05,
-                rotateZ: isComplete ? 0 : 2
+                rotateZ: isComplete ? 0 : 2,
               }}
               animate={{
                 zIndex: isSelected ? 10 : 0,
-                y: isComplete ? -100 : (hints.shouldSway && !isSelected && !isMatched ? [0, -1, 0, 1, 0] : 0),
+                y: isComplete
+                  ? -100
+                  : hints.shouldSway && !isSelected && !isMatched
+                  ? [0, -1, 0, 1, 0]
+                  : 0,
                 opacity: isComplete ? 0 : 1,
                 // Add wiggle/sway effects
                 ...(hints.shouldWiggle && !isSelected && !isMatched
@@ -266,52 +290,68 @@ const PhotoPairGame = memo(function PhotoPairGame({
                   ? { x: [0, 0.5, 0, -0.5, 0] }
                   : {}),
                 // Compute scale once based on state
-                scale:
-                  isSelected
-                    ? 1.15
-                    : hints.shouldWiggle && !isSelected && !isMatched
-                    ? [1, 1.03, 1.01, 1.02, 1]
-                    : [1, 1.02, 1],
+                scale: isSelected
+                  ? 1.15
+                  : hints.shouldWiggle && !isSelected && !isMatched
+                  ? [1, 1.03, 1.01, 1.02, 1]
+                  : [1, 1.02, 1],
               }}
               transition={{
-                scale: isSelected ? { duration: 0.3 } : { 
-                  duration: 2, 
-                  repeat: Infinity, 
-                  ease: "easeInOut",
-                  delay: i * 0.05 
-                },
+                scale: isSelected
+                  ? { duration: 0.3 }
+                  : {
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: i * 0.05,
+                    },
                 // Enhanced wiggle animation timing
-                x: hints.shouldWiggle ? { 
-                  duration: 0.8, 
-                  ease: "easeInOut",
-                  delay: getOnboardingDelay(cell)
-                } : hints.shouldSway ? {
-                  duration: swayTiming.duration,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: swayTiming.delay
-                } : { duration: 0 },
-                rotate: hints.shouldWiggle ? { 
-                  duration: 0.8, 
-                  ease: "easeInOut",
-                  delay: getOnboardingDelay(cell)
-                } : { duration: 0 },
-                boxShadow: hints.shouldWiggle ? {
-                  duration: 0.8,
-                  ease: "easeInOut", 
-                  delay: getOnboardingDelay(cell)
-                } : { duration: 0 },
+                x: hints.shouldWiggle
+                  ? {
+                      duration: 0.8,
+                      ease: "easeInOut",
+                      delay: getOnboardingDelay(cell),
+                    }
+                  : hints.shouldSway
+                  ? {
+                      duration: swayTiming.duration,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: swayTiming.delay,
+                    }
+                  : { duration: 0 },
+                rotate: hints.shouldWiggle
+                  ? {
+                      duration: 0.8,
+                      ease: "easeInOut",
+                      delay: getOnboardingDelay(cell),
+                    }
+                  : { duration: 0 },
+                boxShadow: hints.shouldWiggle
+                  ? {
+                      duration: 0.8,
+                      ease: "easeInOut",
+                      delay: getOnboardingDelay(cell),
+                    }
+                  : { duration: 0 },
                 zIndex: { duration: 0.3 },
-                y: isComplete ? { 
-                  duration: 0.3, 
-                  delay: Math.random() * 0.8 
-                } : hints.shouldSway ? {
-                  duration: swayTiming.duration,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: swayTiming.delay
-                } : { duration: 0.3 },
-                opacity: { duration: 0.3, delay: isComplete ? Math.random() * 0.8 : 0 },
+                y: isComplete
+                  ? {
+                      duration: 0.3,
+                      delay: Math.random() * 0.8,
+                    }
+                  : hints.shouldSway
+                  ? {
+                      duration: swayTiming.duration,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: swayTiming.delay,
+                    }
+                  : { duration: 0.3 },
+                opacity: {
+                  duration: 0.3,
+                  delay: isComplete ? Math.random() * 0.8 : 0,
+                },
               }}
               onClick={handleTileClick}
             >

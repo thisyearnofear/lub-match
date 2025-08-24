@@ -210,7 +210,7 @@ export default function UsernameGuessingGameComponent({
         >
           <div className="relative w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-purple-400">
             <Image
-              src={currentQuestion.user.pfp_url}
+              src={currentQuestion.user.pfpUrl}
               alt="Profile"
               fill
               className="object-cover"
