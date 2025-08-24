@@ -19,6 +19,8 @@ import ProgressiveDisclosureManager, {
   UserLevel,
   EngagementLevel,
 } from "./ProgressiveDisclosureManager";
+import { useSubtleOnboarding } from "@/hooks/useSubtleOnboarding";
+} from "./ProgressiveDisclosureManager";
 
 interface UnifiedOnboardingIntegrationProps {
   sequence: "welcome" | "game-complete" | "advanced-features" | "custom";
@@ -59,6 +61,28 @@ export default function UnifiedOnboardingIntegration({
   onPlayMore,
   onTryChallenges,
 }: UnifiedOnboardingIntegrationProps) {
+  // Add localStorage-based completion tracking
+  const { hasSeenOnboarding, markOnboardingCompleted } = useSubtleOnboarding();
+
+  // Map sequence to onboarding type for localStorage tracking
+  const getOnboardingType = (seq: string) => {
+    switch (seq) {
+      case "welcome": return "MAIN_INTRO";
+      case "game-complete": return "GAME_COMPLETE";
+      case "advanced-features": return "ADVANCED_FEATURES";
+      default: return "MAIN_INTRO";
+    }
+  };
+
+  // Check if this sequence has already been completed
+  const onboardingType = getOnboardingType(sequence);
+  const hasCompletedSequence = hasSeenOnboarding(onboardingType as any);
+
+  // Don't show onboarding if already completed (unless restart is allowed and forced)
+  if (hasCompletedSequence && !allowRestart) {
+    return null;
+  }
+
   return (
     <ProgressiveDisclosureManager
       onLevelChange={(level) => {
@@ -156,7 +180,11 @@ export default function UnifiedOnboardingIntegration({
               updateProgress("helpAccessed");
               onStepComplete?.(stepId);
             }}
-            onSequenceComplete={onSequenceComplete}
+            onSequenceComplete={() => {
+              // Mark sequence as completed in localStorage
+              markOnboardingCompleted(onboardingType as any);
+              onSequenceComplete?.();
+            }}
             autoStart={autoStart}
             delay={delay}
             allowRestart={allowRestart}

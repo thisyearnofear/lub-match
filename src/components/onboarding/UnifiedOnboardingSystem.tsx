@@ -143,38 +143,34 @@ export default function UnifiedOnboardingSystem({
 
   // Handle step completion
   const handleStepComplete = useCallback(() => {
-    if (!currentStep) return;
+    setState((prev) => {
+      const currentStep = prev.availableSteps[prev.currentStepIndex];
+      if (!currentStep) return prev;
 
-    const newCompletedSteps = [...state.completedSteps, currentStep.id];
-    onStepComplete?.(currentStep.id);
+      const newCompletedSteps = [...prev.completedSteps, currentStep.id];
+      onStepComplete?.(currentStep.id);
 
-    // Move to next step or complete sequence
-    if (state.currentStepIndex < state.availableSteps.length - 1) {
-      // Batch state updates to prevent race conditions
-      setState((prev) => ({
-        ...prev,
-        completedSteps: newCompletedSteps,
-        currentStepIndex: prev.currentStepIndex + 1,
-      }));
-    } else {
-      // Sequence complete - update completed steps and hide
-      setState((prev) => ({ 
-        ...prev, 
-        completedSteps: newCompletedSteps,
-        isVisible: false 
-      }));
-      setTimeout(() => {
-        onSequenceComplete?.();
-      }, 300);
-    }
-  }, [
-    currentStep,
-    state.currentStepIndex,
-    state.availableSteps.length,
-    state.completedSteps,
-    onStepComplete,
-    onSequenceComplete,
-  ]);
+      // Move to next step or complete sequence
+      if (prev.currentStepIndex < prev.availableSteps.length - 1) {
+        // Move to next step
+        return {
+          ...prev,
+          completedSteps: newCompletedSteps,
+          currentStepIndex: prev.currentStepIndex + 1,
+        };
+      } else {
+        // Sequence complete - hide onboarding
+        setTimeout(() => {
+          onSequenceComplete?.();
+        }, 300);
+        return {
+          ...prev,
+          completedSteps: newCompletedSteps,
+          isVisible: false
+        };
+      }
+    });
+  }, [onStepComplete, onSequenceComplete]);
 
   // Auto-advance timer
   useEffect(() => {
