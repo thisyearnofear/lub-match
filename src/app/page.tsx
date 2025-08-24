@@ -70,6 +70,7 @@ import {
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useAccount } from "wagmi";
 import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
+import { useUserProgression } from "@/utils/userProgression";
 
 const ANIM_DURATION = 2;
 
@@ -219,6 +220,8 @@ export default function Home() {
     handleNFTMinterClose();
   };
 
+  const { recordEvent } = useUserProgression();
+  
   // Handle game completion and capture real stats
   const handleGameComplete = (stats: {
     completionTime: number;
@@ -233,6 +236,19 @@ export default function Home() {
       completionTime: stats.completionTime,
       accuracy: stats.accuracy,
       socialDiscoveries,
+    });
+
+    // Record the game completion event with performance data
+    recordEvent({
+      type: 'game_complete',
+      timestamp: new Date().toISOString(),
+      data: {
+        completionTime: stats.completionTime,
+        accuracy: stats.accuracy,
+        totalAttempts: stats.totalAttempts,
+        totalMatches: stats.totalMatches,
+        socialDiscoveries,
+      }
     });
 
     console.log("Game completed with stats:", {
@@ -386,7 +402,10 @@ export default function Home() {
                   images={gameImages}
                   users={gameUsers}
                   handleShowProposalAction={handleShowProposal}
-                  onGameComplete={handleGameComplete}
+                  onGameComplete={(stats) => {
+                    // Pass the stats to our handler
+                    handleGameComplete(stats);
+                  }}
                 />
                 <TextFooter />
               </ClientOnly>

@@ -76,9 +76,13 @@ export default function UnifiedOnboardingIntegration({
   // Check if this sequence has already been completed
   const onboardingType = getOnboardingType(sequence);
   const hasCompletedSequence = hasSeenOnboarding(onboardingType as any);
+  
+  // Debug logging
+  console.log("Onboarding check:", { sequence, onboardingType, hasCompletedSequence, allowRestart });
 
   // Don't show onboarding if already completed (unless restart is allowed and forced)
   if (hasCompletedSequence && !allowRestart) {
+    console.log("Skipping onboarding - already completed");
     return null;
   }
 
@@ -181,7 +185,9 @@ export default function UnifiedOnboardingIntegration({
             }}
             onSequenceComplete={() => {
               // Mark sequence as completed in localStorage
+              console.log("Marking onboarding complete:", onboardingType);
               markOnboardingCompleted(onboardingType as any);
+              console.log("onSequenceComplete callback called");
               onSequenceComplete?.();
             }}
             autoStart={autoStart}

@@ -20,6 +20,11 @@ export interface UserProgress {
   photosSharedByOthers: number;
   referralsSent: number;
   
+  // Performance tracking
+  bestCompletionTime: number; // in seconds
+  perfectGames: number; // games with 100% accuracy
+  longestStreak: number; // longest matching streak
+  
   // Web3 progression
   hasConnectedWallet: boolean;
   hasViewedWeb3Explanation: boolean;
@@ -110,6 +115,16 @@ class UserProgressionManager {
     switch (event.type) {
       case 'game_complete':
         updated.gamesCompleted += 1;
+        // Track performance achievements
+        if (event.data?.completionTime && event.data.completionTime < updated.bestCompletionTime) {
+          updated.bestCompletionTime = event.data.completionTime;
+        }
+        if (event.data?.accuracy === 100) {
+          updated.perfectGames += 1;
+        }
+        if (event.data?.longestStreak && event.data.longestStreak > updated.longestStreak) {
+          updated.longestStreak = event.data.longestStreak;
+        }
         break;
         
       case 'social_game':
@@ -274,6 +289,9 @@ class UserProgressionManager {
       gamesShared: 0,
       photosSharedByOthers: 0,
       referralsSent: 0,
+      bestCompletionTime: Infinity, // No games completed yet
+      perfectGames: 0,
+      longestStreak: 0,
       hasConnectedWallet: false,
       hasViewedWeb3Explanation: false,
       lubBalance: BigInt(0),

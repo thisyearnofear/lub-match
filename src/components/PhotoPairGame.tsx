@@ -110,6 +110,9 @@ const PhotoPairGame = memo(function PhotoPairGame({
     }
   }, [imagePairs]);
 
+  const [streakCount, setStreakCount] = useState(0);
+  const [showStreak, setShowStreak] = useState(false);
+  
   const handleClick = useCallback(
     async (index: number) => {
       if (
@@ -129,6 +132,15 @@ const PhotoPairGame = memo(function PhotoPairGame({
         if (shuffledPairs[firstIndex] === shuffledPairs[index]) {
           // Increment total matches when cards match
           setTotalMatches((prev) => prev + 1);
+          
+          // Increase streak
+          setStreakCount(prev => prev + 1);
+          
+          // Show streak celebration for 3+ streaks
+          if (streakCount + 1 >= 3) {
+            setShowStreak(true);
+            setTimeout(() => setShowStreak(false), 1500);
+          }
 
           setJustMatched([firstIndex, index]);
 
@@ -147,6 +159,8 @@ const PhotoPairGame = memo(function PhotoPairGame({
             setJustMatched([]);
           }, 500);
         } else {
+          // Reset streak on miss
+          setStreakCount(0);
           await new Promise((resolve) => setTimeout(resolve, 1000));
           setIncorrect([firstIndex, index]);
           setTimeout(() => setIncorrect([]), 1000);
@@ -154,7 +168,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
         setTimeout(() => setSelected([]), 1000);
       }
     },
-    [selected, matched, shuffledPairs, usersProp]
+    [selected, matched, shuffledPairs, usersProp, streakCount]
   );
 
   const handleCloseMatchNotification = useCallback(() => {
@@ -162,9 +176,21 @@ const PhotoPairGame = memo(function PhotoPairGame({
     setMatchedUser(null);
   }, []);
 
+  // Add celebration state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [longestStreak, setLongestStreak] = useState(0);
+  
+  // Update longest streak when current streak increases
+  useEffect(() => {
+    if (streakCount > longestStreak) {
+      setLongestStreak(streakCount);
+    }
+  }, [streakCount, longestStreak]);
+  
   useEffect(() => {
     if (matched.length === 16 && !isComplete) {
       setIsComplete(true);
+      setShowCelebration(true);
 
       // Calculate game stats
       const completionTime = Math.floor((Date.now() - startTime) / 1000); // in seconds
@@ -199,6 +225,70 @@ const PhotoPairGame = memo(function PhotoPairGame({
 
   return (
     <div className="relative flex justify-center items-center w-full px-4 sm:px-6 py-8">
+      {/* Celebration effects */}
+      {showCelebration && (
+        <>
+          {/* Floating hearts animation */}
+          <div className="absolute inset-0 pointer-events-none">
+            {[...Array(12)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-2xl"
+                initial={{ 
+                  x: Math.random() * window.innerWidth, 
+                  y: window.innerHeight,
+                  opacity: 0,
+                  scale: 0
+                }}
+                animate={{ 
+                  y: -100, 
+                  opacity: [0, 1, 0],
+                  scale: [0, 1, 0],
+                  rotate: 360
+                }}
+                transition={{ 
+                  duration: 2,
+                  delay: i * 0.1,
+                  ease: "easeOut"
+                }}
+                style={{ left: `${Math.random() * 100}%` }}
+              >
+                💝
+              </motion.div>
+            ))}
+          </div>
+          
+          {/* Center celebration message */}
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="bg-black bg-opacity-70 rounded-full px-6 py-3 backdrop-blur-sm">
+              <motion.div
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                  textShadow: [
+                    "0 0 0px #ff69b4",
+                    "0 0 20px #ff69b4",
+                    "0 0 0px #ff69b4"
+                  ]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+                className="text-2xl font-bold text-pink-400"
+              >
+                Amazing! 🎉
+              </motion.div>
+            </div>
+          </motion.div>
+        </>
+      )}
+      
       <div
         className="grid grid-cols-7 gap-2 sm:gap-3"
         style={{
@@ -418,6 +508,20 @@ const PhotoPairGame = memo(function PhotoPairGame({
         zoomControls={zoomControls}
         disabled={matched.length === imagePairs.length}
       />
+
+      {/* Streak celebration */}
+      {showStreak && (
+        <motion.div
+          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+        >
+          <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-full font-bold shadow-lg">
+            🔥 {streakCount} in a row! 
+          </div>
+        </motion.div>
+      )}
 
       {/* Match Notification */}
       {matchedUser && (

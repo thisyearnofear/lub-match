@@ -259,7 +259,11 @@ export default function ProgressiveDisclosureManager({
     onLevelChange?.(newUserLevel);
     onEngagementChange?.(newEngagementLevel);
   }, [
-    progress,
+    progress.gamesCompleted,
+    progress.nftsMinted,
+    progress.socialGamesPlayed,
+    progress.hasConnectedWallet,
+    progress.gamesShared,
     calculateUserLevel,
     calculateEngagementLevel,
     onLevelChange,

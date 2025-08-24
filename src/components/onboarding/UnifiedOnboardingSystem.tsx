@@ -143,9 +143,13 @@ export default function UnifiedOnboardingSystem({
 
   // Handle step completion
   const handleStepComplete = useCallback(() => {
+    console.log("handleStepComplete called");
     setState((prev) => {
       const currentStep = prev.availableSteps[prev.currentStepIndex];
-      if (!currentStep) return prev;
+      if (!currentStep) {
+        console.log("No current step, returning");
+        return prev;
+      }
 
       const newCompletedSteps = [...prev.completedSteps, currentStep.id];
       onStepComplete?.(currentStep.id);
@@ -153,6 +157,7 @@ export default function UnifiedOnboardingSystem({
       // Move to next step or complete sequence
       if (prev.currentStepIndex < prev.availableSteps.length - 1) {
         // Move to next step
+        console.log("Moving to next step");
         return {
           ...prev,
           completedSteps: newCompletedSteps,
@@ -160,6 +165,7 @@ export default function UnifiedOnboardingSystem({
         };
       } else {
         // Sequence complete - hide onboarding
+        console.log("Sequence complete, calling onSequenceComplete");
         setTimeout(() => {
           onSequenceComplete?.();
         }, 300);
@@ -176,11 +182,17 @@ export default function UnifiedOnboardingSystem({
   useEffect(() => {
     if (!currentStep || !state.isVisible || state.isPaused) return;
 
+    console.log("Setting timer for step:", currentStep.id, currentStep.duration || 6000);
+    
     const timer = setTimeout(() => {
+      console.log("Timer expired, moving to next step");
       handleStepComplete();
     }, currentStep.duration || 6000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      console.log("Clearing timer for step:", currentStep?.id);
+      clearTimeout(timer);
+    };
   }, [currentStep, state.isVisible, state.isPaused, handleStepComplete]);
 
   // Handle manual actions
