@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, Pause, Play, SkipForward } from "lucide-react";
 
@@ -62,6 +62,7 @@ export default function UnifiedOnboardingSystem({
   delay = 1000,
   allowRestart = true,
   onRestart,
+  sequenceKey,
 }: UnifiedOnboardingProps) {
   const [state, setState] = useState<OnboardingState>({
     currentStepIndex: 0,
@@ -116,7 +117,9 @@ export default function UnifiedOnboardingSystem({
 
     setState((prev) => {
       // Only update if steps actually changed to prevent infinite loops
-      if (JSON.stringify(prev.availableSteps) !== JSON.stringify(availableSteps)) {
+      if (
+        JSON.stringify(prev.availableSteps) !== JSON.stringify(availableSteps)
+      ) {
         return {
           ...prev,
           availableSteps,
@@ -139,25 +142,34 @@ export default function UnifiedOnboardingSystem({
   }, [autoStart, delay, state.availableSteps.length, state.isVisible]);
 
   // Current step
-  const currentStep = state.availableSteps[state.currentStepIndex];
+  const currentStep = useMemo(
+    () => state.availableSteps[state.currentStepIndex],
+    [state.availableSteps, state.currentStepIndex]
+  );
 
   // Handle step completion
   const handleStepComplete = useCallback(() => {
-    console.log("handleStepComplete called");
+    console.log("handleStepComplete called for sequence:", sequenceKey);
     setState((prev) => {
       const currentStep = prev.availableSteps[prev.currentStepIndex];
       if (!currentStep) {
-        console.log("No current step, returning");
+        console.log("No current step for sequence:", sequenceKey, "returning");
         return prev;
       }
 
       const newCompletedSteps = [...prev.completedSteps, currentStep.id];
+      console.log(
+        "Completing step:",
+        currentStep.id,
+        "for sequence:",
+        sequenceKey
+      );
       onStepComplete?.(currentStep.id);
 
       // Move to next step or complete sequence
       if (prev.currentStepIndex < prev.availableSteps.length - 1) {
         // Move to next step
-        console.log("Moving to next step");
+        console.log("Moving to next step for sequence:", sequenceKey);
         return {
           ...prev,
           completedSteps: newCompletedSteps,
@@ -165,35 +177,59 @@ export default function UnifiedOnboardingSystem({
         };
       } else {
         // Sequence complete - hide onboarding
-        console.log("Sequence complete, calling onSequenceComplete");
+        console.log(
+          "Sequence complete for sequence:",
+          sequenceKey,
+          "calling onSequenceComplete"
+        );
         setTimeout(() => {
           onSequenceComplete?.();
         }, 300);
         return {
           ...prev,
           completedSteps: newCompletedSteps,
-          isVisible: false
+          isVisible: false,
         };
       }
     });
-  }, [onStepComplete, onSequenceComplete]);
+  }, [onStepComplete, onSequenceComplete, sequenceKey]);
 
   // Auto-advance timer
   useEffect(() => {
     if (!currentStep || !state.isVisible || state.isPaused) return;
 
-    console.log("Setting timer for step:", currentStep.id, currentStep.duration || 6000);
-    
+    console.log(
+      "Setting timer for step:",
+      currentStep.id,
+      currentStep.duration || 6000,
+      "sequence:",
+      sequenceKey
+    );
+
     const timer = setTimeout(() => {
-      console.log("Timer expired, moving to next step");
+      console.log(
+        "Timer expired, moving to next step for sequence:",
+        sequenceKey
+      );
       handleStepComplete();
     }, currentStep.duration || 6000);
 
     return () => {
-      console.log("Clearing timer for step:", currentStep?.id);
+      console.log(
+        "Clearing timer for step:",
+        currentStep?.id,
+        "sequence:",
+        sequenceKey
+      );
       clearTimeout(timer);
     };
-  }, [currentStep, state.isVisible, state.isPaused, handleStepComplete]);
+  }, [
+    currentStep?.id,
+    state.isVisible,
+    state.isPaused,
+    handleStepComplete,
+    sequenceKey,
+  ]);
 
   // Handle manual actions
   const handleAction = useCallback(
@@ -408,7 +444,13 @@ export default function UnifiedOnboardingSystem({
               )}
               <button
                 onClick={handleStepComplete}
-                className={`${currentStep.actionButton ? 'px-3 py-2 text-gray-500 hover:text-gray-700' : 'flex-1 bg-gradient-to-r ' + styling.gradient + ' text-white font-medium py-2 px-4 rounded-lg hover:opacity-90 transition-opacity'} text-sm flex items-center justify-center gap-1`}
+                className={`${
+                  currentStep.actionButton
+                    ? "px-3 py-2 text-gray-500 hover:text-gray-700"
+                    : "flex-1 bg-gradient-to-r " +
+                      styling.gradient +
+                      " text-white font-medium py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
+                } text-sm flex items-center justify-center gap-1`}
               >
                 Next <ChevronRight size={12} />
               </button>

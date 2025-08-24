@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   MAIN_INTRO: "subtle_onboarding_main",
   GAME_INTRO: "subtle_onboarding_game",
   GAME_COMPLETE: "subtle_onboarding_complete",
+  ADVANCED_FEATURES: "subtle_onboarding_advanced",
   // NEW: Enhanced onboarding keys (ENHANCEMENT FIRST)
   CHALLENGE_INTRO: "enhanced_onboarding_challenge",
   WHALE_HUNTING: "enhanced_onboarding_whale",

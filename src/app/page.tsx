@@ -66,6 +66,7 @@ import {
   AnimatedTileContainer,
   FloatingHearts,
 } from "@/components/shared/AnimatedTile";
+import OnboardingDebug from "@/components/debug/OnboardingDebug";
 
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useAccount } from "wagmi";
@@ -221,7 +222,7 @@ export default function Home() {
   };
 
   const { recordEvent } = useUserProgression();
-  
+
   // Handle game completion and capture real stats
   const handleGameComplete = (stats: {
     completionTime: number;
@@ -240,7 +241,7 @@ export default function Home() {
 
     // Record the game completion event with performance data
     recordEvent({
-      type: 'game_complete',
+      type: "game_complete",
       timestamp: new Date().toISOString(),
       data: {
         completionTime: stats.completionTime,
@@ -248,7 +249,7 @@ export default function Home() {
         totalAttempts: stats.totalAttempts,
         totalMatches: stats.totalMatches,
         socialDiscoveries,
-      }
+      },
     });
 
     console.log("Game completed with stats:", {
@@ -580,6 +581,9 @@ export default function Home() {
         sequence="welcome"
         onExploreGames={() => startSocialGames()}
       />
+
+      {/* Onboarding Debug Panel */}
+      <OnboardingDebug />
     </div>
   );
 }
