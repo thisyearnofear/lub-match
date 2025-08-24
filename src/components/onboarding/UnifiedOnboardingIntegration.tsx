@@ -20,7 +20,6 @@ import ProgressiveDisclosureManager, {
   EngagementLevel,
 } from "./ProgressiveDisclosureManager";
 import { useSubtleOnboarding } from "@/hooks/useSubtleOnboarding";
-} from "./ProgressiveDisclosureManager";
 
 interface UnifiedOnboardingIntegrationProps {
   sequence: "welcome" | "game-complete" | "advanced-features" | "custom";
