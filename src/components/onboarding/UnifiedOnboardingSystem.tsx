@@ -332,9 +332,10 @@ export default function UnifiedOnboardingSystem({
                   <SkipForward size={12} />
                 </button>
                 <button
-                  onClick={() =>
-                    setState((prev) => ({ ...prev, isVisible: false }))
-                  }
+                  onClick={() => {
+                    setState((prev) => ({ ...prev, isVisible: false }));
+                    onSequenceComplete?.();
+                  }}
                   className="text-gray-400 hover:text-gray-600 text-xs p-1"
                   title="Close"
                 >

@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import { useSubtleOnboarding } from "@/hooks/useSubtleOnboarding";
 
 export default function OnboardingDebug() {
+  // Only show in development
+  if (process.env.NODE_ENV !== "development") {
+    return null;
+  }
+
   const { hasSeenOnboarding, markOnboardingCompleted } = useSubtleOnboarding();
   const [localStorageData, setLocalStorageData] = useState<
     Record<string, string>
