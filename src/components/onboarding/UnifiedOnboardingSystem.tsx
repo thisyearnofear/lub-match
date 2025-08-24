@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronRight, Pause, Play, SkipForward } from "lucide-react";
+import { X, ChevronRight, SkipForward } from "lucide-react";
 
 export interface OnboardingStep {
   id: string;
@@ -47,7 +47,6 @@ interface UnifiedOnboardingProps {
 interface OnboardingState {
   currentStepIndex: number;
   isVisible: boolean;
-  isPaused: boolean;
   availableSteps: OnboardingStep[];
   completedSteps: string[];
 }
@@ -67,7 +66,6 @@ export default function UnifiedOnboardingSystem({
   const [state, setState] = useState<OnboardingState>({
     currentStepIndex: 0,
     isVisible: false,
-    isPaused: false,
     availableSteps: [],
     completedSteps: [...completedSteps],
   });
@@ -194,42 +192,7 @@ export default function UnifiedOnboardingSystem({
     });
   }, [onStepComplete, onSequenceComplete, sequenceKey]);
 
-  // Auto-advance timer
-  useEffect(() => {
-    if (!currentStep || !state.isVisible || state.isPaused) return;
-
-    console.log(
-      "Setting timer for step:",
-      currentStep.id,
-      currentStep.duration || 6000,
-      "sequence:",
-      sequenceKey
-    );
-
-    const timer = setTimeout(() => {
-      console.log(
-        "Timer expired, moving to next step for sequence:",
-        sequenceKey
-      );
-      handleStepComplete();
-    }, currentStep.duration || 6000);
-
-    return () => {
-      console.log(
-        "Clearing timer for step:",
-        currentStep?.id,
-        "sequence:",
-        sequenceKey
-      );
-      clearTimeout(timer);
-    };
-  }, [
-    currentStep?.id,
-    state.isVisible,
-    state.isPaused,
-    handleStepComplete,
-    sequenceKey,
-  ]);
+  // Auto-advance timer removed - using manual progression only
 
   // Handle manual actions
   const handleAction = useCallback(
@@ -250,9 +213,7 @@ export default function UnifiedOnboardingSystem({
     onSequenceComplete?.();
   }, [onSequenceComplete]);
 
-  const handlePause = useCallback(() => {
-    setState((prev) => ({ ...prev, isPaused: !prev.isPaused }));
-  }, []);
+  // No pause functionality needed for manual progression
 
   const handleRestart = useCallback(() => {
     setState((prev) => ({
@@ -364,13 +325,6 @@ export default function UnifiedOnboardingSystem({
                   </button>
                 )}
                 <button
-                  onClick={handlePause}
-                  className="text-gray-400 hover:text-gray-600 text-xs p-1"
-                  title={state.isPaused ? "Resume" : "Pause"}
-                >
-                  {state.isPaused ? <Play size={12} /> : <Pause size={12} />}
-                </button>
-                <button
                   onClick={handleSkip}
                   className="text-gray-400 hover:text-gray-600 text-xs p-1"
                   title="Skip all"
@@ -456,22 +410,7 @@ export default function UnifiedOnboardingSystem({
               </button>
             </div>
 
-            {/* Auto-advance timer (visual) */}
-            {!state.isPaused && !currentStep.actionButton && (
-              <div className="mt-3">
-                <div className="w-full bg-gray-200 rounded-full h-1">
-                  <motion.div
-                    className={`bg-gradient-to-r ${styling.gradient} h-1 rounded-full`}
-                    initial={{ width: "0%" }}
-                    animate={{ width: "100%" }}
-                    transition={{
-                      duration: (currentStep.duration || 6000) / 1000,
-                      ease: "linear",
-                    }}
-                  />
-                </div>
-              </div>
-            )}
+            {/* Manual progression - no timer */}
           </div>
         </motion.div>
       </motion.div>
