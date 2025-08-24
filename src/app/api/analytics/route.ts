@@ -25,12 +25,43 @@ interface AnalyticsEvent {
 
 export async function POST(request: NextRequest) {
   try {
-    const event: AnalyticsEvent = await request.json();
-    
+    // Check if request has content
+    const contentLength = request.headers.get('content-length');
+    if (!contentLength || contentLength === '0') {
+      console.warn("Analytics API: Received empty request body");
+      return NextResponse.json(
+        { error: "Empty request body" },
+        { status: 400 }
+      );
+    }
+
+    // Get the raw body first to check if it's empty
+    const body = await request.text();
+    if (!body || body.trim() === '') {
+      console.warn("Analytics API: Received empty or whitespace-only body");
+      return NextResponse.json(
+        { error: "Empty request body" },
+        { status: 400 }
+      );
+    }
+
+    // Parse JSON with better error handling
+    let event: AnalyticsEvent;
+    try {
+      event = JSON.parse(body);
+    } catch (parseError) {
+      console.error("Analytics API: JSON parse error:", parseError, "Body:", body);
+      return NextResponse.json(
+        { error: "Invalid JSON format" },
+        { status: 400 }
+      );
+    }
+
     // Validate event structure
     if (!event.type || !event.timestamp || !event.sessionId) {
+      console.warn("Analytics API: Invalid event structure:", event);
       return NextResponse.json(
-        { error: "Invalid event structure" },
+        { error: "Invalid event structure - missing required fields" },
         { status: 400 }
       );
     }

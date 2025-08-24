@@ -9,21 +9,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { OnboardingStep } from "./UnifiedOnboardingSystem";
+import { userProgression, UserProgress, useUserProgression } from "@/utils/userProgression";
 
 export type UserLevel = "newcomer" | "player" | "challenger" | "whale_hunter";
 export type EngagementLevel = "none" | "curious" | "engaged" | "expert";
-
-interface UserProgress {
-  gamesPlayed: number;
-  gamesCompleted: number;
-  nftsMinted: number;
-  challengesAttempted: number;
-  socialShares: number;
-  walletConnected: boolean;
-  helpAccessed: number;
-  onboardingRestarted: number;
-  lastActive: Date;
-}
 
 interface DisclosureState {
   userLevel: UserLevel;
@@ -41,39 +30,15 @@ export default function ProgressiveDisclosureManager({
 }: {
   children: (
     state: DisclosureState & {
-      updateProgress: (action: keyof UserProgress, value?: number) => void;
+      updateProgress: (eventType: string, data?: Record<string, any>) => void;
       getRecommendedSequence: () => OnboardingStep[];
     }
   ) => React.ReactNode;
   onLevelChange?: (level: UserLevel) => void;
   onEngagementChange?: (level: EngagementLevel) => void;
 }) {
-  const [progress, setProgress] = useState<UserProgress>(() => {
-    // Load from localStorage if available
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("user-progress");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          return { ...parsed, lastActive: new Date(parsed.lastActive) };
-        } catch (e) {
-          console.warn("Failed to parse saved progress:", e);
-        }
-      }
-    }
-
-    return {
-      gamesPlayed: 0,
-      gamesCompleted: 0,
-      nftsMinted: 0,
-      challengesAttempted: 0,
-      socialShares: 0,
-      walletConnected: false,
-      helpAccessed: 0,
-      onboardingRestarted: 0,
-      lastActive: new Date(),
-    };
-  });
+  // Use the centralized user progression system
+  const { progress, recordEvent } = useUserProgression();
 
   // Calculate user level based on progress
   const calculateUserLevel = useCallback(
@@ -81,22 +46,22 @@ export default function ProgressiveDisclosureManager({
       const {
         gamesCompleted,
         nftsMinted,
-        challengesAttempted,
-        walletConnected,
+        socialGamesPlayed,
+        hasConnectedWallet,
       } = progress;
 
-      if (gamesCompleted >= 10 || nftsMinted >= 3 || challengesAttempted >= 5) {
+      if (gamesCompleted >= 10 || nftsMinted >= 3 || socialGamesPlayed >= 5) {
         return "whale_hunter";
       } else if (
         gamesCompleted >= 5 ||
         nftsMinted >= 1 ||
-        (walletConnected && challengesAttempted >= 2)
+        (hasConnectedWallet && socialGamesPlayed >= 2)
       ) {
         return "challenger";
       } else if (
         gamesCompleted >= 2 ||
-        walletConnected ||
-        challengesAttempted >= 1
+        hasConnectedWallet ||
+        socialGamesPlayed >= 1
       ) {
         return "player";
       } else {
@@ -109,14 +74,14 @@ export default function ProgressiveDisclosureManager({
   // Calculate engagement level
   const calculateEngagementLevel = useCallback(
     (progress: UserProgress): EngagementLevel => {
-      const { gamesPlayed, helpAccessed, onboardingRestarted, socialShares } =
-        progress;
+      const { gamesCompleted, socialGamesPlayed, gamesShared } = progress;
+      const totalGamesPlayed = gamesCompleted + socialGamesPlayed;
 
-      if (gamesPlayed >= 5 || socialShares >= 3 || onboardingRestarted >= 2) {
+      if (totalGamesPlayed >= 5 || gamesShared >= 3) {
         return "expert";
-      } else if (gamesPlayed >= 2 || helpAccessed >= 1 || socialShares >= 1) {
+      } else if (totalGamesPlayed >= 2 || gamesShared >= 1) {
         return "engaged";
-      } else if (gamesPlayed >= 1 || helpAccessed >= 1) {
+      } else if (totalGamesPlayed >= 1) {
         return "curious";
       } else {
         return "none";
@@ -168,28 +133,30 @@ export default function ProgressiveDisclosureManager({
     shouldShowSocial: calculateEngagementLevel(progress) !== "none",
   };
 
-  // Update progress
+  // Update progress using centralized system
   const updateProgress = useCallback(
-    (action: keyof UserProgress, value: number = 1) => {
-      setProgress((prev) => {
-        const newProgress = {
-          ...prev,
-          [action]:
-            typeof prev[action] === "number"
-              ? (prev[action] as number) + value
-              : value,
-          lastActive: new Date(),
-        };
+    (eventType: string, data?: Record<string, any>) => {
+      // Map common onboarding events to progression events
+      const eventMap: Record<string, any> = {
+        'gamesPlayed': { type: 'game_complete' },
+        'gamesCompleted': { type: 'game_complete' },
+        'socialGamesPlayed': { type: 'social_game' },
+        'nftsMinted': { type: 'nft_minted' },
+        'walletConnected': { type: 'wallet_connected' },
+        'gamesShared': { type: 'game_shared' },
+        'helpAccessed': { type: 'game_complete' }, // Track as engagement
+      };
 
-        // Save to localStorage with unique key
-        if (typeof window !== "undefined") {
-          localStorage.setItem("user-progress", JSON.stringify(newProgress));
-        }
-
-        return newProgress;
-      });
+      const mappedEvent = eventMap[eventType];
+      if (mappedEvent) {
+        recordEvent({
+          type: mappedEvent.type,
+          timestamp: new Date().toISOString(),
+          data: data || {}
+        });
+      }
     },
-    []
+    [recordEvent]
   );
 
   // Get recommended onboarding sequence based on current state
@@ -306,44 +273,62 @@ export default function ProgressiveDisclosureManager({
   });
 }
 
-// Hook for easy access to disclosure state
+// Hook for easy access to disclosure state - now uses centralized system
 export function useProgressiveDisclosure() {
-  const [progress, setProgress] = useState<UserProgress | null>(null);
+  const { progress, recordEvent } = useUserProgression();
 
   const updateProgress = useCallback(
-    (action: keyof UserProgress, value: number = 1) => {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem("user-progress");
-        if (saved) {
-          try {
-            const current = JSON.parse(saved);
-            const newProgress = {
-              ...current,
-              [action]:
-                typeof current[action] === "number"
-                  ? (current[action] as number) + value
-                  : value,
-              lastActive: new Date(),
-            };
-            localStorage.setItem("user-progress", JSON.stringify(newProgress));
-            setProgress(newProgress);
-          } catch (e) {
-            console.warn("Failed to update progress:", e);
-          }
-        }
+    (eventType: string, data?: Record<string, any>) => {
+      // Map common onboarding events to progression events
+      const eventMap: Record<string, any> = {
+        'gamesPlayed': { type: 'game_complete' },
+        'gamesCompleted': { type: 'game_complete' },
+        'socialGamesPlayed': { type: 'social_game' },
+        'nftsMinted': { type: 'nft_minted' },
+        'walletConnected': { type: 'wallet_connected' },
+        'gamesShared': { type: 'game_shared' },
+        'helpAccessed': { type: 'game_complete' },
+      };
+
+      const mappedEvent = eventMap[eventType];
+      if (mappedEvent) {
+        recordEvent({
+          type: mappedEvent.type,
+          timestamp: new Date().toISOString(),
+          data: data || {}
+        });
       }
     },
-    []
+    [recordEvent]
   );
 
   const getCurrentLevel = useCallback((): UserLevel => {
-    if (!progress) return "newcomer";
-    return calculateUserLevel(progress);
+    const { gamesCompleted, nftsMinted, socialGamesPlayed, hasConnectedWallet } = progress;
+
+    if (gamesCompleted >= 10 || nftsMinted >= 3 || socialGamesPlayed >= 5) {
+      return "whale_hunter";
+    } else if (gamesCompleted >= 5 || nftsMinted >= 1 || (hasConnectedWallet && socialGamesPlayed >= 2)) {
+      return "challenger";
+    } else if (gamesCompleted >= 2 || hasConnectedWallet || socialGamesPlayed >= 1) {
+      return "player";
+    } else {
+      return "newcomer";
+    }
   }, [progress]);
 
   const getEngagementLevel = useCallback((): EngagementLevel => {
-    if (!progress) return "none";
-    return calculateEngagementLevel(progress);
+    const { gamesCompleted, socialGamesPlayed, gamesShared } = progress;
+    const totalGamesPlayed = gamesCompleted + socialGamesPlayed;
+
+    if (totalGamesPlayed >= 5 || gamesShared >= 3) {
+      return "expert";
+    } else if (totalGamesPlayed >= 2 || gamesShared >= 1) {
+      return "engaged";
+    } else if (totalGamesPlayed >= 1) {
+      return "curious";
+    } else {
+      return "none";
+    }
   }, [progress]);
 
   return {
@@ -354,41 +339,4 @@ export function useProgressiveDisclosure() {
   };
 }
 
-// Helper functions
-function calculateUserLevel(progress: UserProgress): UserLevel {
-  const { gamesCompleted, nftsMinted, challengesAttempted, walletConnected } =
-    progress;
 
-  if (gamesCompleted >= 10 || nftsMinted >= 3 || challengesAttempted >= 5) {
-    return "whale_hunter";
-  } else if (
-    gamesCompleted >= 5 ||
-    nftsMinted >= 1 ||
-    (walletConnected && challengesAttempted >= 2)
-  ) {
-    return "challenger";
-  } else if (
-    gamesCompleted >= 2 ||
-    walletConnected ||
-    challengesAttempted >= 1
-  ) {
-    return "player";
-  } else {
-    return "newcomer";
-  }
-}
-
-function calculateEngagementLevel(progress: UserProgress): EngagementLevel {
-  const { gamesPlayed, helpAccessed, onboardingRestarted, socialShares } =
-    progress;
-
-  if (gamesPlayed >= 5 || socialShares >= 3 || onboardingRestarted >= 2) {
-    return "expert";
-  } else if (gamesPlayed >= 2 || helpAccessed >= 1 || socialShares >= 1) {
-    return "engaged";
-  } else if (gamesPlayed >= 1 || helpAccessed >= 1) {
-    return "curious";
-  } else {
-    return "none";
-  }
-}

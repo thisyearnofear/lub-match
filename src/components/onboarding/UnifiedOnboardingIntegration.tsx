@@ -92,7 +92,7 @@ export default function UnifiedOnboardingIntegration({
               onLearnMore?.();
             },
             onConnectWallet: () => {
-              updateProgress("walletConnected", 1);
+              updateProgress("walletConnected");
               onConnectWallet?.();
             },
             onExploreGames: () => {
@@ -108,7 +108,7 @@ export default function UnifiedOnboardingIntegration({
               onPlayMore?.();
             },
             onTryChallenges: () => {
-              updateProgress("challengesAttempted");
+              updateProgress("socialGamesPlayed");
               onTryChallenges?.();
             },
           };
@@ -152,8 +152,8 @@ export default function UnifiedOnboardingIntegration({
             userLevel={providedUserLevel || userLevel}
             completedSteps={completedSteps}
             onStepComplete={(stepId) => {
-              // Track step completion by incrementing help accessed or games played
-              updateProgress("helpAccessed", 1);
+              // Track step completion
+              updateProgress("helpAccessed");
               onStepComplete?.(stepId);
             }}
             onSequenceComplete={onSequenceComplete}
@@ -161,7 +161,7 @@ export default function UnifiedOnboardingIntegration({
             delay={delay}
             allowRestart={allowRestart}
             onRestart={() => {
-              updateProgress("onboardingRestarted");
+              updateProgress("helpAccessed");
               onRestart?.();
             }}
             sequenceKey={sequence}

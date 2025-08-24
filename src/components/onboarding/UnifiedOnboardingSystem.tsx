@@ -113,6 +113,7 @@ export default function UnifiedOnboardingSystem({
   // Initialize available steps
   useEffect(() => {
     const availableSteps = filterAvailableSteps(completedSteps);
+
     setState((prev) => {
       // Only update if steps actually changed to prevent infinite loops
       if (JSON.stringify(prev.availableSteps) !== JSON.stringify(availableSteps)) {
@@ -124,7 +125,7 @@ export default function UnifiedOnboardingSystem({
       }
       return prev;
     });
-  }, [steps, userLevel, completedSteps]);
+  }, [steps, userLevel, completedSteps, filterAvailableSteps]);
 
   // Auto-start onboarding
   useEffect(() => {

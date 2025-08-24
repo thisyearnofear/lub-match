@@ -101,16 +101,21 @@ class AnalyticsManager {
   track(eventType: string, data: Record<string, any> = {}) {
     if (typeof window === "undefined") return;
 
+    // Validate input
+    if (!eventType || typeof eventType !== 'string' || !this.sessionId) {
+      return;
+    }
+
     const event: AnalyticsEvent = {
       type: eventType,
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId,
-      data,
+      data: data || {},
       metadata: {
-        userAgent: navigator.userAgent,
-        referrer: document.referrer,
+        userAgent: navigator?.userAgent || "unknown",
+        referrer: document?.referrer || "",
         platform: this.detectPlatform(),
-        walletConnected: !!window.ethereum,
+        walletConnected: !!(window as any)?.ethereum,
       },
     };
 
@@ -142,18 +147,30 @@ class AnalyticsManager {
   }
 
   private async sendToAnalyticsService(event: AnalyticsEvent) {
-    // Log to console in development
-    if (process.env.NODE_ENV === "development") {
-      console.log("📊 Analytics Event:", event);
+    // Validate event before sending
+    if (!event || !event.type || !event.timestamp || !event.sessionId) {
+      return;
     }
+
+
 
     // Send to analytics API endpoint
     try {
-      await fetch("/api/analytics", {
+      const body = JSON.stringify(event);
+      if (!body || body === '{}' || body === 'null') {
+        return;
+      }
+
+      const response = await fetch("/api/analytics", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(event),
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": body.length.toString()
+        },
+        body: body,
       });
+
+
     } catch (error) {
       // Fail silently to not disrupt user experience
       console.warn("Failed to send analytics event:", error);
