@@ -228,9 +228,9 @@ const PhotoPairGame = memo(function PhotoPairGame({
       {/* Celebration effects */}
       {showCelebration && (
         <>
-          {/* Floating hearts animation */}
+          {/* Floating hearts animation (ENHANCEMENT: Intensity based on streak) */}
           <div className="absolute inset-0 pointer-events-none">
-            {[...Array(12)].map((_, i) => (
+            {[...Array(Math.min(12 + Math.floor(longestStreak / 3), 20))].map((_, i) => (
               <motion.div
                 key={i}
                 className="absolute text-2xl"
@@ -334,8 +334,15 @@ const PhotoPairGame = memo(function PhotoPairGame({
           const isSelected = selected.includes(cell);
           const isMatched = matched.includes(cell);
 
-          // Interactive hints for this tile
-          const hints = useInteractiveHints(cell, isGameActive, isGameIdle);
+          // Interactive hints for this tile (ENHANCEMENT: Pass additional context)
+          const hints = useInteractiveHints({
+            tileIndex: cell,
+            isGameActive,
+            isIdle: isGameIdle,
+            selected,
+            matched,
+            shuffledPairs
+          });
           const swayTiming = getSwayTiming(cell);
 
           // Record interaction when tile is clicked
@@ -363,7 +370,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
                   ? [0, -1, 0, 1, 0]
                   : 0,
                 opacity: isComplete ? 0 : 1,
-                // Add wiggle/sway effects
+                // Add wiggle/sway/pulse effects
                 ...(hints.shouldWiggle && !isSelected && !isMatched
                   ? {
                       x: [0, -3, 3, -2, 2, 0],
@@ -378,12 +385,23 @@ const PhotoPairGame = memo(function PhotoPairGame({
                     }
                   : hints.shouldSway && !isSelected && !isMatched
                   ? { x: [0, 0.5, 0, -0.5, 0] }
+                  : hints.shouldPulse && !isSelected && !isMatched
+                  ? { // NEW: Pulsing effect for potential matches
+                      scale: [1, 1.05, 1],
+                      boxShadow: [
+                        "0 0 0px 0px rgba(139, 92, 246, 0)",
+                        "0 0 0px 4px rgba(139, 92, 246, 0.3)",
+                        "0 0 0px 0px rgba(139, 92, 246, 0)",
+                      ]
+                    }
                   : {}),
                 // Compute scale once based on state
                 scale: isSelected
                   ? 1.15
                   : hints.shouldWiggle && !isSelected && !isMatched
                   ? [1, 1.03, 1.01, 1.02, 1]
+                  : hints.shouldPulse && !isSelected && !isMatched
+                  ? [1, 1.04, 1] // Slightly more pronounced pulse
                   : [1, 1.02, 1],
               }}
               transition={{
@@ -409,6 +427,13 @@ const PhotoPairGame = memo(function PhotoPairGame({
                       ease: "easeInOut",
                       delay: swayTiming.delay,
                     }
+                  : hints.shouldPulse
+                  ? { // NEW: Timing for pulse effect
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: (i % 5) * 0.2, // Stagger pulses
+                    }
                   : { duration: 0 },
                 rotate: hints.shouldWiggle
                   ? {
@@ -422,6 +447,13 @@ const PhotoPairGame = memo(function PhotoPairGame({
                       duration: 0.8,
                       ease: "easeInOut",
                       delay: getOnboardingDelay(cell),
+                    }
+                  : hints.shouldPulse
+                  ? { // NEW: Timing for pulse shadow effect
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: (i % 5) * 0.2,
                     }
                   : { duration: 0 },
                 zIndex: { duration: 0.3 },

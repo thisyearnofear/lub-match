@@ -116,6 +116,10 @@ export default function SocialGamesHub({
     tier,
     challengeStats,
     whaleHunterLevel,
+    challengeSkillLevel,
+    challengeSkillLabel,
+    challengeSkillScore,
+    difficultyRecommendation,
   } = useUnifiedStats();
 
   const { earnLub, balanceFormatted, enabled: lubTokenEnabled } = useLubToken();
@@ -152,11 +156,13 @@ export default function SocialGamesHub({
 
     try {
       // Generate AI challenge for selected target with anti-spam validation
+      // ENHANCEMENT: Pass user's skill level for adaptive difficulty
       const challenge = await challengeEngine.generateChallenge(
         target,
         challengeDifficulty,
         farcasterUser?.username || "anonymous",
-        farcasterUser?.fid // Pass user ID for anti-spam validation
+        farcasterUser?.fid, // Pass user ID for anti-spam validation
+        challengeSkillLevel // Pass user's skill level for adaptive difficulty
       );
 
       setActiveChallenge(challenge);
@@ -725,23 +731,40 @@ export default function SocialGamesHub({
                   custom challenge based on their profile.
                 </p>
 
-                {/* Difficulty Selection */}
-                <div className="flex gap-2 mb-4">
-                  {(["easy", "medium", "hard"] as ChallengeDifficulty[]).map(
-                    (diff) => (
-                      <button
-                        key={diff}
-                        onClick={() => setChallengeDifficulty(diff)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          challengeDifficulty === diff
-                            ? "bg-pink-600 text-white"
-                            : "bg-purple-800/50 text-purple-200 hover:bg-purple-700/50"
-                        }`}
-                      >
-                        {diff.charAt(0).toUpperCase() + diff.slice(1)}
-                      </button>
-                    )
-                  )}
+                {/* Difficulty Selection with Skill Guidance */}
+                <div className="bg-purple-800/50 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-white font-medium">
+                      {challengeSkillLabel} (Skill: {challengeSkillScore}/100)
+                    </h3>
+                    <span className="text-xs bg-purple-600 text-purple-200 px-2 py-1 rounded">
+                      {difficultyRecommendation.difficulty.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-purple-200 text-sm mb-3">
+                    {difficultyRecommendation.explanation}
+                  </p>
+                  <div className="flex gap-2">
+                    {(["easy", "medium", "hard"] as ChallengeDifficulty[]).map(
+                      (diff) => (
+                        <button
+                          key={diff}
+                          onClick={() => setChallengeDifficulty(diff)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-1 ${
+                            challengeDifficulty === diff
+                              ? "bg-pink-600 text-white"
+                              : "bg-purple-700/50 text-purple-200 hover:bg-purple-600/50"
+                          }`}
+                          disabled={diff === 'hard' && challengeSkillLevel === 'beginner'}
+                        >
+                          {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                          {diff === difficultyRecommendation.difficulty && (
+                            <span className="ml-1">⭐</span>
+                          )}
+                        </button>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -787,10 +810,23 @@ export default function SocialGamesHub({
                   whale, the bigger the reward!
                 </p>
 
+                {/* Whale Hunting Guidance */}
                 <div className="bg-cyan-900/30 rounded-lg p-4 mb-4">
-                  <h3 className="text-cyan-300 font-semibold mb-2">
-                    Whale Classifications:
-                  </h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-cyan-300 font-semibold">
+                      {challengeSkillLabel} Whale Hunter
+                    </h3>
+                    <span className="text-xs bg-cyan-700 text-cyan-200 px-2 py-1 rounded">
+                      {whaleHunterLevel}
+                    </span>
+                  </div>
+                  <p className="text-cyan-200 text-sm mb-3">
+                    {challengeSkillLevel === 'beginner' 
+                      ? "Start with smaller fish to build your skills before hunting whales."
+                      : challengeSkillLevel === 'intermediate'
+                      ? "You're ready for shark hunting! Aim for 5k+ followers for bigger rewards."
+                      : "You're an expert whale hunter! Target the biggest whales for maximum rewards."}
+                  </p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>🐟 Fish: 1k+ followers (2x reward)</div>
                     <div>🦈 Shark: 5k+ followers (5x reward)</div>

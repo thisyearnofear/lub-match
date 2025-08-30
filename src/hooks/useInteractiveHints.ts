@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 /**
  * Interactive hints system for engaging idle users
  * Provides smart timing for onboarding and curiosity effects
+ * ENHANCEMENT: Context-aware hints based on game state
  */
 
 interface InteractiveHintsState {
@@ -12,18 +13,35 @@ interface InteractiveHintsState {
   onboardingTiles: Set<number>;
   nextCuriosityPulse: number;
   lastInteraction: number;
+  // NEW: State for context-aware hints
+  potentialMatches: Set<number>;
 }
 
-export function useInteractiveHints(
-  tileIndex: number,
-  isGameActive: boolean,
-  isIdle: boolean
-) {
+// NEW: Props for enhanced hinting
+interface UseInteractiveHintsProps {
+  tileIndex: number;
+  isGameActive: boolean;
+  isIdle: boolean;
+  // NEW: Add game state for smarter hints
+  selected: number[];
+  matched: number[];
+  shuffledPairs: string[];
+}
+
+export function useInteractiveHints({
+  tileIndex,
+  isGameActive,
+  isIdle,
+  selected,
+  matched,
+  shuffledPairs
+}: UseInteractiveHintsProps) {
   const [state, setState] = useState<InteractiveHintsState>(() => ({
     showOnboarding: true,
     onboardingTiles: new Set(),
     nextCuriosityPulse: 0, // Will be set after mount
-    lastInteraction: 0 // Will be set after mount
+    lastInteraction: 0, // Will be set after mount
+    potentialMatches: new Set() // NEW: Track potential matches
   }));
 
   // Initialize timestamps after mount to avoid hydration mismatch
@@ -88,17 +106,54 @@ export function useInteractiveHints(
     return () => clearTimeout(timer);
   }, []);
 
-  // Curiosity pulse for idle users (disabled for now to prevent crashes)
-  // useEffect(() => {
-  //   if (isGameActive || !isIdle) return;
-  //   // Implementation will be added in next iteration
-  // }, [isGameActive, isIdle]);
+  // NEW: Calculate potential matches when idle
+  useEffect(() => {
+    if (!isIdle || isGameActive || selected.length > 0) {
+      // Clear potential matches when not idle or when a card is selected
+      if (state.potentialMatches.size > 0) {
+        setState(prev => ({ ...prev, potentialMatches: new Set() }));
+      }
+      return;
+    }
+
+    // Only calculate potential matches if we have at least one matched pair
+    if (matched.length >= 2) {
+      // Find unmatched pairs that could be potential matches
+      const unmatchedIndices = shuffledPairs
+        .map((_, index) => index)
+        .filter(index => !matched.includes(index));
+      
+      // Group unmatched cards by their image
+      const imageToIndices: Record<string, number[]> = {};
+      unmatchedIndices.forEach(index => {
+        const image = shuffledPairs[index];
+        if (!imageToIndices[image]) {
+          imageToIndices[image] = [];
+        }
+        imageToIndices[image].push(index);
+      });
+
+      // Find pairs (potential matches)
+      const potentialMatchIndices = new Set<number>();
+      Object.values(imageToIndices).forEach(indices => {
+        if (indices.length >= 2) {
+          // Add both indices of the potential match
+          indices.slice(0, 2).forEach(index => potentialMatchIndices.add(index));
+        }
+      });
+
+      setState(prev => ({ ...prev, potentialMatches: potentialMatchIndices }));
+    }
+  }, [isIdle, isGameActive, selected.length, matched.length, shuffledPairs.length]);
+
+  // NEW: Calculate if this tile should pulse (part of a potential match)
+  const shouldPulse = state.potentialMatches.has(tileIndex);
 
   return {
     // Animation states
     shouldWiggle: state.onboardingTiles.has(tileIndex),
-    shouldPulse: false, // Will implement in next iteration
-    shouldSway: isIdle && !state.showOnboarding && !isGameActive, // Gentle sway when truly idle
+    shouldPulse, // NEW: Context-aware pulsing
+    shouldSway: isIdle && !state.showOnboarding && !isGameActive && !shouldPulse, // Gentle sway when truly idle and not pulsing
     
     // Control functions
     recordInteraction,

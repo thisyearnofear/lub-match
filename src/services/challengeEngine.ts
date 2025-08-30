@@ -189,12 +189,14 @@ class ChallengeEngine {
    * Generate AI-powered challenge for target user
    * CLEAN: Separated AI logic from business logic
    * ENHANCED: Anti-spam validation (ENHANCEMENT FIRST)
+   * ENHANCEMENT: Adaptive difficulty based on user skill
    */
   async generateChallenge(
     targetUser: FarcasterUser,
     difficulty: ChallengeDifficulty,
     createdBy?: string,
-    creatorUserId?: number
+    creatorUserId?: number,
+    creatorSkillLevel?: string // NEW: Accept creator's skill level
   ): Promise<Challenge> {
     // NEW: Anti-spam validation
     if (creatorUserId) {
@@ -203,18 +205,34 @@ class ChallengeEngine {
         throw new Error(`Challenge blocked: ${spamCheck.reasons.join(', ')}`);
       }
     }
+    
     // Classify target user
     const whaleType = classifyUserByFollowers(targetUser.followerCount);
     const whaleMultiplier = getWhaleMultiplier(whaleType);
     
+    // NEW: Adjust difficulty based on creator's skill level
+    let adjustedDifficulty = difficulty;
+    if (creatorSkillLevel) {
+      // For advanced/expert users, increase difficulty against easier targets
+      if ((creatorSkillLevel === 'advanced' || creatorSkillLevel === 'expert') && 
+          (whaleType === 'minnow' || whaleType === 'fish')) {
+        adjustedDifficulty = 'hard';
+      }
+      // For beginners, reduce difficulty against harder targets
+      else if (creatorSkillLevel === 'beginner' && 
+               (whaleType === 'whale' || whaleType === 'mega_whale')) {
+        adjustedDifficulty = 'easy';
+      }
+    }
+    
     // Select appropriate challenge type
-    const challengeType = this.selectChallengeType(targetUser, difficulty, whaleType);
+    const challengeType = this.selectChallengeType(targetUser, adjustedDifficulty, whaleType);
     
     // Generate contextual prompt
-    const prompt = await this.generateContextualPrompt(challengeType, targetUser, difficulty);
+    const prompt = await this.generateContextualPrompt(challengeType, targetUser, adjustedDifficulty);
     
     // Calculate rewards
-    const baseReward = CHALLENGE_DIFFICULTIES[difficulty].baseReward;
+    const baseReward = CHALLENGE_DIFFICULTIES[adjustedDifficulty].baseReward;
     const totalReward = Math.floor(baseReward * whaleMultiplier);
     
     // Create challenge instance
@@ -222,7 +240,7 @@ class ChallengeEngine {
       id: `challenge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: challengeType,
       targetUser,
-      difficulty,
+      difficulty: adjustedDifficulty, // Use adjusted difficulty
       prompt,
       baseReward,
       whaleMultiplier,
@@ -242,7 +260,7 @@ class ChallengeEngine {
       antiSpamService.recordActivity(creatorUserId, 'challenge', {
         challengeId: challenge.id,
         targetUserId: targetUser.fid,
-        difficulty,
+        difficulty: adjustedDifficulty, // Use adjusted difficulty
         whaleMultiplier
       });
     }

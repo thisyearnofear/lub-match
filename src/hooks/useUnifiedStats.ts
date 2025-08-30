@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { userStatsService } from "@/services/userStatsService";
 import { UserStats, FormattedUserStats, StatsEvent } from "@/types/userStats";
+import { calculateChallengeSkill, getChallengeSkillLevel, getSkillLevelLabel, getDifficultyRecommendation } from "@/utils/challengeSkillCalculator";
 
 export function useUnifiedStats() {
   const [stats, setStats] = useState<UserStats>(() => userStatsService.getUserStats());
@@ -119,6 +120,12 @@ export function useUnifiedStats() {
     return recordEvent({ type: 'viral_detected', bonus });
   }, [recordEvent]);
 
+  // NEW: Challenge skill calculation (ENHANCEMENT)
+  const challengeSkillScore = calculateChallengeSkill(stats);
+  const challengeSkillLevel = getChallengeSkillLevel(challengeSkillScore);
+  const challengeSkillLabel = getSkillLevelLabel(challengeSkillLevel);
+  const difficultyRecommendation = getDifficultyRecommendation(challengeSkillLevel);
+
   return {
     // Raw stats
     stats,
@@ -181,6 +188,12 @@ export function useUnifiedStats() {
     whalesHarpooned: stats.challengeStats.whalesHarpooned,
     viralDetections: stats.challengeStats.viralDetections,
     challengeStreak: stats.challengeStats.challengeStreak,
-    whaleHunterLevel: formattedStats.challengeStats.whaleHunterLevel
+    whaleHunterLevel: formattedStats.challengeStats.whaleHunterLevel,
+    
+    // NEW: Challenge skill metrics (ENHANCEMENT)
+    challengeSkillScore,
+    challengeSkillLevel,
+    challengeSkillLabel,
+    difficultyRecommendation
   };
 }
