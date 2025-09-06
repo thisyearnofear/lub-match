@@ -1,7 +1,7 @@
 // Social game factory for creating different types of Farcaster-based games
 
 import {
-  FarcasterUser,
+  SocialUser,
   GameFactory,
   UsernameGuessingGame,
   PfpMatchingGame,
@@ -19,7 +19,7 @@ import {
 export class SocialGameFactory implements GameFactory {
   
   createUsernameGuessingGame(
-    users: FarcasterUser[], 
+    users: SocialUser[], 
     difficulty: 'easy' | 'medium' | 'hard' = 'medium'
   ): UsernameGuessingGame {
     const gameUsers = this.selectUsersByDifficulty(users, difficulty);
@@ -50,7 +50,7 @@ export class SocialGameFactory implements GameFactory {
   }
 
   createPfpMatchingGame(
-    users: FarcasterUser[], 
+    users: SocialUser[], 
     difficulty: 'easy' | 'medium' | 'hard' = 'medium'
   ): PfpMatchingGame {
     const gameUsers = this.selectUsersByDifficulty(users, difficulty);
@@ -70,7 +70,7 @@ export class SocialGameFactory implements GameFactory {
   }
 
   createSocialTriviaGame(
-    users: FarcasterUser[], 
+    users: SocialUser[], 
     difficulty: 'easy' | 'medium' | 'hard' = 'medium'
   ): SocialTriviaGame {
     const gameUsers = this.selectUsersByDifficulty(users, difficulty);
@@ -89,7 +89,7 @@ export class SocialGameFactory implements GameFactory {
   }
 
   // ENHANCED: Whale-aware user selection (ENHANCEMENT FIRST)
-  private selectUsersByDifficulty(users: FarcasterUser[], difficulty: 'easy' | 'medium' | 'hard'): FarcasterUser[] {
+  private selectUsersByDifficulty(users: SocialUser[], difficulty: 'easy' | 'medium' | 'hard'): SocialUser[] {
     const counts = { easy: 4, medium: 8, hard: 12 };
     const count = Math.min(counts[difficulty], users.length);
 
@@ -105,9 +105,9 @@ export class SocialGameFactory implements GameFactory {
   }
 
   // NEW: Whale-balanced selection for hard difficulty (MODULAR)
-  private selectWhaleBalancedUsers(users: FarcasterUser[], count: number): FarcasterUser[] {
+  private selectWhaleBalancedUsers(users: SocialUser[], count: number): SocialUser[] {
     const whaleGroups = this.groupUsersByWhaleType(users);
-    const selected: FarcasterUser[] = [];
+    const selected: SocialUser[] = [];
 
     // Hard difficulty: Include whales for high-stakes gameplay
     // 25% whales/mega_whales, 25% sharks, 50% fish/minnows
@@ -130,9 +130,9 @@ export class SocialGameFactory implements GameFactory {
   }
 
   // NEW: Mixed whale selection for medium difficulty (MODULAR)
-  private selectMixedWhaleUsers(users: FarcasterUser[], count: number): FarcasterUser[] {
+  private selectMixedWhaleUsers(users: SocialUser[], count: number): SocialUser[] {
     const whaleGroups = this.groupUsersByWhaleType(users);
-    const selected: FarcasterUser[] = [];
+    const selected: SocialUser[] = [];
 
     // Medium difficulty: Balanced mix with some challenge
     // 10% whales, 30% sharks, 60% fish/minnows
@@ -154,7 +154,7 @@ export class SocialGameFactory implements GameFactory {
   }
 
   // NEW: Easy user selection (MODULAR)
-  private selectEasyUsers(users: FarcasterUser[], count: number): FarcasterUser[] {
+  private selectEasyUsers(users: SocialUser[], count: number): SocialUser[] {
     const whaleGroups = this.groupUsersByWhaleType(users);
 
     // Easy difficulty: Mostly approachable users
@@ -174,8 +174,8 @@ export class SocialGameFactory implements GameFactory {
   }
 
   // NEW: Group users by whale classification (PERFORMANT caching)
-  private groupUsersByWhaleType(users: FarcasterUser[]): Record<WhaleType, FarcasterUser[]> {
-    const groups: Record<WhaleType, FarcasterUser[]> = {
+  private groupUsersByWhaleType(users: SocialUser[]): Record<WhaleType, SocialUser[]> {
+    const groups: Record<WhaleType, SocialUser[]> = {
       minnow: [],
       fish: [],
       shark: [],
@@ -191,19 +191,19 @@ export class SocialGameFactory implements GameFactory {
     return groups;
   }
 
-  private generateTriviaQuestions(users: FarcasterUser[], difficulty: 'easy' | 'medium' | 'hard') {
+  private generateTriviaQuestions(users: SocialUser[], difficulty: 'easy' | 'medium' | 'hard') {
     const questions = [];
     
     // Follower count questions
     for (const user of users.slice(0, 3)) {
-      const otherUsers = users.filter(u => u.fid !== user.fid);
+      const otherUsers = users.filter(u => u.id !== user.id);
       const options = shuffleArray([
         this.formatFollowerCount(user.followerCount),
-        ...otherUsers.slice(0, 3).map(u => this.formatFollowerCount(u.followerCount))
+         ...otherUsers.slice(0, 3).map(u => this.formatFollowerCount(u.followerCount))
       ]);
       
       questions.push({
-        id: `followers-${user.fid}`,
+        id: `followers-${user.id}`,
         question: `How many followers does @${user.username} have?`,
         options,
         correctAnswer: this.formatFollowerCount(user.followerCount),
@@ -220,14 +220,14 @@ export class SocialGameFactory implements GameFactory {
       const keyPhrase = bioWords.slice(0, Math.min(4, bioWords.length)).join(' ');
       
       const otherBios = usersWithBios
-        .filter(u => u.fid !== user.fid)
+        .filter(u => u.id !== user.id)
         .map(u => u.bio!.split(' ').slice(0, 4).join(' '))
         .slice(0, 3);
       
       const options = shuffleArray([keyPhrase, ...otherBios]);
       
       questions.push({
-        id: `bio-${user.fid}`,
+        id: `bio-${user.id}`,
         question: `Which bio snippet belongs to @${user.username}?`,
         options,
         correctAnswer: keyPhrase,
@@ -251,7 +251,7 @@ export class SocialGameFactory implements GameFactory {
 
   // NEW: Whale-aware reward calculation (ENHANCEMENT FIRST)
   calculateGameReward(
-    users: FarcasterUser[],
+    users: SocialUser[],
     difficulty: 'easy' | 'medium' | 'hard',
     accuracy: number,
     timeSpent: number
@@ -307,7 +307,7 @@ export class SocialGameFactory implements GameFactory {
   }
 
   // NEW: Calculate whale bonus for game (COMPOSABLE)
-  private calculateWhaleBonus(users: FarcasterUser[]): number {
+  private calculateWhaleBonus(users: SocialUser[]): number {
     let bonus = 0;
     const whaleGroups = this.groupUsersByWhaleType(users);
 
@@ -321,7 +321,7 @@ export class SocialGameFactory implements GameFactory {
   }
 
   // NEW: Get whale statistics for game preview (PERFORMANT)
-  getWhaleStats(users: FarcasterUser[]): {
+  getWhaleStats(users: SocialUser[]): {
     whaleCount: number;
     totalMultiplier: number;
     whaleBreakdown: Record<WhaleType, number>;

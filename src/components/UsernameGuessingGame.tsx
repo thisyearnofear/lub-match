@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import {
   FarcasterUser,
+  SocialUser,
   UsernameGuessingGame,
   UsernameGuessingResult,
 } from "@/types/socialGames";
@@ -18,7 +19,7 @@ interface UsernameGuessingGameProps {
 }
 
 interface QuestionData {
-  user: FarcasterUser;
+  user: SocialUser;
   options: string[];
   userGuess?: string;
   isCorrect?: boolean;

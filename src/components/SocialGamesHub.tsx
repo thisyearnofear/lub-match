@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
-import { FarcasterUser, GameResult } from "@/types/socialGames";
+import { SocialUser, GameResult } from "@/types/socialGames";
 import { socialGameFactory } from "@/utils/socialGameFactory";
 import UsernameGuessingGameComponent from "./UsernameGuessingGame";
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
@@ -30,7 +30,7 @@ import { useUserIdentity } from "@/contexts/UserContext";
 import { GlobalLeaderboard } from "./GlobalLeaderboard";
 
 interface SocialGamesHubProps {
-  users: FarcasterUser[];
+  users: SocialUser[];
   onClose: () => void;
   onSkipToProposal?: () => void;
 }
@@ -61,9 +61,7 @@ export default function SocialGamesHub({
   );
 
   // NEW: Challenge system state (ENHANCEMENT FIRST)
-  const [selectedTarget, setSelectedTarget] = useState<FarcasterUser | null>(
-    null
-  );
+  const [selectedTarget, setSelectedTarget] = useState<SocialUser | null>(null);
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(
     null
   );
@@ -150,7 +148,7 @@ export default function SocialGamesHub({
     setCurrentMode("whale-hunting");
   };
 
-  const handleTargetSelection = async (target: FarcasterUser) => {
+  const handleTargetSelection = async (target: SocialUser) => {
     setSelectedTarget(target);
     setCurrentMode("challenge-creation");
 
@@ -169,11 +167,13 @@ export default function SocialGamesHub({
       setCurrentMode("challenge-active");
 
       // Record challenge creation in stats
-      recordChallengeCreated(
-        target.fid,
-        challengeDifficulty,
-        challenge.whaleMultiplier
-      );
+      if (target.fid) {
+        recordChallengeCreated(
+          target.fid,
+          challengeDifficulty,
+          challenge.whaleMultiplier
+        );
+      }
 
       // Show earning notification for challenge creation
       if (lubTokenEnabled) {
@@ -755,7 +755,10 @@ export default function SocialGamesHub({
                               ? "bg-pink-600 text-white"
                               : "bg-purple-700/50 text-purple-200 hover:bg-purple-600/50"
                           }`}
-                          disabled={diff === 'hard' && challengeSkillLevel === 'beginner'}
+                          disabled={
+                            diff === "hard" &&
+                            challengeSkillLevel === "beginner"
+                          }
                         >
                           {diff.charAt(0).toUpperCase() + diff.slice(1)}
                           {diff === difficultyRecommendation.difficulty && (
@@ -821,9 +824,9 @@ export default function SocialGamesHub({
                     </span>
                   </div>
                   <p className="text-cyan-200 text-sm mb-3">
-                    {challengeSkillLevel === 'beginner' 
+                    {challengeSkillLevel === "beginner"
                       ? "Start with smaller fish to build your skills before hunting whales."
-                      : challengeSkillLevel === 'intermediate'
+                      : challengeSkillLevel === "intermediate"
                       ? "You're ready for shark hunting! Aim for 5k+ followers for bigger rewards."
                       : "You're an expert whale hunter! Target the biggest whales for maximum rewards."}
                   </p>
@@ -1066,6 +1069,7 @@ export default function SocialGamesHub({
       {/* Unified Onboarding System */}
       <UnifiedOnboardingIntegration
         sequence="advanced-features"
+        allowRestart={false}
         onTryChallenges={startChallengeSelection}
         onExploreGames={backToMenu}
       />
@@ -1074,6 +1078,7 @@ export default function SocialGamesHub({
       {gameResult?.challengeResult && (
         <UnifiedOnboardingIntegration
           sequence="game-complete"
+          allowRestart={false}
           onPlayMore={startChallengeSelection}
         />
       )}

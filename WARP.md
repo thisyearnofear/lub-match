@@ -49,6 +49,37 @@ pnpm scan-events && pnpm distribute-rewards
 
 # Send LUB tokens manually
 pnpm send-lub
+
+# Lens user data collection (weekly)
+pnpm collect-lens-users
+
+# Test Lens integration
+pnpm test-lens
+
+### Lens Protocol Integration (Official SDK)
+```bash
+# Collect authentic Lens users using official Lens Protocol SDK
+pnpm collect-lens-users
+
+# Verify collected profile images are accessible
+pnpm verify-lens-images
+
+# Test Lens data integration
+pnpm test-lens
+
+# Use in games:
+# - Set network: 'lens' for Lens-only games
+# - Set network: 'both' for mixed Farcaster + Lens games
+# - Visit /lens-game-test for dedicated test page
+# - Visit /lens-test for integration testing
+
+# Features:
+# ✅ Authentic Lens profiles with real profile pictures
+# ✅ Official Lens handles and usernames
+# ✅ Real bio content from Lens Protocol
+# ✅ No synthetic/placeholder data
+# ✅ High-quality user filtering and game scoring
+```
 ```
 
 ### Testing & Analysis

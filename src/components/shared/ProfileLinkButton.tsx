@@ -2,10 +2,10 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { FarcasterUser } from "@/types/socialGames";
+import { FarcasterUser, SocialUser } from "@/types/socialGames";
 
 interface ProfileLinkButtonProps {
-  user: FarcasterUser;
+  user: SocialUser;
   variant?: "primary" | "secondary" | "minimal";
   size?: "sm" | "md" | "lg";
   showUsername?: boolean;
@@ -43,15 +43,26 @@ export default function ProfileLinkButton({
     setIsClicked(true);
     onClick?.();
 
-    // Open Farcaster profile in new tab
-    const farcasterUrl = `https://warpcast.com/${user.username}`;
-    window.open(farcasterUrl, "_blank", "noopener,noreferrer");
+    // Open profile in new tab based on network
+    let profileUrl: string;
+    if (user.network === "lens") {
+      // Lens users use Hey.xyz
+      profileUrl = `https://hey.xyz/u/${user.username}`;
+    } else {
+      // Farcaster users use Warpcast
+      profileUrl = `https://warpcast.com/${user.username}`;
+    }
+
+    window.open(profileUrl, "_blank", "noopener,noreferrer");
 
     // Reset clicked state after animation
     setTimeout(() => setIsClicked(false), 200);
   };
 
-  const formatFollowerCount = (count: number): string => {
+  const formatFollowerCount = (count: number | undefined): string => {
+    if (count === undefined || count === null) {
+      return "0";
+    }
     if (count >= 1000000) {
       return `${(count / 1000000).toFixed(1)}M`;
     } else if (count >= 1000) {
@@ -99,7 +110,7 @@ export function SocialGameProfileLink({
   isCorrectAnswer = false,
   className = "",
 }: {
-  user: FarcasterUser;
+  user: SocialUser;
   isCorrectAnswer?: boolean;
   className?: string;
 }) {
@@ -122,7 +133,7 @@ export function MatchProfileLink({
   user,
   className = "",
 }: {
-  user: FarcasterUser;
+  user: SocialUser;
   className?: string;
 }) {
   return (

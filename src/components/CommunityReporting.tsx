@@ -8,11 +8,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FarcasterUser } from "@/types/user";
+import { SocialUser } from "@/types/socialGames";
 import { antiSpamService } from "@/services/antiSpamService";
 import ActionButton from "./shared/ActionButton";
 
 interface CommunityReportingProps {
-  targetUser: FarcasterUser;
+  targetUser: SocialUser;
   contentType: "challenge" | "cast" | "user";
   contentId?: string;
   onClose: () => void;
@@ -79,6 +80,10 @@ export default function CommunityReporting({
     try {
       // In a real implementation, we'd get the current user's ID
       const reporterId = 1; // Placeholder - would come from user context
+
+      if (!targetUser.fid) {
+        throw new Error("Cannot report user without valid ID");
+      }
 
       const result = antiSpamService.submitReport(
         reporterId,
@@ -286,13 +291,13 @@ export default function CommunityReporting({
 export function useReporting() {
   const [showReporting, setShowReporting] = useState(false);
   const [reportTarget, setReportTarget] = useState<{
-    user: FarcasterUser;
+    user: SocialUser;
     contentType: "challenge" | "cast" | "user";
     contentId?: string;
   } | null>(null);
 
   const openReport = (
-    user: FarcasterUser,
+    user: SocialUser,
     contentType: "challenge" | "cast" | "user",
     contentId?: string
   ) => {

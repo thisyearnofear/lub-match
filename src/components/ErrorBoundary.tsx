@@ -1,7 +1,8 @@
 "use client";
 
-import React, { Component, ReactNode } from "react";
+import React, { Component, ReactNode, useState } from "react";
 import { motion } from "framer-motion";
+import { classifyError, ClassifiedError, retryWithBackoff, isOnline } from "@/utils/errorRecovery";
 
 interface Props {
   children: ReactNode;
@@ -12,16 +13,30 @@ interface Props {
 interface State {
   hasError: boolean;
   error?: Error;
+  classifiedError?: ClassifiedError;
+  retryCount: number;
+  isRetrying: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { 
+      hasError: false, 
+      retryCount: 0, 
+      isRetrying: false 
+    };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    const classifiedError = classifyError(error);
+    return { 
+      hasError: true, 
+      error, 
+      classifiedError,
+      retryCount: 0,
+      isRetrying: false
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -47,6 +62,52 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
+  handleRetry = async () => {
+    if (this.state.isRetrying || this.state.retryCount >= 3) return;
+    
+    this.setState({ isRetrying: true });
+    
+    try {
+      // Wait for network if offline
+      if (!isOnline()) {
+        await new Promise(resolve => {
+          const checkOnline = () => {
+            if (isOnline()) {
+              resolve(void 0);
+            } else {
+              setTimeout(checkOnline, 1000);
+            }
+          };
+          checkOnline();
+        });
+      }
+      
+      // Attempt to retry with exponential backoff
+      await retryWithBackoff(
+        async () => {
+          // Clear error state and retry rendering
+          this.setState({ 
+            hasError: false, 
+            error: undefined, 
+            classifiedError: undefined,
+            isRetrying: false,
+            retryCount: this.state.retryCount + 1
+          });
+        },
+        {
+          maxAttempts: 1,
+          baseDelay: 1000 * (this.state.retryCount + 1)
+        }
+      );
+    } catch (retryError) {
+      console.error('Retry failed:', retryError);
+      this.setState({ 
+        isRetrying: false,
+        retryCount: this.state.retryCount + 1
+      });
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -69,6 +130,29 @@ export class ErrorBoundary extends Component<Props, State> {
             </p>
             
             <div className="space-y-3">
+              {this.state.classifiedError?.canRetry && this.state.retryCount < 3 && (
+                <button
+                  onClick={this.handleRetry}
+                  disabled={this.state.isRetrying}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  {this.state.isRetrying ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                      />
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      🔄 Try Again ({3 - this.state.retryCount} attempts left)
+                    </>
+                  )}
+                </button>
+              )}
+              
               <button
                 onClick={() => window.location.reload()}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
@@ -83,6 +167,28 @@ export class ErrorBoundary extends Component<Props, State> {
                 🏠 Go Home
               </button>
             </div>
+            
+            {this.state.classifiedError && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800 font-medium">
+                  💡 {this.state.classifiedError.suggestedAction}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  {this.state.classifiedError.userMessage}
+                </p>
+              </div>
+            )}
+            
+            {!isOnline() && (
+              <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm text-orange-800 font-medium">
+                  📡 You appear to be offline
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  Please check your internet connection and try again.
+                </p>
+              </div>
+            )}
 
             {process.env.NODE_ENV === "development" && this.state.error && (
               <details className="mt-6 text-left">
@@ -214,13 +320,78 @@ export function LoadingState({
   );
 }
 
-// Network Error Component
+// Enhanced Network Error Component with Recovery
 interface NetworkErrorProps {
   onRetry?: () => void;
   message?: string;
+  error?: Error;
+  showDetails?: boolean;
 }
 
-export function NetworkError({ onRetry, message }: NetworkErrorProps) {
+export function NetworkError({ onRetry, message, error, showDetails = false }: NetworkErrorProps) {
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isOnlineStatus, setIsOnlineStatus] = useState(isOnline());
+  
+  // Monitor online status
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnlineStatus(true);
+    const handleOffline = () => setIsOnlineStatus(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  
+  const handleRetryWithRecovery = async () => {
+    if (isRetrying || retryCount >= 3) return;
+    
+    setIsRetrying(true);
+    
+    try {
+      // Wait for network if offline
+      if (!isOnlineStatus) {
+        await new Promise<void>(resolve => {
+          const checkOnline = () => {
+            if (isOnline()) {
+              setIsOnlineStatus(true);
+              resolve();
+            } else {
+              setTimeout(checkOnline, 1000);
+            }
+          };
+          checkOnline();
+        });
+      }
+      
+      // Retry with exponential backoff
+      await retryWithBackoff(
+        async () => {
+          if (onRetry) {
+            await onRetry();
+          }
+        },
+        {
+          maxAttempts: 1,
+          baseDelay: 1000 * (retryCount + 1)
+        }
+      );
+      
+      setRetryCount(prev => prev + 1);
+    } catch (retryError) {
+      console.error('Network retry failed:', retryError);
+      setRetryCount(prev => prev + 1);
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+  
+  const classifiedError = error ? classifyError(error) : null;
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -228,18 +399,64 @@ export function NetworkError({ onRetry, message }: NetworkErrorProps) {
       className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl p-6 text-center"
     >
       <div className="text-4xl mb-4">📡</div>
-      <h3 className="font-semibold text-red-800 mb-2">Connection Issue</h3>
+      <h3 className="font-semibold text-red-800 mb-2">
+        {!isOnlineStatus ? "You're Offline" : "Connection Issue"}
+      </h3>
       <p className="text-sm text-red-600 mb-4">
-        {message || "Unable to connect to the network. Please check your internet connection."}
+        {!isOnlineStatus 
+          ? "Please check your internet connection and try again."
+          : (message || classifiedError?.userMessage || "Unable to connect to the network. Please check your internet connection.")
+        }
       </p>
       
-      {onRetry && (
+      {!isOnlineStatus && (
+        <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <p className="text-sm text-orange-800">
+            🔍 Waiting for connection to be restored...
+          </p>
+        </div>
+      )}
+      
+      {classifiedError && showDetails && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-left">
+          <p className="text-sm text-blue-800 font-medium">
+            💡 {classifiedError.suggestedAction}
+          </p>
+          <p className="text-xs text-blue-600 mt-1">
+            Error Type: {classifiedError.type}
+          </p>
+        </div>
+      )}
+      
+      {onRetry && retryCount < 3 && (
         <button
-          onClick={onRetry}
-          className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-red-600 hover:to-pink-600 transition-all duration-300"
+          onClick={handleRetryWithRecovery}
+          disabled={isRetrying || !isOnlineStatus}
+          className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-red-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-300 flex items-center justify-center gap-2 mx-auto"
         >
-          🔄 Try Again
+          {isRetrying ? (
+            <>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+              />
+              Retrying...
+            </>
+          ) : (
+            <>
+              🔄 Try Again {retryCount > 0 && `(${3 - retryCount} attempts left)`}
+            </>
+          )}
         </button>
+      )}
+      
+      {retryCount >= 3 && (
+        <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <p className="text-sm text-gray-700">
+            ⚠️ Maximum retry attempts reached. Please refresh the page or contact support.
+          </p>
+        </div>
       )}
     </motion.div>
   );

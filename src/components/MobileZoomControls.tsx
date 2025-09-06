@@ -35,8 +35,9 @@ export default function MobileZoomControls({
             <motion.button
               onClick={zoomOut}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
-              aria-label="Zoom out"
+              className="flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 focus:bg-white/40 focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-full text-white transition-colors"
+              aria-label="Zoom out from current view"
+              title="Zoom out"
             >
               <svg
                 width="20"
@@ -63,8 +64,9 @@ export default function MobileZoomControls({
             <motion.button
               onClick={resetZoom}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
-              aria-label="Reset zoom"
+              className="flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 focus:bg-white/40 focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-full text-white transition-colors"
+              aria-label="Reset zoom to original view"
+              title="Reset zoom"
             >
               <svg
                 width="18"
@@ -86,7 +88,14 @@ export default function MobileZoomControls({
 
           {/* Visual zoom indicator */}
           <div className="mt-2 flex justify-center">
-            <div className="bg-black/60 backdrop-blur-sm rounded-full px-3 py-1">
+            <div 
+              className="bg-black/60 backdrop-blur-sm rounded-full px-3 py-1"
+              role="progressbar"
+              aria-label="Zoom level indicator"
+              aria-valuenow={Math.round(zoomState.scale * 100)}
+              aria-valuemin={100}
+              aria-valuemax={200}
+            >
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
                   <div
@@ -96,6 +105,7 @@ export default function MobileZoomControls({
                         ? "bg-pink-400"
                         : "bg-white/30"
                     }`}
+                    aria-hidden="true"
                   />
                 ))}
               </div>
@@ -144,9 +154,10 @@ export function SimpleMobileZoomControls({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           onClick={zoomOut}
-          className="fixed bottom-6 right-6 w-12 h-12 bg-pink-500 hover:bg-pink-600 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-colors"
+          className="fixed bottom-6 right-6 w-12 h-12 bg-pink-500 hover:bg-pink-600 focus:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-gray-900 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-colors"
           whileTap={{ scale: 0.9 }}
-          aria-label="Zoom out to see full heart"
+          aria-label="Zoom out to see full heart layout"
+          title="Zoom out"
         >
           💝
         </motion.button>

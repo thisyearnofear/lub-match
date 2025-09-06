@@ -2,12 +2,12 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { FarcasterUser } from "@/types/socialGames";
+import { SocialUser } from "@/types/socialGames";
 
 interface NFTPreviewProps {
   images: string[];
   message: string;
-  users?: FarcasterUser[];
+  users?: SocialUser[];
   gameStats?: {
     completionTime: number;
     accuracy: number;
@@ -15,7 +15,7 @@ interface NFTPreviewProps {
   };
   tokenId?: string;
   showSocialGraph?: boolean;
-  onUserClick?: (user: FarcasterUser) => void;
+  onUserClick?: (user: SocialUser) => void;
 }
 
 export default function NFTPreview({
@@ -34,9 +34,9 @@ export default function NFTPreview({
 
   const displayImages = Array.from(new Set(images)).slice(0, 8);
   // For matching games, we might have duplicate users, so we need to deduplicate them
-  const uniqueUsers = Array.from(new Set(users.map(u => u.fid))).map(fid => 
-    users.find(u => u.fid === fid)
-  ).filter(Boolean) as FarcasterUser[];
+  const uniqueUsers = Array.from(new Set(users.map(u => u.fid || u.id))).map(fidOrId => 
+    users.find(u => (u.fid || u.id) === fidOrId)
+  ).filter(Boolean) as SocialUser[];
   
   const featuredUsers = uniqueUsers.slice(0, 8);
   const verifiedUsers = uniqueUsers.filter(
@@ -159,12 +159,12 @@ export default function NFTPreview({
               <div className="grid grid-cols-4 gap-3">
                 {featuredUsers.map((user, index) => (
                   <motion.div
-                    key={user.fid}
+                    key={user.fid || user.id}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.1 }}
                     whileHover={{ scale: 1.05 }}
-                    onHoverStart={() => setHoveredUser(user.fid)}
+                    onHoverStart={() => setHoveredUser(user.fid || parseInt(user.id))}
                     onHoverEnd={() => setHoveredUser(null)}
                     onClick={() => onUserClick?.(user)}
                     className="relative cursor-pointer"

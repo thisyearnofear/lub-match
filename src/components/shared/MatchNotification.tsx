@@ -2,11 +2,11 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FarcasterUser } from "@/types/socialGames";
+import { SocialUser } from "@/types/socialGames";
 import { MatchProfileLink } from "./ProfileLinkButton";
 
 interface MatchNotificationProps {
-  user: FarcasterUser;
+  user: SocialUser;
   isVisible: boolean;
   onClose?: () => void;
   autoCloseDelay?: number;
@@ -84,7 +84,8 @@ export default function MatchNotification({
                 Perfect Match!
               </h3>
               <p className="text-purple-200 text-sm">
-                You found a Farcaster user
+                You found a {user.network === "lens" ? "Lens" : "Farcaster"}{" "}
+                user
               </p>
             </div>
 
@@ -127,7 +128,7 @@ export function MultiMatchNotification({
   onClose,
   className = "",
 }: {
-  users: FarcasterUser[];
+  users: SocialUser[];
   isVisible: boolean;
   onClose?: () => void;
   className?: string;
@@ -152,14 +153,14 @@ export function MultiMatchNotification({
                 Amazing Matches!
               </h3>
               <p className="text-purple-200 text-sm">
-                You discovered {Math.min(users.length, 8)} Farcaster users
+                You discovered {Math.min(users.length, 8)} social users
               </p>
             </div>
 
             <div className="space-y-2 mb-4">
               {users.map((user, index) => (
                 <motion.div
-                  key={user.fid}
+                  key={user.username}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}

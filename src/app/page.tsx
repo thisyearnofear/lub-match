@@ -109,7 +109,7 @@ export default function Home() {
     apiCheckComplete,
     refreshUsers,
   } = useFarcasterUsers({
-    count: 16,
+    count: 20,
     minFollowers: 50,
     enableAutoRefresh: false, // Disable auto-refresh to prevent hydration issues
   });
@@ -160,13 +160,13 @@ export default function Home() {
 
   // Update game images only on client side after API check is complete
   useEffect(() => {
-    if (isClient && apiCheckComplete && !loading && users.length >= 8) {
+    if (isClient && apiCheckComplete && !loading && users.length >= 10) {
       const farcasterPairs = getRandomPairs();
-      if (farcasterPairs.length === 8) {
+      if (farcasterPairs.length === 10) {
         setGameImages(farcasterPairs);
 
-        // Set the corresponding users (first 8 users whose images are used)
-        setGameUsers(users.slice(0, 8));
+        // Set the corresponding users (first 10 users whose images are used)
+        setGameUsers(users.slice(0, 10));
 
         // Legacy onboarding - will be replaced by enhanced system
         // showOnboardingMessage("FARCASTER_INTRO", { delay: 1000 });
@@ -179,7 +179,7 @@ export default function Home() {
 
   const handleShowProposal = () => {
     // For the home page demo, show NFT minting option first
-    if (isClient && gameImages.length === 8) {
+    if (isClient && gameImages.length === 10) {
       setIsTransitioning(true);
       setTimeout(() => {
         setShowHeartNFTMinter(true);
@@ -231,7 +231,7 @@ export default function Home() {
     totalMatches: number;
   }) => {
     // Calculate social discoveries based on unique users actually used in the game
-    const socialDiscoveries = Math.min(gameUsers.length, 8);
+    const socialDiscoveries = Math.min(gameUsers.length, 10);
 
     setGameStats({
       completionTime: stats.completionTime,
@@ -302,7 +302,7 @@ export default function Home() {
               </button>
             )}
 
-            {gameImages && gameImages.length >= 8 && (
+            {gameImages && gameImages.length >= 10 && (
               <Link
                 href="/create"
                 className="px-3 py-1.5 bg-gradient-to-r from-pink-500/80 to-purple-600/80 text-white rounded-lg text-sm font-medium hover:from-pink-500 hover:to-purple-600 transition-all backdrop-blur-sm border border-pink-400/20"
@@ -390,7 +390,7 @@ export default function Home() {
                     : "Almost ready..."}
                 </p>
               </div>
-            ) : gameImages.length === 8 ? (
+            ) : gameImages.length === 10 ? (
               <ClientOnly
                 fallback={
                   <div className="text-center p-8">
@@ -541,10 +541,13 @@ export default function Home() {
       )}
 
       {/* Heart NFT Minter Modal */}
-      {showHeartNFTMinter && gameImages.length === 8 && (
+      {showHeartNFTMinter && gameImages.length === 10 && (
         <HeartNFTMinter
           gameImages={gameImages}
-          gameLayout={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]}
+          gameLayout={[
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+            19,
+          ]}
           message={getPersonalizedMessage()}
           gameType="demo"
           creator="0x0000000000000000000000000000000000000000"
@@ -559,7 +562,7 @@ export default function Home() {
             gameStats || {
               completionTime: 120, // Fallback completion time
               accuracy: 100, // Fallback accuracy for demo
-              socialDiscoveries: Math.min(gameUsers.length, 8), // Cap at 8 unique users
+              socialDiscoveries: Math.min(gameUsers.length, 10), // Cap at 10 unique users
             }
           }
         />

@@ -8,6 +8,7 @@ import {
 import {
   FarcasterUser
 } from "@/utils/mockData";
+import { SocialUser, LensUser } from "@/types/socialGames";
 
 // Whale classification utility functions
 export function classifyUserByFollowers(followerCount: number): WhaleType {
@@ -62,7 +63,7 @@ interface UseFarcasterUsersOptions {
 
 // Enhanced hook return interface
 interface UseFarcasterUsersReturn {
-  users: FarcasterUser[];
+  users: SocialUser[];
   loading: boolean;
   error: string | null;
   refreshUsers: () => Promise<void>;
@@ -71,10 +72,10 @@ interface UseFarcasterUsersReturn {
   hasApiKey: boolean | null; // null = checking, true/false = determined
   apiCheckComplete: boolean;
   // NEW: Whale detection utilities
-  getWhalesByType: (type: WhaleType) => FarcasterUser[];
-  getTopWhales: (limit?: number) => FarcasterUser[];
-  classifyUser: (user: FarcasterUser) => WhaleType;
-  getChallengeTargets: (difficulty: 'easy' | 'medium' | 'hard') => FarcasterUser[];
+  getWhalesByType: (type: WhaleType) => SocialUser[];
+  getTopWhales: (limit?: number) => SocialUser[];
+  classifyUser: (user: SocialUser) => WhaleType;
+  getChallengeTargets: (difficulty: 'easy' | 'medium' | 'hard') => SocialUser[];
 }
 
 // API response interface
@@ -85,7 +86,7 @@ interface FarcasterUsersResponse {
 }
 
 // Cache for API responses to avoid excessive calls
-const userCache = new Map<string, { data: FarcasterUser[]; timestamp: number }>();
+const userCache = new Map<string, { data: SocialUser[]; timestamp: number }>();
 
 /**
  * Hook for fetching and managing Farcaster users
@@ -103,7 +104,7 @@ export function useFarcasterUsers(
     challengeMode = false,
   } = options;
 
-  const [users, setUsers] = useState<FarcasterUser[]>([]);
+  const [users, setUsers] = useState<SocialUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
@@ -190,7 +191,7 @@ export function useFarcasterUsers(
 
   // Check cache first
   const getCachedUsers = useCallback(
-    (cacheKey: string): FarcasterUser[] | null => {
+    (cacheKey: string): SocialUser[] | null => {
       const cached = userCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         return cached.data;
@@ -201,7 +202,7 @@ export function useFarcasterUsers(
   );
 
   // Fetch users from our API route
-  const fetchUsersFromAPI = useCallback(async (): Promise<FarcasterUser[]> => {
+  const fetchUsersFromAPI = useCallback(async (): Promise<SocialUser[]> => {
     if (hasApiKey === false) {
       throw new Error("NEYNAR_API_KEY not configured - Farcaster features unavailable");
     }
@@ -253,14 +254,20 @@ export function useFarcasterUsers(
 
       const data: FarcasterUsersResponse = await response.json();
 
+      // Convert FarcasterUser to SocialUser format
+      const socialUsers: SocialUser[] = data.users.map(user => ({
+        ...user,
+        network: 'farcaster' as const
+      })) as SocialUser[];
+
       // Cache the results
       userCache.set(requestKey, {
-        data: data.users,
+        data: socialUsers,
         timestamp: Date.now(),
       });
 
       setIsUsingMockData(false);
-      return data.users;
+      return socialUsers;
     } catch (err) {
       console.error("Error fetching Farcaster users:", err);
       throw err;
@@ -271,6 +278,49 @@ export function useFarcasterUsers(
   }, [hasApiKey, count, minFollowers, getCachedUsers]);
 
 
+
+  // Load Lens users from static JSON file
+  const loadLensUsers = useCallback(async (): Promise<LensUser[]> => {
+    try {
+      const lensData = await import('../data/lensRewardsUsers.json');
+      if (!lensData.users || !Array.isArray(lensData.users)) {
+        console.warn('No Lens users data available');
+        return [];
+      }
+
+      // Convert Lens users to LensUser format
+      const lensUsers: LensUser[] = lensData.users
+        .filter((user: any) =>
+          user.followerCount >= minFollowers &&
+          user.pfpUrl &&
+          user.pfpUrl !== '' &&
+          user.username
+        )
+        .map((user: any) => ({
+          id: user.id,
+          username: user.username.replace('lens/', ''),
+          displayName: user.displayName,
+          pfpUrl: user.pfpUrl,
+          bio: user.bio,
+          followerCount: user.followerCount,
+          followingCount: user.followingCount,
+          lensHandle: user.lensHandle,
+          lensProfileId: user.lensProfileId,
+          ownedBy: user.ownedBy,
+          totalPosts: user.totalPosts,
+          totalCollects: user.totalCollects,
+          totalMirrors: user.totalMirrors,
+          totalComments: user.totalComments,
+          totalReactions: user.totalReactions,
+        }));
+
+      console.log(`📊 Loaded ${lensUsers.length} Lens users from static data`);
+      return lensUsers;
+    } catch (error) {
+      console.warn('Failed to load Lens users:', error);
+      return [];
+    }
+  }, [minFollowers]);
 
   // Main function to refresh users
   const refreshUsers = useCallback(async () => {
@@ -283,14 +333,40 @@ export function useFarcasterUsers(
     setError(null);
 
     try {
-      const fetchedUsers = await fetchUsersFromAPI();
-      setUsers(fetchedUsers);
+      // Load both Farcaster and Lens users
+      const [farcasterUsers, lensUsers] = await Promise.all([
+        fetchUsersFromAPI(),
+        loadLensUsers()
+      ]);
+
+      // Convert to SocialUser format with type assertions
+      const farcasterSocialUsers: SocialUser[] = farcasterUsers.map(user => ({
+        ...user,
+        network: 'farcaster' as const
+      })) as SocialUser[];
+
+      const lensSocialUsers: SocialUser[] = lensUsers.map(user => ({
+        ...user,
+        network: 'lens' as const
+      })) as SocialUser[];
+
+      // Combine and shuffle users for variety
+      const combinedUsers = [...farcasterSocialUsers, ...lensSocialUsers];
+      const shuffledUsers = combinedUsers.sort(() => Math.random() - 0.5);
+
+      // Limit to requested count
+      const finalUsers = shuffledUsers.slice(0, count);
+
+      setUsers(finalUsers);
+
+      console.log(`🎯 Combined users: ${farcasterUsers.length} Farcaster + ${lensUsers.length} Lens = ${finalUsers.length} total`);
+
       // Clear any previous errors on successful fetch
       setError(null);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to fetch users";
-      
+
       // Only set error if API check is complete and we know the API should work
       if (hasApiKey === true) {
         setError(errorMessage);
@@ -299,23 +375,39 @@ export function useFarcasterUsers(
         setError("Neynar API key not configured - social features unavailable");
       }
 
-      // Don't fallback to mock data - let the app handle the error state
-      setUsers([]);
+      // Try to load just Lens users as fallback
+      try {
+        const lensUsers = await loadLensUsers();
+        if (lensUsers.length > 0) {
+          const lensSocialUsers: SocialUser[] = lensUsers.map(user => ({
+            ...user,
+            network: 'lens' as const
+          })) as SocialUser[];
+          setUsers(lensSocialUsers.slice(0, count));
+          setError(null); // Clear error if we have Lens users
+          console.log(`📊 Fallback: Loaded ${lensUsers.length} Lens users`);
+        } else {
+          setUsers([]);
+        }
+      } catch (fallbackErr) {
+        setUsers([]);
+      }
+
       setIsUsingMockData(false);
     } finally {
       setLoading(false);
     }
-  }, [fetchUsersFromAPI, apiCheckComplete, hasApiKey]);
+  }, [fetchUsersFromAPI, loadLensUsers, apiCheckComplete, hasApiKey, count]);
 
   // Generate random pairs from users for the memory game
   const getRandomPairs = useCallback((): string[] => {
-    if (users.length < 8) {
+    if (users.length < 10) {
       // Not enough users, return empty array to indicate unavailable
       return [];
     }
 
-    // Take first 8 users and use their profile pictures
-    return users.slice(0, 8).map((user) => user.pfpUrl);
+    // Take first 10 users and use their profile pictures
+    return users.slice(0, 10).map((user) => user.pfpUrl);
   }, [users]);
 
   // Set client-side flag
@@ -338,21 +430,21 @@ export function useFarcasterUsers(
   }, [enableAutoRefresh, refreshInterval, refreshUsers, isClient]);
 
   // Whale detection utility functions
-  const getWhalesByType = useCallback((type: WhaleType): FarcasterUser[] => {
+  const getWhalesByType = useCallback((type: WhaleType): SocialUser[] => {
     return users.filter(user => classifyUserByFollowers(user.followerCount) === type);
   }, [users]);
 
-  const getTopWhales = useCallback((limit: number = 10): FarcasterUser[] => {
+  const getTopWhales = useCallback((limit: number = 10): SocialUser[] => {
     return [...users]
       .sort((a, b) => b.followerCount - a.followerCount)
       .slice(0, limit);
   }, [users]);
 
-  const classifyUser = useCallback((user: FarcasterUser): WhaleType => {
+  const classifyUser = useCallback((user: SocialUser): WhaleType => {
     return classifyUserByFollowers(user.followerCount);
   }, []);
 
-  const getChallengeTargets = useCallback((difficulty: 'easy' | 'medium' | 'hard'): FarcasterUser[] => {
+  const getChallengeTargets = useCallback((difficulty: 'easy' | 'medium' | 'hard'): SocialUser[] => {
     const difficultyMap = {
       easy: ['minnow', 'fish'] as WhaleType[],
       medium: ['fish', 'shark'] as WhaleType[],
@@ -363,7 +455,7 @@ export function useFarcasterUsers(
     return users.filter(user =>
       targetTypes.includes(classifyUserByFollowers(user.followerCount))
     );
-  }, [users]);
+  }, [users, classifyUser]);
 
   return {
     users,

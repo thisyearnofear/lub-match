@@ -2,11 +2,11 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import { useGameZoom, useAutoZoom } from "@/hooks/useGameZoom";
 import { SimpleMobileZoomControls } from "./MobileZoomControls";
 import MatchNotification from "./shared/MatchNotification";
-import { FarcasterUser } from "@/types/socialGames";
+import { FarcasterUser } from "@/utils/mockData";
 import {
   useInteractiveHints,
   getOnboardingDelay,
@@ -27,14 +27,14 @@ const heartLayout: CellType[][] = [
   [null, 0, 1, null, 2, 3, null],
   [4, 5, 6, 7, 8, 9, 10],
   [null, 11, 12, 13, 14, 15, null],
-  [null, null, "deco", "deco", "deco", null, null],
-  [null, null, null, "deco", null, null, null],
+  [null, null, 16, 17, 18, null, null],
+  [null, null, null, 19, null, null, null],
   [null, null, null, null, null, null, null],
 ];
 
 type PhotoPairGameProps = {
-  images: string[]; // requires exactly 8 IPFS image URLs
-  users?: FarcasterUser[]; // Optional: Farcaster user data for enhanced social features
+  images: string[]; // requires exactly 10 IPFS image URLs
+  users?: FarcasterUser[]; // Optional: Social user data for enhanced social features
   handleShowProposalAction: () => void;
   onGameComplete?: (stats: {
     completionTime: number;
@@ -68,6 +68,8 @@ const PhotoPairGame = memo(function PhotoPairGame({
   const [startTime] = useState(Date.now());
   const [totalAttempts, setTotalAttempts] = useState(0);
   const [totalMatches, setTotalMatches] = useState(0);
+  const [focusedCard, setFocusedCard] = useState<number | null>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Initialize zoom system
   const zoomControls = useGameZoom({
@@ -84,14 +86,61 @@ const PhotoPairGame = memo(function PhotoPairGame({
   const isGameActive = selected.length > 0 || matched.length > 0 || isComplete;
   const isGameIdle = !isGameActive;
 
-  // Validate that we have exactly 8 images (after hooks are initialized)
-  if (!imagesProp || imagesProp.length !== 8) {
+  // Keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (isComplete) return;
+
+      const playableCards = heartLayout
+        .flat()
+        .filter((cell): cell is number => typeof cell === "number");
+      const currentIndex =
+        focusedCard !== null ? playableCards.indexOf(focusedCard) : -1;
+
+      switch (e.key) {
+        case "ArrowRight":
+        case "ArrowDown":
+          e.preventDefault();
+          const nextIndex = (currentIndex + 1) % playableCards.length;
+          setFocusedCard(playableCards[nextIndex]);
+          cardRefs.current[playableCards[nextIndex]]?.focus();
+          break;
+        case "ArrowLeft":
+        case "ArrowUp":
+          e.preventDefault();
+          const prevIndex =
+            currentIndex <= 0 ? playableCards.length - 1 : currentIndex - 1;
+          setFocusedCard(playableCards[prevIndex]);
+          cardRefs.current[playableCards[prevIndex]]?.focus();
+          break;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          if (focusedCard !== null && !matched.includes(focusedCard)) {
+            handleClick(focusedCard);
+          }
+          break;
+        case "Escape":
+          setFocusedCard(null);
+          break;
+      }
+    },
+    [focusedCard, isComplete, matched]
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Validate that we have exactly 10 images (after hooks are initialized)
+  if (!imagesProp || imagesProp.length !== 10) {
     return (
       <div className="text-center p-8">
         <div className="text-4xl mb-4">🚫</div>
         <h3 className="text-xl font-bold text-white mb-2">Game Unavailable</h3>
         <p className="text-purple-200">
-          Need exactly 8 images to play. Got {imagesProp?.length || 0}.
+          Need exactly 10 images to play. Got {imagesProp?.length || 0}.
         </p>
       </div>
     );
@@ -99,8 +148,8 @@ const PhotoPairGame = memo(function PhotoPairGame({
 
   // Initialize game when images change
   useEffect(() => {
-    if (imagePairs.length === 16) {
-      // 8 images * 2 = 16 pairs
+    if (imagePairs.length === 20) {
+      // 10 images * 2 = 20 pairs
       setShuffledPairs(shuffleArray([...imagePairs]));
       setSelected([]);
       setMatched([]);
@@ -112,7 +161,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
 
   const [streakCount, setStreakCount] = useState(0);
   const [showStreak, setShowStreak] = useState(false);
-  
+
   const handleClick = useCallback(
     async (index: number) => {
       if (
@@ -132,10 +181,10 @@ const PhotoPairGame = memo(function PhotoPairGame({
         if (shuffledPairs[firstIndex] === shuffledPairs[index]) {
           // Increment total matches when cards match
           setTotalMatches((prev) => prev + 1);
-          
+
           // Increase streak
-          setStreakCount(prev => prev + 1);
-          
+          setStreakCount((prev) => prev + 1);
+
           // Show streak celebration for 3+ streaks
           if (streakCount + 1 >= 3) {
             setShowStreak(true);
@@ -179,16 +228,16 @@ const PhotoPairGame = memo(function PhotoPairGame({
   // Add celebration state
   const [showCelebration, setShowCelebration] = useState(false);
   const [longestStreak, setLongestStreak] = useState(0);
-  
+
   // Update longest streak when current streak increases
   useEffect(() => {
     if (streakCount > longestStreak) {
       setLongestStreak(streakCount);
     }
   }, [streakCount, longestStreak]);
-  
+
   useEffect(() => {
-    if (matched.length === 16 && !isComplete) {
+    if (matched.length === 20 && !isComplete) {
       setIsComplete(true);
       setShowCelebration(true);
 
@@ -224,40 +273,57 @@ const PhotoPairGame = memo(function PhotoPairGame({
   ]);
 
   return (
-    <div className="relative flex justify-center items-center w-full px-4 sm:px-6 py-8">
+    <div
+      className="relative flex justify-center items-center w-full px-4 sm:px-6 py-8"
+      role="application"
+      aria-label="Photo matching game"
+      aria-describedby="game-instructions"
+    >
+      {/* Screen reader instructions */}
+      <div id="game-instructions" className="sr-only">
+        Photo matching game with {imagePairs.length / 2} pairs to find. Use
+        arrow keys to navigate between cards, Enter or Space to select a card.
+        Find matching pairs by selecting two cards with the same image.
+        {matched.length / 2} of {imagePairs.length / 2} pairs found.
+        {selected.length === 1 &&
+          "One card selected, choose another to make a match."}
+        {isComplete && "Congratulations! All pairs have been found."}
+      </div>
       {/* Celebration effects */}
       {showCelebration && (
         <>
           {/* Floating hearts animation (ENHANCEMENT: Intensity based on streak) */}
           <div className="absolute inset-0 pointer-events-none">
-            {[...Array(Math.min(12 + Math.floor(longestStreak / 3), 20))].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute text-2xl"
-                initial={{ 
-                  x: Math.random() * window.innerWidth, 
-                  y: window.innerHeight,
-                  opacity: 0,
-                  scale: 0
-                }}
-                animate={{ 
-                  y: -100, 
-                  opacity: [0, 1, 0],
-                  scale: [0, 1, 0],
-                  rotate: 360
-                }}
-                transition={{ 
-                  duration: 2,
-                  delay: i * 0.1,
-                  ease: "easeOut"
-                }}
-                style={{ left: `${Math.random() * 100}%` }}
-              >
-                💝
-              </motion.div>
-            ))}
+            {[...Array(Math.min(12 + Math.floor(longestStreak / 3), 20))].map(
+              (_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute text-2xl"
+                  initial={{
+                    x: Math.random() * window.innerWidth,
+                    y: window.innerHeight,
+                    opacity: 0,
+                    scale: 0,
+                  }}
+                  animate={{
+                    y: -100,
+                    opacity: [0, 1, 0],
+                    scale: [0, 1, 0],
+                    rotate: 360,
+                  }}
+                  transition={{
+                    duration: 2,
+                    delay: i * 0.1,
+                    ease: "easeOut",
+                  }}
+                  style={{ left: `${Math.random() * 100}%` }}
+                >
+                  💝
+                </motion.div>
+              )
+            )}
           </div>
-          
+
           {/* Center celebration message */}
           <motion.div
             className="absolute inset-0 flex items-center justify-center pointer-events-none"
@@ -267,18 +333,18 @@ const PhotoPairGame = memo(function PhotoPairGame({
           >
             <div className="bg-black bg-opacity-70 rounded-full px-6 py-3 backdrop-blur-sm">
               <motion.div
-                animate={{ 
+                animate={{
                   scale: [1, 1.1, 1],
                   textShadow: [
                     "0 0 0px #ff69b4",
                     "0 0 20px #ff69b4",
-                    "0 0 0px #ff69b4"
-                  ]
+                    "0 0 0px #ff69b4",
+                  ],
                 }}
-                transition={{ 
+                transition={{
                   duration: 1.5,
                   repeat: Infinity,
-                  repeatType: "reverse"
+                  repeatType: "reverse",
                 }}
                 className="text-2xl font-bold text-pink-400"
               >
@@ -288,7 +354,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
           </motion.div>
         </>
       )}
-      
+
       <div
         className="grid grid-cols-7 gap-2 sm:gap-3"
         style={{
@@ -296,6 +362,8 @@ const PhotoPairGame = memo(function PhotoPairGame({
           width: "100%",
           ...zoomControls.getTransformStyle(),
         }}
+        role="grid"
+        aria-label="Game board with heart-shaped layout"
       >
         {/* Image preload - improved with proper sizes */}
         <div className="hidden">
@@ -341,7 +409,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
             isIdle: isGameIdle,
             selected,
             matched,
-            shuffledPairs
+            shuffledPairs,
           });
           const swayTiming = getSwayTiming(cell);
 
@@ -350,14 +418,56 @@ const PhotoPairGame = memo(function PhotoPairGame({
             if (!isComplete) {
               hints.recordInteraction();
               handleClick(cell);
+              setFocusedCard(cell);
             }
+          };
+
+          const handleCardFocus = () => {
+            setFocusedCard(cell);
+          };
+
+          const handleCardBlur = () => {
+            // Only clear focus if not navigating with keyboard
+            setTimeout(() => {
+              if (document.activeElement !== cardRefs.current[cell]) {
+                setFocusedCard(null);
+              }
+            }, 0);
+          };
+
+          // Accessibility descriptions
+          const getCardDescription = () => {
+            if (isMatched) return "Matched card";
+            if (isSelected) return "Selected card";
+            return "Face-down card";
+          };
+
+          const getCardInstructions = () => {
+            if (isMatched) return "";
+            if (selected.length === 0)
+              return "Press Enter or Space to select this card";
+            if (selected.includes(cell))
+              return "This card is selected. Press Enter or Space to deselect";
+            return "Press Enter or Space to select this card and try to make a match";
           };
 
           return (
             <motion.div
               key={i}
-              className="relative cursor-pointer"
+              ref={(el) => {
+                cardRefs.current[cell] = el;
+              }}
+              className={`relative cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-gray-900 rounded-xl ${
+                focusedCard === cell ? "ring-2 ring-purple-400" : ""
+              }`}
               style={{ width: cellSize, height: cellSize }}
+              role="gridcell"
+              tabIndex={isComplete || isMatched ? -1 : 0}
+              aria-label={`Card ${cell + 1}, ${getCardDescription()}`}
+              aria-describedby={`card-${cell}-instructions`}
+              aria-pressed={isSelected}
+              onFocus={handleCardFocus}
+              onBlur={handleCardBlur}
               whileHover={{
                 scale: isComplete ? 1 : 1.05,
                 rotateZ: isComplete ? 0 : 2,
@@ -386,13 +496,14 @@ const PhotoPairGame = memo(function PhotoPairGame({
                   : hints.shouldSway && !isSelected && !isMatched
                   ? { x: [0, 0.5, 0, -0.5, 0] }
                   : hints.shouldPulse && !isSelected && !isMatched
-                  ? { // NEW: Pulsing effect for potential matches
+                  ? {
+                      // NEW: Pulsing effect for potential matches
                       scale: [1, 1.05, 1],
                       boxShadow: [
                         "0 0 0px 0px rgba(139, 92, 246, 0)",
                         "0 0 0px 4px rgba(139, 92, 246, 0.3)",
                         "0 0 0px 0px rgba(139, 92, 246, 0)",
-                      ]
+                      ],
                     }
                   : {}),
                 // Compute scale once based on state
@@ -428,7 +539,8 @@ const PhotoPairGame = memo(function PhotoPairGame({
                       delay: swayTiming.delay,
                     }
                   : hints.shouldPulse
-                  ? { // NEW: Timing for pulse effect
+                  ? {
+                      // NEW: Timing for pulse effect
                       duration: 1.5,
                       repeat: Infinity,
                       ease: "easeInOut",
@@ -449,7 +561,8 @@ const PhotoPairGame = memo(function PhotoPairGame({
                       delay: getOnboardingDelay(cell),
                     }
                   : hints.shouldPulse
-                  ? { // NEW: Timing for pulse shadow effect
+                  ? {
+                      // NEW: Timing for pulse shadow effect
                       duration: 1.5,
                       repeat: Infinity,
                       ease: "easeInOut",
@@ -477,6 +590,10 @@ const PhotoPairGame = memo(function PhotoPairGame({
               }}
               onClick={handleTileClick}
             >
+              {/* Screen reader instructions for each card */}
+              <div id={`card-${cell}-instructions`} className="sr-only">
+                {getCardInstructions()}
+              </div>
               {!isSelected && !isMatched && (
                 <motion.div
                   className="absolute inset-0 bg-gray-300 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-gray-400 shadow-lg sm:shadow-xl"
@@ -500,7 +617,13 @@ const PhotoPairGame = memo(function PhotoPairGame({
                   <div className="relative w-full h-full">
                     <Image
                       src={shuffledPairs[cell]}
-                      alt={`Image ${cell + 1}`}
+                      alt={
+                        usersProp?.[Math.floor(cell / 2)]?.displayName
+                          ? `Profile picture of ${
+                              usersProp[Math.floor(cell / 2)].displayName
+                            }`
+                          : `Matching game image ${cell + 1}`
+                      }
                       fill
                       sizes="(max-width: 768px) 16vw, 13vh"
                       priority={true}
@@ -538,7 +661,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
       {/* Mobile Zoom Controls */}
       <SimpleMobileZoomControls
         zoomControls={zoomControls}
-        disabled={matched.length === imagePairs.length}
+        disabled={matched.length === 20}
       />
 
       {/* Streak celebration */}
@@ -550,7 +673,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
           exit={{ opacity: 0, y: -20 }}
         >
           <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-full font-bold shadow-lg">
-            🔥 {streakCount} in a row! 
+            🔥 {streakCount} in a row!
           </div>
         </motion.div>
       )}

@@ -243,11 +243,11 @@ export default function GameContent({
         </motion.div>
       )}
 
-
       {/* Game Completion Unified Onboarding */}
       {demoGameFinished && (
         <UnifiedOnboardingIntegration
           sequence="game-complete"
+          allowRestart={false}
           onMintNFT={() => setShowHeartMinter(true)}
           onPlayMore={() => goToSocialGames()}
         />

@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, SkipForward } from "lucide-react";
 
@@ -63,6 +63,14 @@ export default function UnifiedOnboardingSystem({
   onRestart,
   sequenceKey,
 }: UnifiedOnboardingProps) {
+  // Unique instance ID for debugging multiple mounts
+  const instanceId = useRef(
+    `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  ).current;
+  console.log(
+    `[OnboardingSystem ${instanceId}] Mounted instance for sequenceKey: ${sequenceKey}`
+  );
+
   const [state, setState] = useState<OnboardingState>({
     currentStepIndex: 0,
     isVisible: false,
@@ -70,74 +78,46 @@ export default function UnifiedOnboardingSystem({
     completedSteps: [...completedSteps],
   });
 
-  // Filter steps based on user level and prerequisites
-  const filterAvailableSteps = useCallback(
-    (completedSteps: string[]) => {
-      // Determine max complexity based on user level
-      const complexityMap = {
-        newcomer: "basic" as const,
-        player: "intermediate" as const,
-        challenger: "advanced" as const,
-        whale_hunter: "advanced" as const,
-      };
-
-      const maxComplexity = complexityMap[userLevel];
-
-      // Filter by complexity first
-      let availableSteps = steps.filter((step) => {
-        const complexityLevels = ["basic", "intermediate", "advanced"];
-        const stepLevel = complexityLevels.indexOf(step.complexity);
-        const maxLevel = complexityLevels.indexOf(maxComplexity);
-        return stepLevel <= maxLevel;
-      });
-
-      // Filter by prerequisites
-      availableSteps = availableSteps.filter((step) => {
-        if (!step.prerequisites) return true;
-        return step.prerequisites.every((prereq) =>
-          completedSteps.includes(prereq)
-        );
-      });
-
-      // Remove already completed steps
-      availableSteps = availableSteps.filter(
-        (step) => !completedSteps.includes(step.id)
-      );
-
-      return availableSteps;
-    },
-    [steps, userLevel]
-  );
-
-  // Initialize available steps
+  // For static sequences, just use the steps as provided
   useEffect(() => {
-    const availableSteps = filterAvailableSteps(completedSteps);
-
     setState((prev) => {
       // Only update if steps actually changed to prevent infinite loops
-      if (
-        JSON.stringify(prev.availableSteps) !== JSON.stringify(availableSteps)
-      ) {
+      if (JSON.stringify(prev.availableSteps) !== JSON.stringify(steps)) {
         return {
           ...prev,
-          availableSteps,
+          availableSteps: steps,
           currentStepIndex: 0,
         };
       }
       return prev;
     });
-  }, [steps, userLevel, completedSteps, filterAvailableSteps]);
+  }, [steps]); // Use steps directly for static sequences
 
   // Auto-start onboarding
   useEffect(() => {
     if (autoStart && state.availableSteps.length > 0 && !state.isVisible) {
+      console.log(
+        `[OnboardingSystem ${instanceId}] Auto-starting for sequence: ${sequenceKey}`
+      );
       const timer = setTimeout(() => {
-        setState((prev) => ({ ...prev, isVisible: true }));
+        setState((prev) => {
+          console.log(
+            `[OnboardingSystem ${instanceId}] Setting isVisible to true for sequence: ${sequenceKey}`
+          );
+          return { ...prev, isVisible: true };
+        });
       }, delay);
 
       return () => clearTimeout(timer);
     }
-  }, [autoStart, delay, state.availableSteps.length, state.isVisible]);
+  }, [
+    autoStart,
+    delay,
+    state.availableSteps.length,
+    state.isVisible,
+    instanceId,
+    sequenceKey,
+  ]);
 
   // Current step
   const currentStep = useMemo(
@@ -147,27 +127,30 @@ export default function UnifiedOnboardingSystem({
 
   // Handle step completion
   const handleStepComplete = useCallback(() => {
-    console.log("handleStepComplete called for sequence:", sequenceKey);
+    console.log(
+      `[OnboardingSystem ${instanceId}] handleStepComplete called for sequence: ${sequenceKey}, currentIndex: ${state.currentStepIndex}`
+    );
     setState((prev) => {
       const currentStep = prev.availableSteps[prev.currentStepIndex];
       if (!currentStep) {
-        console.log("No current step for sequence:", sequenceKey, "returning");
+        console.log(
+          `[OnboardingSystem ${instanceId}] No current step for sequence: ${sequenceKey}, returning`
+        );
         return prev;
       }
 
       const newCompletedSteps = [...prev.completedSteps, currentStep.id];
       console.log(
-        "Completing step:",
-        currentStep.id,
-        "for sequence:",
-        sequenceKey
+        `[OnboardingSystem ${instanceId}] Completing step: ${currentStep.id} for sequence: ${sequenceKey}`
       );
       onStepComplete?.(currentStep.id);
 
       // Move to next step or complete sequence
       if (prev.currentStepIndex < prev.availableSteps.length - 1) {
         // Move to next step
-        console.log("Moving to next step for sequence:", sequenceKey);
+        console.log(
+          `[OnboardingSystem ${instanceId}] Moving to next step for sequence: ${sequenceKey}`
+        );
         return {
           ...prev,
           completedSteps: newCompletedSteps,
@@ -176,9 +159,7 @@ export default function UnifiedOnboardingSystem({
       } else {
         // Sequence complete - hide onboarding
         console.log(
-          "Sequence complete for sequence:",
-          sequenceKey,
-          "calling onSequenceComplete"
+          `[OnboardingSystem ${instanceId}] Sequence complete for sequence: ${sequenceKey}, calling onSequenceComplete`
         );
         setTimeout(() => {
           onSequenceComplete?.();
@@ -190,7 +171,13 @@ export default function UnifiedOnboardingSystem({
         };
       }
     });
-  }, [onStepComplete, onSequenceComplete, sequenceKey]);
+  }, [
+    onStepComplete,
+    onSequenceComplete,
+    sequenceKey,
+    state.currentStepIndex,
+    instanceId,
+  ]);
 
   // Auto-advance timer removed - using manual progression only
 
@@ -209,13 +196,19 @@ export default function UnifiedOnboardingSystem({
   );
 
   const handleSkip = useCallback(() => {
+    console.log(
+      `[OnboardingSystem ${instanceId}] handleSkip called for sequence: ${sequenceKey}`
+    );
     setState((prev) => ({ ...prev, isVisible: false }));
     onSequenceComplete?.();
-  }, [onSequenceComplete]);
+  }, [onSequenceComplete, sequenceKey, instanceId]);
 
   // No pause functionality needed for manual progression
 
   const handleRestart = useCallback(() => {
+    console.log(
+      `[OnboardingSystem ${instanceId}] handleRestart called for sequence: ${sequenceKey}`
+    );
     setState((prev) => ({
       ...prev,
       currentStepIndex: 0,
@@ -224,7 +217,7 @@ export default function UnifiedOnboardingSystem({
       completedSteps: [],
     }));
     onRestart?.();
-  }, [onRestart]);
+  }, [onRestart, sequenceKey, instanceId]);
 
   // Don't render if no steps available
   if (!currentStep || !state.isVisible) {
@@ -407,7 +400,10 @@ export default function UnifiedOnboardingSystem({
                       " text-white font-medium py-2 px-4 rounded-lg hover:opacity-90 transition-opacity"
                 } text-sm flex items-center justify-center gap-1`}
               >
-                Next <ChevronRight size={12} />
+                {state.currentStepIndex === state.availableSteps.length - 1
+                  ? "Complete"
+                  : "Next"}{" "}
+                <ChevronRight size={12} />
               </button>
             </div>
 

@@ -15,6 +15,27 @@ export interface FarcasterUser {
   };
 }
 
+export interface LensUser {
+  id: string;
+  username: string;
+  displayName: string;
+  pfpUrl: string;
+  bio?: string;
+  followerCount: number;
+  followingCount: number;
+  lensHandle?: string;
+  lensProfileId?: string;
+  ownedBy?: string;
+  totalPosts?: number;
+  totalCollects?: number;
+  totalMirrors?: number;
+  totalComments?: number;
+  totalReactions?: number;
+}
+
+// Discriminated union for components that handle both
+export type SocialUser = (FarcasterUser & { network: 'farcaster' }) | (LensUser & { network: 'lens' });
+
 // Base game interface
 export interface SocialGame {
   id: string;

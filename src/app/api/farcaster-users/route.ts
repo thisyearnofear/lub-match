@@ -138,7 +138,25 @@ async function fetchTrendingUsers(count: number, minFollowers: number): Promise<
   const uniqueUsers = new Map<number, FarcasterUser>();
 
   data.casts.forEach((cast) => {
-    const user = cast.author;
+    const apiUser = cast.author as any; // API uses snake_case
+
+    // Transform snake_case API fields to camelCase for our interface
+    const user: FarcasterUser = {
+      fid: apiUser.fid,
+      username: apiUser.username,
+      displayName: apiUser.display_name,
+      pfpUrl: apiUser.pfp_url,
+      bio: apiUser.profile?.bio?.text || '',
+      followerCount: apiUser.follower_count,
+      followingCount: apiUser.following_count,
+      powerBadge: apiUser.power_badge || false,
+      verifiedAddresses: {
+        ethAddresses: apiUser.verified_addresses?.eth_addresses || [],
+        solAddresses: apiUser.verified_addresses?.sol_addresses || [],
+      },
+      active_status: 'active',
+    };
+
     if (
       user.followerCount >= minFollowers &&
       user.pfpUrl &&
@@ -182,14 +200,30 @@ async function searchUsers(query: string, limit: number = 10): Promise<Farcaster
   console.log("Search API response structure:", JSON.stringify(data, null, 2));
   
   // Handle different response structures
-  const users = data.result?.users || data.users || [];
-  
-  // Filter and validate users
-  return users.filter((user: FarcasterUser) => 
-    user.pfpUrl && 
-    user.pfpUrl.trim() !== '' && 
-    user.username
-  );
+  const apiUsers = data.result?.users || data.users || [];
+
+  // Transform and filter users
+  return apiUsers
+    .map((apiUser: any) => ({
+      fid: apiUser.fid,
+      username: apiUser.username,
+      displayName: apiUser.display_name,
+      pfpUrl: apiUser.pfp_url,
+      bio: apiUser.profile?.bio?.text || '',
+      followerCount: apiUser.follower_count,
+      followingCount: apiUser.following_count,
+      powerBadge: apiUser.power_badge || false,
+      verifiedAddresses: {
+        ethAddresses: apiUser.verified_addresses?.eth_addresses || [],
+        solAddresses: apiUser.verified_addresses?.sol_addresses || [],
+      },
+      active_status: 'active',
+    } as FarcasterUser))
+    .filter((user: FarcasterUser) =>
+      user.pfpUrl &&
+      user.pfpUrl.trim() !== '' &&
+      user.username
+    );
 }
 
 // Calculate user quality score based on multiple factors
@@ -276,8 +310,25 @@ async function fetchHighQualityUsers(needed: number): Promise<FarcasterUser[]> {
   }
 
   const data = await response.json();
-  const users = data.users || [];
-  
+  const apiUsers = data.users || [];
+
+  // Transform API users to our interface format
+  const users = apiUsers.map((apiUser: any) => ({
+    fid: apiUser.fid,
+    username: apiUser.username,
+    displayName: apiUser.display_name,
+    pfpUrl: apiUser.pfp_url,
+    bio: apiUser.profile?.bio?.text || '',
+    followerCount: apiUser.follower_count,
+    followingCount: apiUser.following_count,
+    powerBadge: apiUser.power_badge || false,
+    verifiedAddresses: {
+      ethAddresses: apiUser.verified_addresses?.eth_addresses || [],
+      solAddresses: apiUser.verified_addresses?.sol_addresses || [],
+    },
+    active_status: 'active',
+  } as FarcasterUser));
+
   // Score and sort users by quality
   const scoredUsers = users
     .map((user: FarcasterUser) => ({
@@ -321,7 +372,25 @@ async function fetchRecentActiveUsers(count: number, minFollowers: number): Prom
     const uniqueUsers = new Map<number, { user: FarcasterUser; score: number; castData: any }>();
 
     data.casts.forEach((cast) => {
-      const user = cast.author;
+      const apiUser = cast.author as any; // API uses snake_case
+
+      // Transform snake_case API fields to camelCase for our interface
+      const user: FarcasterUser = {
+        fid: apiUser.fid,
+        username: apiUser.username,
+        displayName: apiUser.display_name,
+        pfpUrl: apiUser.pfp_url,
+        bio: apiUser.profile?.bio?.text || '',
+        followerCount: apiUser.follower_count,
+        followingCount: apiUser.following_count,
+        powerBadge: apiUser.power_badge || false,
+        verifiedAddresses: {
+          ethAddresses: apiUser.verified_addresses?.eth_addresses || [],
+          solAddresses: apiUser.verified_addresses?.sol_addresses || [],
+        },
+        active_status: 'active', // Assume active if we found them in feed
+      };
+
       if (
         user.followerCount >= minFollowers &&
         user.pfpUrl &&
@@ -521,10 +590,27 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-    
+
+    // Transform API users to our interface format
+    const users = (data.users || []).map((apiUser: any) => ({
+      fid: apiUser.fid,
+      username: apiUser.username,
+      displayName: apiUser.display_name,
+      pfpUrl: apiUser.pfp_url,
+      bio: apiUser.profile?.bio?.text || '',
+      followerCount: apiUser.follower_count,
+      followingCount: apiUser.following_count,
+      powerBadge: apiUser.power_badge || false,
+      verifiedAddresses: {
+        ethAddresses: apiUser.verified_addresses?.eth_addresses || [],
+        solAddresses: apiUser.verified_addresses?.sol_addresses || [],
+      },
+      active_status: 'active',
+    } as FarcasterUser));
+
     return NextResponse.json({
-      users: data.users || [],
-      count: data.users?.length || 0,
+      users,
+      count: users.length,
       timestamp: Date.now(),
     });
 

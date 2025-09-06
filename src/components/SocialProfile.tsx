@@ -4,22 +4,23 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState } from "react";
 import { FarcasterUser } from "@/types/user";
+import { SocialUser } from "@/types/socialGames";
 import { socialInteractionService } from "@/services/socialInteractionService";
 import { classifyUserByFollowers, getWhaleEmoji } from "@/hooks/useFarcasterUsers";
 
-// Updated to use modern FarcasterUser interface
+// Updated to use modern SocialUser interface
 interface SocialProfileProps {
-  user: FarcasterUser;
+  user: SocialUser;
   variant?: "full" | "compact" | "minimal" | "challenge";
   gameCreator?: boolean;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;
-  onChallengeTarget?: (user: FarcasterUser) => void;
+  onChallengeTarget?: (user: SocialUser) => void;
   showWhaleStatus?: boolean;
   showFollowerCount?: boolean;
   showChallengeActions?: boolean;
   showReportAction?: boolean;
-  onReport?: (user: FarcasterUser) => void;
+  onReport?: (user: SocialUser) => void;
   className?: string;
 }
 
@@ -81,14 +82,14 @@ export default function SocialProfile({
 
   // NEW: Challenge targeting handler
   const handleChallengeTarget = () => {
-    if (onChallengeTarget && user.fid) {
+    if (onChallengeTarget) {
       onChallengeTarget(user);
     }
   };
 
   // NEW: Report handler
   const handleReport = () => {
-    if (onReport && user.fid) {
+    if (onReport) {
       onReport(user);
     }
   };
@@ -359,11 +360,11 @@ export function SocialProfileGrid({
   showChallengeActions = false,
   className = "",
 }: {
-  users: FarcasterUser[];
+  users: SocialUser[];
   gameCreatorFid?: number;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;
-  onChallengeTarget?: (user: FarcasterUser) => void; // NEW
+  onChallengeTarget?: (user: SocialUser) => void; // NEW
   variant?: "full" | "compact" | "minimal" | "challenge"; // NEW
   showWhaleStatus?: boolean; // NEW
   showChallengeActions?: boolean; // NEW
@@ -373,7 +374,7 @@ export function SocialProfileGrid({
     <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${className}`}>
       {users.slice(0, 4).map((user) => (
         <SocialProfile
-          key={user.fid}
+          key={user.fid || user.id}
           user={user}
           variant={variant}
           gameCreator={user.fid === gameCreatorFid}

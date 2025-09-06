@@ -6,6 +6,7 @@
  */
 
 import { FarcasterUser } from "@/utils/mockData";
+import { SocialUser } from "@/types/socialGames";
 import { WhaleType, classifyUserByFollowers, getWhaleMultiplier } from "@/hooks/useFarcasterUsers";
 // NEW: Anti-spam integration (ENHANCEMENT FIRST)
 import { antiSpamService } from "@/services/antiSpamService";
@@ -37,7 +38,7 @@ export interface ChallengeType {
 export interface Challenge {
   id: string;
   type: ChallengeType;
-  targetUser: FarcasterUser;
+  targetUser: SocialUser;
   difficulty: ChallengeDifficulty;
   prompt: string;
   baseReward: number;
@@ -192,14 +193,14 @@ class ChallengeEngine {
    * ENHANCEMENT: Adaptive difficulty based on user skill
    */
   async generateChallenge(
-    targetUser: FarcasterUser,
+    targetUser: SocialUser,
     difficulty: ChallengeDifficulty,
     createdBy?: string,
     creatorUserId?: number,
     creatorSkillLevel?: string // NEW: Accept creator's skill level
   ): Promise<Challenge> {
     // NEW: Anti-spam validation
-    if (creatorUserId) {
+    if (creatorUserId && targetUser.fid) {
       const spamCheck = antiSpamService.canCreateChallenge(creatorUserId, targetUser.fid);
       if (spamCheck.isSpam) {
         throw new Error(`Challenge blocked: ${spamCheck.reasons.join(', ')}`);
@@ -273,7 +274,7 @@ class ChallengeEngine {
    * MODULAR: Composable selection logic
    */
   private selectChallengeType(
-    targetUser: FarcasterUser,
+    targetUser: SocialUser,
     difficulty: ChallengeDifficulty,
     whaleType: WhaleType
   ): ChallengeType {
@@ -308,7 +309,7 @@ class ChallengeEngine {
    */
   private async generateContextualPrompt(
     challengeType: ChallengeType,
-    targetUser: FarcasterUser,
+    targetUser: SocialUser,
     difficulty: ChallengeDifficulty
   ): Promise<string> {
     // For now, use template-based generation
@@ -331,7 +332,7 @@ class ChallengeEngine {
    * Get strategy tip based on challenge type and target
    * MODULAR: Composable strategy system
    */
-  private getStrategyTip(challengeType: ChallengeType, targetUser: FarcasterUser): string {
+  private getStrategyTip(challengeType: ChallengeType, targetUser: SocialUser): string {
     const whaleType = classifyUserByFollowers(targetUser.followerCount);
     
     if (whaleType === 'mega_whale' || whaleType === 'whale') {
