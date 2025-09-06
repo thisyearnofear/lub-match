@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { FarcasterUser } from "@/types/user";
 import { SocialUser } from "@/types/socialGames";
+import { PlatformAdapter, UnifiedUtils } from "@/utils/platformAdapter";
 import { socialInteractionService } from "@/services/socialInteractionService";
 import { classifyUserByFollowers, getWhaleEmoji } from "@/hooks/useFarcasterUsers";
 
@@ -52,13 +53,19 @@ export default function SocialProfile({
 
     setIsLoading(true);
     try {
-      // Check if fid exists before calling the service
-      if (user.fid) {
-        const result = await socialInteractionService.followUser(user.fid);
+      // CLEAN: Use PlatformAdapter for type-safe ID extraction
+      const userId = PlatformAdapter.getNumericId(user);
+      
+      if (userId) {
+        const result = await socialInteractionService.followUser(userId);
         if (result.success) {
-          await onFollow(user.fid);
-          setIsFollowing(!isFollowing);
+          await onFollow(userId);
+          setIsFollowing(true);
+        } else {
+          throw new Error(result.error || 'Follow failed');
         }
+      } else {
+        throw new Error('User ID not available');
       }
     } catch (error) {
       console.error("Follow action failed:", error);
@@ -71,9 +78,11 @@ export default function SocialProfile({
     if (!onCast) return;
 
     const message = `Hey @${user.username}! 👋`;
-    // Check if fid exists before calling the service
-    if (user.fid) {
-      const result = await socialInteractionService.castToUser(user.fid, message);
+    // CLEAN: Use PlatformAdapter for type-safe ID extraction
+    const userId = PlatformAdapter.getNumericId(user);
+    
+    if (userId) {
+      const result = await socialInteractionService.castToUser(userId, message);
       if (result.success && onCast) {
         onCast(message);
       }
@@ -260,10 +269,9 @@ export default function SocialProfile({
             <h3 className="font-semibold text-gray-900 truncate">
               {user.displayName}
             </h3>
-            {user.verifiedAddresses?.ethAddresses &&
-              user.verifiedAddresses.ethAddresses.length > 0 && (
-                <span className="text-blue-500 text-sm">✓</span>
-              )}
+            {PlatformAdapter.isVerified(user) && (
+              <span className="text-blue-500 text-sm">✓</span>
+            )}
           </div>
           <p className="text-sm text-gray-600">@{user.username}</p>
         </div>
@@ -374,10 +382,10 @@ export function SocialProfileGrid({
     <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${className}`}>
       {users.slice(0, 4).map((user) => (
         <SocialProfile
-          key={user.fid || user.id}
+          key={user.username}
           user={user}
           variant={variant}
-          gameCreator={user.fid === gameCreatorFid}
+          gameCreator={false}
           onFollow={onFollow}
           onCast={onCast}
           onChallengeTarget={onChallengeTarget}

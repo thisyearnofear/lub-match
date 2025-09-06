@@ -54,7 +54,10 @@ export default function UsernameGuessingGameComponent({
       );
 
       return {
-        user,
+        user: {
+          ...user,
+          network: 'farcaster' as const
+        },
         options: shuffledOptions,
       };
     });
@@ -141,11 +144,11 @@ export default function UsernameGuessingGameComponent({
         correctGuesses,
         totalQuestions: finalQuestions.length,
         questionsData: finalQuestions.map((q) => ({
-          user: q.user,
+          user: q.user.network === 'farcaster' ? q.user as any : q.user as any,
           userGuess: q.userGuess!,
           correctAnswer: q.user.username,
-          isCorrect: q.isCorrect!,
-          timeSpent: q.timeSpent!,
+          isCorrect: q.userGuess === q.user.username,
+          timeSpent: q.timeSpent || 0,
         })),
       },
     };

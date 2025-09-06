@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useHeartNFT, HeartData, CollectionStats } from "@/hooks/useHeartNFT";
 import { useAccount } from "wagmi";
 import { ContractInfo } from "./ContractInfo";
+import { SocialUser } from "@/types/socialGames";
+import { calculateCollectionRarity, getPlatformStyling, getRarityStyling } from "@/utils/socialInfluenceCalculator";
 
 // Cache for NFT data to prevent excessive API calls
 const nftCache = new Map<string, {
@@ -24,9 +26,19 @@ interface NFTItem {
 interface NFTGalleryProps {
   className?: string;
   onNFTClick?: (nft: NFTItem) => void;
+  // ENHANCEMENT FIRST: Platform filtering and sorting
+  showFilters?: boolean;
+  defaultFilter?: 'all' | 'farcaster' | 'lens' | 'mixed';
+  defaultSort?: 'date' | 'rarity' | 'influence';
 }
 
-export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
+export function NFTGallery({ 
+  className = "", 
+  onNFTClick, 
+  showFilters = true,
+  defaultFilter = 'all',
+  defaultSort = 'date'
+}: NFTGalleryProps) {
   const {
     getUserNFTCollection,
     nftBalance,
@@ -41,6 +53,10 @@ export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
   const [collectionStats, setCollectionStats] =
     useState<CollectionStats | null>(null);
   const [totalSupply, setTotalSupply] = useState<bigint | null>(null);
+  
+  // ENHANCEMENT FIRST: Filtering and sorting state
+  const [activeFilter, setActiveFilter] = useState<'all' | 'farcaster' | 'lens' | 'mixed'>(defaultFilter);
+  const [activeSort, setActiveSort] = useState<'date' | 'rarity' | 'influence'>(defaultSort);
   
   // Refs for cleanup and debouncing
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -94,7 +110,37 @@ export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
         collection.slice(0, 20).map(async (nft) => { // Limit to 20 for performance
           try {
             const rarity = await getHeartRarity(nft.tokenId);
-            return { ...nft, rarity: rarity || undefined };
+            
+            // ENHANCEMENT FIRST: Calculate social influence if users data available
+            let socialInfluence = null;
+            let networkType: 'farcaster' | 'lens' | 'mixed' = 'farcaster';
+            
+            if (nft.heartData.usernames && nft.heartData.usernames.length > 0) {
+              // Reconstruct social users from heart data (simplified)
+              const socialUsers: SocialUser[] = nft.heartData.usernames.map((username, index) => ({
+                fid: index + 1, // Add required fid for Farcaster users
+                username,
+                displayName: username,
+                pfpUrl: nft.heartData.imageHashes?.[index] || '',
+                bio: '',
+                followerCount: nft.heartData.userFollowers?.[index] || 0,
+                followingCount: 0,
+                network: 'farcaster' as const
+              } as SocialUser));
+              
+              socialInfluence = calculateCollectionRarity(socialUsers);
+              
+              // Determine network type based on data patterns
+              const platforms = new Set(['farcaster']); // Simplified for now
+              networkType = platforms.size > 1 ? 'mixed' : 'farcaster';
+            }
+            
+            return { 
+              ...nft, 
+              rarity: rarity || undefined,
+              socialInfluence,
+              networkType
+            };
           } catch (error) {
             // Gracefully handle rarity fetch failures
             return nft;
@@ -104,7 +150,7 @@ export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
 
       // Filter successful results
       const validNFTs = enhancedCollection
-        .filter((result): result is PromiseFulfilledResult<NFTItem> => result.status === 'fulfilled')
+        .filter((result): result is PromiseFulfilledResult<NFTItem & { socialInfluence?: any; networkType?: string }> => result.status === 'fulfilled')
         .map(result => result.value);
 
       // Cache the results
@@ -168,6 +214,38 @@ export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
   const refreshNFTs = useCallback(() => {
     loadNFTs(true);
   }, [loadNFTs]);
+  
+  // ENHANCEMENT FIRST: Filtered and sorted NFTs
+  const filteredAndSortedNFTs = useMemo(() => {
+    let filtered = [...nfts];
+    
+    // Apply platform filter
+    if (activeFilter !== 'all') {
+      filtered = filtered.filter(nft => {
+        const networkType = (nft as any).networkType || 'farcaster';
+        return networkType === activeFilter;
+      });
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (activeSort) {
+        case 'rarity':
+          const aRarity = (a as any).socialInfluence?.score || 0;
+          const bRarity = (b as any).socialInfluence?.score || 0;
+          return bRarity - aRarity;
+        case 'influence':
+          const aInfluence = a.heartData.userFollowers?.reduce((sum, count) => sum + Number(count), 0) || 0;
+          const bInfluence = b.heartData.userFollowers?.reduce((sum, count) => sum + Number(count), 0) || 0;
+          return bInfluence - aInfluence;
+        case 'date':
+        default:
+          return Number(b.heartData.completedAt) - Number(a.heartData.completedAt);
+      }
+    });
+    
+    return filtered;
+  }, [nfts, activeFilter, activeSort]);
 
   if (!isConnected) {
     return (
@@ -238,10 +316,63 @@ export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
         </h3>
         <div className="flex flex-wrap gap-3 text-sm text-gray-600">
           <span>
-            {nfts.length} NFT{nfts.length !== 1 ? "s" : ""} owned
+            {filteredAndSortedNFTs.length} NFT{filteredAndSortedNFTs.length !== 1 ? "s" : ""} shown
           </span>
+          <span>• {nfts.length} total owned</span>
           {totalSupply && <span>• {totalSupply.toString()} total minted</span>}
         </div>
+        
+        {/* ENHANCEMENT FIRST: Filters and Sorting */}
+        {showFilters && (
+          <div className="mt-3 space-y-3">
+            {/* Platform Filter */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs font-medium text-gray-700 mr-2">Filter:</span>
+              {[
+                { key: 'all', label: 'All', icon: '🌟' },
+                { key: 'farcaster', label: 'Farcaster', icon: '🟣' },
+                { key: 'lens', label: 'Lens', icon: '🌿' },
+                { key: 'mixed', label: 'Cross-Platform', icon: '🌈' },
+              ].map(({ key, label, icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveFilter(key as any)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    activeFilter === key
+                      ? 'bg-purple-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className="mr-1">{icon}</span>
+                  {label}
+                </button>
+              ))}
+            </div>
+            
+            {/* Sort Options */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs font-medium text-gray-700 mr-2">Sort:</span>
+              {[
+                { key: 'date', label: 'Latest', icon: '📅' },
+                { key: 'rarity', label: 'Rarity', icon: '💎' },
+                { key: 'influence', label: 'Influence', icon: '📈' },
+              ].map(({ key, label, icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveSort(key as any)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    activeSort === key
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className="mr-1">{icon}</span>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Collection Stats (if available) */}
         {collectionStats && (
@@ -276,29 +407,46 @@ export function NFTGallery({ className = "", onNFTClick }: NFTGalleryProps) {
       {/* NFT Grid */}
       <div className="grid grid-cols-2 gap-3">
         <AnimatePresence>
-          {nfts.map((nft, index) => (
+          {filteredAndSortedNFTs.map((nft, index) => (
             <NFTCard
               key={nft.tokenId.toString()}
-              nft={nft}
+              nft={nft as any}
               index={index}
               onClick={() => onNFTClick?.(nft)}
             />
           ))}
         </AnimatePresence>
       </div>
+      
+      {/* No Results Message */}
+      {filteredAndSortedNFTs.length === 0 && nfts.length > 0 && (
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4">🔍</div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            No NFTs Match Filter
+          </h3>
+          <p className="text-gray-600 text-sm">
+            Try adjusting your filter or sort options
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
 interface NFTCardProps {
-  nft: NFTItem;
+  nft: NFTItem & { socialInfluence?: any; networkType?: string };
   index: number;
   onClick?: () => void;
 }
 
 function NFTCard({ nft, index, onClick }: NFTCardProps) {
-  const { heartData, rarity } = nft;
+  const { heartData, rarity, socialInfluence, networkType } = nft;
   const isDemo = heartData.gameType === "demo";
+  
+  // ENHANCEMENT FIRST: Platform-specific styling
+  const platformStyling = getPlatformStyling(networkType as any || 'farcaster');
+  const rarityStyling = socialInfluence ? getRarityStyling(socialInfluence.tier) : null;
 
   // Calculate social metrics if available
   const totalFollowers =
@@ -309,7 +457,7 @@ function NFTCard({ nft, index, onClick }: NFTCardProps) {
     ? Math.round(totalFollowers / heartData.userFollowers.length)
     : 0;
 
-  // Rarity color mapping
+  // Rarity color mapping (legacy support)
   const getRarityColor = (rarity: string) => {
     if (rarity.includes("Legendary")) return "from-yellow-400 to-orange-500";
     if (rarity.includes("Ultra Rare")) return "from-purple-400 to-pink-500";
@@ -324,23 +472,40 @@ function NFTCard({ nft, index, onClick }: NFTCardProps) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ delay: index * 0.1 }}
-      className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 border border-purple-200 cursor-pointer hover:shadow-lg transition-all"
+      className={`bg-gradient-to-br ${platformStyling.backgroundColor} rounded-xl p-3 border ${platformStyling.borderColor} cursor-pointer hover:shadow-lg transition-all ${rarityStyling?.glow || ''}`}
       onClick={onClick}
     >
       {/* NFT Preview */}
-      <div className="aspect-square bg-gradient-to-br from-pink-200 to-purple-200 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
+      <div className={`aspect-square bg-gradient-to-br ${platformStyling.backgroundColor} rounded-lg mb-3 flex items-center justify-center relative overflow-hidden ${rarityStyling?.border || ''}`}>
         <div className="text-2xl">💝</div>
         {/* Heart shape overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-pink-400/20 to-purple-400/20 rounded-lg" />
+        <div className={`absolute inset-0 bg-gradient-to-br ${platformStyling.primaryColor}/20 rounded-lg`} />
+        
+        {/* Platform Badge */}
+        <div className={`absolute top-1 left-1 w-6 h-6 bg-gradient-to-r ${platformStyling.primaryColor} rounded-full flex items-center justify-center text-xs text-white shadow-lg`}>
+          {platformStyling.icon}
+        </div>
 
         {/* Rarity badge */}
-        {rarity && (
+        {(rarity || socialInfluence) && (
           <div
-            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${getRarityColor(
-              rarity
-            )}`}
+            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r ${
+              socialInfluence ? 
+                (socialInfluence.tier === 'Legendary' ? 'from-yellow-400 to-orange-500' :
+                 socialInfluence.tier === 'Epic' ? 'from-purple-400 to-pink-500' :
+                 socialInfluence.tier === 'Rare' ? 'from-blue-400 to-cyan-500' :
+                 'from-green-400 to-emerald-500') :
+                getRarityColor(rarity || '')
+            }`}
           >
-            {rarity.split(" ")[0]}
+            {socialInfluence ? socialInfluence.tier.charAt(0) : rarity?.split(" ")[0]}
+          </div>
+        )}
+        
+        {/* Cross-platform indicator */}
+        {networkType === 'mixed' && (
+          <div className="absolute bottom-1 right-1 w-6 h-6 bg-gradient-to-r from-purple-500 via-pink-500 to-green-500 rounded-full flex items-center justify-center text-xs text-white shadow-lg">
+            🌈
           </div>
         )}
       </div>
@@ -348,13 +513,23 @@ function NFTCard({ nft, index, onClick }: NFTCardProps) {
       {/* NFT Info */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-purple-700">
-            {isDemo ? "Demo Lub" : "Custom Lub"}
+          <span className={`text-xs font-medium ${platformStyling.textColor}`}>
+            {networkType === 'mixed' ? 'Cross-Platform' : platformStyling.name} {isDemo ? "Demo" : "Custom"}
           </span>
           <span className="text-xs text-gray-500">
             #{nft.tokenId.toString()}
           </span>
         </div>
+        
+        {/* Social Influence Score */}
+        {socialInfluence && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-600">Influence:</span>
+            <span className={`font-semibold ${rarityStyling?.text || 'text-gray-700'}`}>
+              {socialInfluence.score} pts
+            </span>
+          </div>
+        )}
 
         {/* Social Metrics (if available) */}
         {avgFollowers > 0 && (
@@ -395,6 +570,15 @@ function NFTCard({ nft, index, onClick }: NFTCardProps) {
             {new Date(
               Number(heartData.completedAt) * 1000
             ).toLocaleDateString()}
+          </div>
+        )}
+        
+        {/* Platform-specific achievements */}
+        {socialInfluence?.factors.crossPlatform && (
+          <div className="text-xs text-center">
+            <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-green-500 text-white px-2 py-1 rounded-full font-medium">
+              Cross-Platform Pioneer
+            </span>
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NFTPreview from "@/components/shared/NFTPreview";
 import MiniAppWalletConnect from "@/components/MiniAppWalletConnect";
@@ -15,6 +15,8 @@ import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import { trackNFTMinted } from "@/utils/analytics";
 import { useOnboardingContext } from "@/components/onboarding/OnboardingProvider";
 import { useWeb3ErrorHandler } from "@/hooks/useWeb3ErrorHandler";
+import { SocialUser } from "@/types/socialGames";
+import { calculateCollectionRarity, getPlatformStyling } from "@/utils/socialInfluenceCalculator";
 
 type GameType = "custom" | "demo";
 
@@ -35,6 +37,8 @@ export type HeartNFTMinterProps = {
   onViewCollection?: () => void;
   users?: any[];
   gameStats?: GameStats;
+  // ENHANCEMENT FIRST: Social platform context
+  socialUsers?: SocialUser[];
 };
 
 export default function HeartNFTMinter({
@@ -48,6 +52,7 @@ export default function HeartNFTMinter({
   onViewCollection,
   users,
   gameStats,
+  socialUsers,
 }: HeartNFTMinterProps) {
   const [isMinting, setIsMinting] = React.useState(false);
   const { address, isConnected } = useAccount();
@@ -68,6 +73,30 @@ export default function HeartNFTMinter({
 
   // Use the new unified pricing hook for accurate contract data
   const nftPricing = useNFTPricing();
+  
+  // ENHANCEMENT FIRST: Platform-aware features
+  const platformAnalysis = useMemo(() => {
+    if (!socialUsers || socialUsers.length === 0) return null;
+    
+    const platforms = new Set(socialUsers.map(u => u.network));
+    const networkType = platforms.size > 1 ? 'mixed' : Array.from(platforms)[0] as 'farcaster' | 'lens';
+    const collectionRarity = calculateCollectionRarity(socialUsers);
+    const platformStyling = getPlatformStyling(networkType);
+    
+    return {
+      networkType,
+      platforms: Array.from(platforms),
+      collectionRarity,
+      platformStyling,
+      crossPlatformBonus: platforms.size > 1,
+      achievements: [
+        ...(platforms.size > 1 ? ['Cross-Platform Pioneer'] : []),
+        ...(collectionRarity.tier === 'Legendary' ? ['Legendary Collector'] : []),
+        ...(collectionRarity.tier === 'Epic' ? ['Epic Curator'] : []),
+        ...(collectionRarity.factors.verifiedCount > 0 ? ['Verified Network'] : []),
+      ]
+    };
+  }, [socialUsers]);
 
   // Payment method state - default to ETH if no LUB options available
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>(() => {
@@ -221,19 +250,23 @@ export default function HeartNFTMinter({
         tx as `0x`
       );
 
-      // Show success toast with payment method info
+      // Show enhanced success toast with platform-aware messaging
       const paymentMethodText = paymentMethod === "eth" ? "ETH" :
                                paymentMethod === "full-lub" ? "LUB tokens" :
                                "ETH + LUB discount";
+      
+      const platformMessage = platformAnalysis ? 
+        `${platformAnalysis.platformStyling.icon} ${platformAnalysis.collectionRarity.tier} rarity ${platformAnalysis.networkType === 'mixed' ? 'cross-platform' : platformAnalysis.platformStyling.name} NFT` :
+        'NFT';
 
       showToast(
-        "💎 NFT Minted!",
+        `💎 ${platformMessage} Minted!`,
         tokenId
-          ? `Your NFT #${tokenId.toString()} has been minted successfully using ${paymentMethodText}.`
-          : `Your NFT has been minted successfully using ${paymentMethodText}.`,
+          ? `Your ${platformMessage} #${tokenId.toString()} has been minted successfully using ${paymentMethodText}${platformAnalysis?.crossPlatformBonus ? ' with cross-platform bonus!' : '.'}`
+          : `Your ${platformMessage} has been minted successfully using ${paymentMethodText}${platformAnalysis?.crossPlatformBonus ? ' with cross-platform bonus!' : '.'}.`,
         {
-          icon: "🎉",
-          duration: 6000,
+          icon: platformAnalysis?.platformStyling.icon || "🎉",
+          duration: 8000,
           actionButton: onViewCollection
             ? { text: "View Collection", onClick: onViewCollection }
             : undefined,
@@ -241,6 +274,7 @@ export default function HeartNFTMinter({
       );
 
       if (tokenId) {
+        // Pass enhanced context to success handler
         onMinted?.(tokenId.toString());
       }
 
@@ -294,25 +328,52 @@ export default function HeartNFTMinter({
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="w-full max-w-md mx-4 rounded-2xl bg-gradient-to-b from-gray-900 to-black border border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          className={`w-full max-w-md mx-4 rounded-2xl bg-gradient-to-b from-gray-900 to-black border ${platformAnalysis ? `border-${platformAnalysis.platformStyling.accentColor}/20` : 'border-white/10'} shadow-2xl overflow-hidden max-h-[90vh] flex flex-col`}
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
         >
-          <div className="p-5 border-b border-white/10">
-            <h3 className="text-lg font-semibold text-white">
-              Mint Your Heart NFT
-            </h3>
-            <p className="text-xs text-gray-400 mt-1">
-              Celebrate this moment by minting a commemorative NFT on-chain.
+          <div className={`p-5 border-b ${platformAnalysis ? `border-${platformAnalysis.platformStyling.accentColor}/20` : 'border-white/10'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              {platformAnalysis && (
+                <span className="text-lg">{platformAnalysis.platformStyling.icon}</span>
+              )}
+              <h3 className="text-lg font-semibold text-white">
+                Mint Your {platformAnalysis?.networkType === 'mixed' ? 'Cross-Platform' : platformAnalysis?.platformStyling.name || 'Heart'} NFT
+              </h3>
+              {platformAnalysis?.collectionRarity && (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  platformAnalysis.collectionRarity.tier === 'Legendary' ? 'bg-yellow-500/20 text-yellow-300' :
+                  platformAnalysis.collectionRarity.tier === 'Epic' ? 'bg-purple-500/20 text-purple-300' :
+                  platformAnalysis.collectionRarity.tier === 'Rare' ? 'bg-blue-500/20 text-blue-300' :
+                  'bg-gray-500/20 text-gray-300'
+                }`}>
+                  {platformAnalysis.collectionRarity.tier}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400">
+              {platformAnalysis?.crossPlatformBonus 
+                ? 'Celebrate this cross-platform moment by minting a unique commemorative NFT bridging social networks.'
+                : 'Celebrate this moment by minting a commemorative NFT on-chain.'
+              }
             </p>
+            {platformAnalysis?.achievements && platformAnalysis.achievements.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {platformAnalysis.achievements.map((achievement, index) => (
+                  <span key={index} className={`px-2 py-1 rounded-full text-xs bg-gradient-to-r ${platformAnalysis.platformStyling.primaryColor} text-white`}>
+                    {achievement}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="p-5 space-y-4 overflow-y-auto flex-1">
             <NFTPreview
               images={gameImages}
               message={message}
-              users={users}
+              users={socialUsers || users}
               gameStats={gameStats}
             />
 

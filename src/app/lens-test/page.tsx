@@ -13,18 +13,14 @@ export default function LensTestPage() {
   const { isAuthenticated, authState } = useLensAuth();
   const [selectedNetwork, setSelectedNetwork] = useState<'farcaster' | 'lens' | 'both'>('lens'); // ENHANCEMENT FIRST: Default to lens for testing
   
-  // Use the updated hook with network selection
+  // Use the updated hook
   const {
     users,
     loading,
     error,
     refreshUsers,
-    isLensAuthenticated,
-    lensAuthState,
-    network,
   } = useFarcasterUsers({
     count: 10,
-    network: selectedNetwork,
   });
 
   return (
@@ -87,7 +83,7 @@ export default function LensTestPage() {
               ))}
             </div>
             <div className="text-sm text-gray-600">
-              Current network: <span className="font-medium">{network}</span>
+              Current network: <span className="font-medium">Mixed</span>
             </div>
           </div>
 
@@ -113,7 +109,7 @@ export default function LensTestPage() {
               </ActionButton>
               
               <div className="text-sm text-gray-600 flex items-center">
-                Lens Auth: {isLensAuthenticated ? '✅ Yes' : '❌ No'}
+                Lens Auth: {isAuthenticated ? '✅ Yes' : '❌ No'}
               </div>
             </div>
 
@@ -126,12 +122,12 @@ export default function LensTestPage() {
             {users.length > 0 && (
               <div className="space-y-4">
                 <div className="text-sm text-gray-600">
-                  Found {users.length} users from {network} network(s)
+                  Found {users.length} users from mixed networks
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-2">
                   {users.slice(0, 6).map((user, index) => (
-                    <div key={user.id} className="p-4 bg-white rounded-lg border">
+                    <div key={index} className="p-4 bg-white rounded-lg border">
                       <div className="flex items-center gap-3">
                         {user.pfpUrl && (
                           <img
@@ -173,9 +169,9 @@ export default function LensTestPage() {
             <h2 className="text-xl font-semibold mb-4">5. Debug Information</h2>
             <div className="text-sm text-gray-600 space-y-2">
               <div>Wallet Connected: {isConnected ? '✅' : '❌'}</div>
-              <div>Lens Authenticated: {isLensAuthenticated ? '✅' : '❌'}</div>
+              <div>Lens Authenticated: {isAuthenticated ? '✅' : '❌'}</div>
               <div>Selected Network: {selectedNetwork}</div>
-              <div>Active Network: {network}</div>
+              <div>Active Network: Mixed</div>
               <div>Users Loaded: {users.length}</div>
               <div>Loading: {loading ? '⏳' : '✅'}</div>
               {error && <div className="text-red-600">Error: {error}</div>}

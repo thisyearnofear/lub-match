@@ -7,6 +7,7 @@ import { useGameZoom, useAutoZoom } from "@/hooks/useGameZoom";
 import { SimpleMobileZoomControls } from "./MobileZoomControls";
 import MatchNotification from "./shared/MatchNotification";
 import { FarcasterUser } from "@/utils/mockData";
+import { SocialUser } from "@/types/socialGames";
 import {
   useInteractiveHints,
   getOnboardingDelay,
@@ -62,7 +63,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
   const [matched, setMatched] = useState<number[]>([]);
   const [incorrect, setIncorrect] = useState<number[]>([]);
   const [justMatched, setJustMatched] = useState<number[]>([]);
-  const [matchedUser, setMatchedUser] = useState<FarcasterUser | null>(null);
+  const [matchedUser, setMatchedUser] = useState<SocialUser | null>(null);
   const [showMatchNotification, setShowMatchNotification] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [startTime] = useState(Date.now());
@@ -198,7 +199,12 @@ const PhotoPairGame = memo(function PhotoPairGame({
             const matchedImageUrl = shuffledPairs[firstIndex];
             const user = usersProp.find((u) => u.pfpUrl === matchedImageUrl);
             if (user) {
-              setMatchedUser(user);
+              // Convert FarcasterUser to SocialUser format
+              const socialUser = {
+                ...user,
+                network: 'farcaster' as const
+              };
+              setMatchedUser(socialUser);
               setShowMatchNotification(true);
             }
           }
@@ -256,11 +262,11 @@ const PhotoPairGame = memo(function PhotoPairGame({
         totalMatches,
       });
 
-      // Show proposal after a delay
+      // ENHANCEMENT FIRST: Trigger sequential flow after celebration
       setTimeout(() => {
         document.dispatchEvent(new CustomEvent("demoGameFinished"));
         handleShowProposalAction();
-      }, 3500); // Give users time to process their success
+      }, 2000); // Reduced delay for better flow
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

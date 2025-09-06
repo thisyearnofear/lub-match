@@ -7,6 +7,7 @@
 
 import { FarcasterUser } from "@/utils/mockData";
 import { SocialUser } from "@/types/socialGames";
+import { PlatformAdapter } from "@/utils/platformAdapter";
 import { WhaleType, classifyUserByFollowers, getWhaleMultiplier } from "@/hooks/useFarcasterUsers";
 // NEW: Anti-spam integration (ENHANCEMENT FIRST)
 import { antiSpamService } from "@/services/antiSpamService";
@@ -199,9 +200,11 @@ class ChallengeEngine {
     creatorUserId?: number,
     creatorSkillLevel?: string // NEW: Accept creator's skill level
   ): Promise<Challenge> {
-    // NEW: Anti-spam validation
-    if (creatorUserId && targetUser.fid) {
-      const spamCheck = antiSpamService.canCreateChallenge(creatorUserId, targetUser.fid);
+    // CLEAN: Anti-spam validation using PlatformAdapter
+    const targetUserId = PlatformAdapter.getNumericId(targetUser);
+    
+    if (creatorUserId && targetUserId) {
+      const spamCheck = antiSpamService.canCreateChallenge(creatorUserId, targetUserId);
       if (spamCheck.isSpam) {
         throw new Error(`Challenge blocked: ${spamCheck.reasons.join(', ')}`);
       }
@@ -260,7 +263,7 @@ class ChallengeEngine {
     if (creatorUserId) {
       antiSpamService.recordActivity(creatorUserId, 'challenge', {
         challengeId: challenge.id,
-        targetUserId: targetUser.fid,
+        targetUserId: targetUserId,
         difficulty: adjustedDifficulty, // Use adjusted difficulty
         whaleMultiplier
       });

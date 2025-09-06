@@ -72,6 +72,7 @@ import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useAccount } from "wagmi";
 import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
 import { useUserProgression } from "@/utils/userProgression";
+import { LoadingState } from "@/components/ErrorBoundary";
 
 const ANIM_DURATION = 2;
 
@@ -87,11 +88,14 @@ export default function Home() {
     closeApp,
   } = useMiniAppReady();
 
+  const [showWalletDrawer, setShowWalletDrawer] = useState(false);
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [showHeartNFTMinter, setShowHeartNFTMinter] = useState(false);
-  const [showWalletDrawer, setShowWalletDrawer] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  
+  // ENHANCEMENT FIRST: Sequential loading states using existing patterns
+  const [loadingState, setLoadingState] = useState<'none' | 'celebrating' | 'preparing_nft' | 'loading_proposal'>('none');
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   // Game stats state to capture actual performance data
   const [gameStats, setGameStats] = useState<{
@@ -178,46 +182,52 @@ export default function Home() {
   // No longer need to refresh player data - using unified stats
 
   const handleShowProposal = () => {
-    // For the home page demo, show NFT minting option first
-    if (isClient && gameImages.length === 10) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setShowHeartNFTMinter(true);
-        setIsTransitioning(false);
-      }, ANIM_DURATION * 1000);
-    } else {
-      // Fallback to proposal if game images aren't available
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setShowValentinesProposal(true);
-        setIsTransitioning(false);
-      }, ANIM_DURATION * 1000);
-    }
+    // ENHANCEMENT FIRST: Sequential loading using existing state management
+    setLoadingState('celebrating');
+    
+    // Celebration phase (2s)
+    setTimeout(() => {
+      setLoadingState('preparing_nft');
+      setLoadingProgress(0);
+      
+      // Progress animation for NFT preparation
+      const progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            setLoadingState('none');
+            setShowHeartNFTMinter(true);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 150); // 1.5s total
+    }, 2000);
   };
 
   const handleNFTMinterClose = () => {
     setShowHeartNFTMinter(false);
-    // ENHANCED: After closing NFT minter, proceed to social games with challenge integration
-    if (isClient && canPlayGames(users)) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        // Start social games which now includes challenge selection
-        startSocialGames();
-        setIsTransitioning(false);
-      }, ANIM_DURATION * 1000);
-    } else {
-      // Fallback to proposal if social games aren't available
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setShowValentinesProposal(true);
-        setIsTransitioning(false);
-      }, ANIM_DURATION * 1000);
-    }
+    // ENHANCEMENT FIRST: Continue sequential flow to proposal
+    setLoadingState('loading_proposal');
+    setLoadingProgress(0);
+    
+      // Progress animation for proposal loading
+      const progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            setLoadingState('none');
+            setShowValentinesProposal(true);
+            return 100;
+          }
+          return prev + 20;
+        });
+      }, 100); // 1s total
   };
 
   const handleNFTMinted = (tokenId: string) => {
     console.log("NFT minted with token ID:", tokenId);
-    // Continue to social games after successful minting
+    // Continue sequential flow after successful minting
     handleNFTMinterClose();
   };
 
@@ -233,11 +243,13 @@ export default function Home() {
     // Calculate social discoveries based on unique users actually used in the game
     const socialDiscoveries = Math.min(gameUsers.length, 10);
 
-    setGameStats({
+    const enhancedStats = {
       completionTime: stats.completionTime,
       accuracy: stats.accuracy,
       socialDiscoveries,
-    });
+    };
+
+    setGameStats(enhancedStats);
 
     // Record the game completion event with performance data
     recordEvent({
@@ -262,7 +274,7 @@ export default function Home() {
   const handleSocialGamesClose = () => {
     closeSocialGames();
     // Reset all states to allow playing again
-    setIsTransitioning(false);
+    setLoadingState('none');
     setShowHeartNFTMinter(false);
     setShowValentinesProposal(false);
   };
@@ -322,10 +334,10 @@ export default function Home() {
           paddingBottom: `max(1rem, var(--safe-area-inset-bottom))`,
         }}
       >
-        {!showValentinesProposal && !showHeartNFTMinter ? (
+        {loadingState === 'none' && !showValentinesProposal && !showHeartNFTMinter ? (
           <motion.div
             initial={{ opacity: 1 }}
-            animate={{ opacity: isTransitioning ? 0 : 1 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: ANIM_DURATION }}
             className="w-full max-w-lg"
           >
@@ -494,7 +506,18 @@ export default function Home() {
               </div>
             )}
           </motion.div>
-        ) : (
+        ) : loadingState !== 'none' ? (
+          <div className="flex items-center justify-center min-h-screen">
+            <LoadingState
+              type={loadingState}
+              platformTheme="farcaster"
+              gameStats={gameStats || undefined}
+              showProgress={loadingState !== 'celebrating'}
+              progress={loadingProgress}
+              size="lg"
+            />
+          </div>
+        ) : showValentinesProposal ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -506,7 +529,7 @@ export default function Home() {
               message={defaultMessage}
             />
           </motion.div>
-        )}
+        ) : null}
       </div>
 
       {/* Mobile-friendly bottom info with safe area */}
@@ -531,11 +554,7 @@ export default function Home() {
           users={users}
           onClose={handleSocialGamesClose}
           onSkipToProposal={() => {
-            setIsTransitioning(true);
-            setTimeout(() => {
-              setShowValentinesProposal(true);
-              setIsTransitioning(false);
-            }, ANIM_DURATION * 1000);
+            setShowValentinesProposal(true);
           }}
         />
       )}
@@ -569,7 +588,7 @@ export default function Home() {
       )}
 
       {/* Floating Action Button - always visible except during modals */}
-      {!showValentinesProposal && !showHeartNFTMinter && (
+      {loadingState === 'none' && !showValentinesProposal && !showHeartNFTMinter && (
         <FloatingActionButton onClick={() => setShowWalletDrawer(true)} />
       )}
 

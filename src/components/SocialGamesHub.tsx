@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { SocialUser, GameResult } from "@/types/socialGames";
+import { PlatformAdapter, UnifiedUtils } from "@/utils/platformAdapter";
 import { socialGameFactory } from "@/utils/socialGameFactory";
 import UsernameGuessingGameComponent from "./UsernameGuessingGame";
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
@@ -166,14 +167,13 @@ export default function SocialGamesHub({
       setActiveChallenge(challenge);
       setCurrentMode("challenge-active");
 
-      // Record challenge creation in stats
-      if (target.fid) {
-        recordChallengeCreated(
-          target.fid,
-          challengeDifficulty,
-          challenge.whaleMultiplier
-        );
-      }
+      // CLEAN: Record challenge creation in stats
+      const targetId = PlatformAdapter.getNumericId(target);
+      recordChallengeCreated(
+        targetId,
+        challengeDifficulty,
+        challenge.whaleMultiplier
+      );
 
       // Show earning notification for challenge creation
       if (lubTokenEnabled) {
@@ -775,7 +775,7 @@ export default function SocialGamesHub({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {validUsers.map((user) => (
                   <ChallengeSocialProfile
-                    key={user.fid}
+                    key={UnifiedUtils.getUniqueKey(user)}
                     user={user}
                     onChallengeTarget={handleTargetSelection}
                     onReport={(user) => openReport(user, "user")}
@@ -846,7 +846,7 @@ export default function SocialGamesHub({
                   .sort((a, b) => b.followerCount - a.followerCount)
                   .map((user) => (
                     <ChallengeSocialProfile
-                      key={user.fid}
+                      key={UnifiedUtils.getUniqueKey(user)}
                       user={user}
                       onChallengeTarget={handleTargetSelection}
                       onReport={(user) => openReport(user, "user")}

@@ -30,7 +30,7 @@ interface LensDistribution {
   sentAmount: string;
 }
 
-interface CollectedLensUser extends SocialUser {
+type CollectedLensUser = SocialUser & {
   // Enhanced fields for game optimization
   rewardAmount: string;
   distributionId: string;
@@ -232,7 +232,10 @@ export class LensUserCollector {
     const recipientMap = new Map(recipients.map(r => [r.recipient.toLowerCase(), r]));
     
     for (const lensUser of allLensUsers) {
-      const rewardData = recipientMap.get(lensUser.ownedBy?.toLowerCase() || lensUser.id.toLowerCase());
+      // Type guard to check if this is a Lens user and get appropriate identifier
+      const ownedBy = lensUser.network === 'lens' && 'ownedBy' in lensUser ? (lensUser as any).ownedBy : undefined;
+      const userId = lensUser.network === 'lens' && 'id' in lensUser ? (lensUser as any).id : (lensUser as any).fid?.toString();
+      const rewardData = recipientMap.get(ownedBy?.toLowerCase() || userId?.toLowerCase());
       
       const enrichedUser: CollectedLensUser = {
         ...lensUser,
@@ -289,7 +292,7 @@ export class LensUserCollector {
               lensHandle: data.identity,
               lensProfileId: data.address,
               ownedBy: data.address
-            } as SocialUser;
+            } as SocialUser & { ownedBy?: string; lensHandle?: string; lensProfileId?: string; };
           }
 
           return null;
@@ -351,7 +354,8 @@ export class LensUserCollector {
       // Fetch follower stats for quality accounts
       const accountsWithStats = await Promise.all(
         qualityAccounts.map(async (account) => {
-          const stats = await lensActions.fetchAccountStats(account.id);
+          const accountId = account.network === 'lens' && 'id' in account ? (account as any).id : (account as any).fid?.toString();
+          const stats = await lensActions.fetchAccountStats(accountId);
           return {
             ...account,
             followerCount: stats.followers,
@@ -382,7 +386,16 @@ export class LensUserCollector {
       if (user.pfpUrl && user.pfpUrl !== '') score += 25; // Profile image is crucial
       if (user.bio && user.bio.length > 20) score += 20; // Good bio content
       if (user.displayName && user.displayName !== user.username) score += 15; // Custom display name
-      if (user.lensHandle && user.lensHandle.includes('.')) score += 10; // Has proper Lens handle
+      
+      // Lens-specific properties (only for Lens users)
+      if (user.network === 'lens') {
+        const lensUser = user as any;
+        if (lensUser.lensHandle && lensUser.lensHandle.includes('.')) score += 10; // Has proper Lens handle
+        if (lensUser.totalPosts && lensUser.totalPosts > 0) {
+          const postBonus = Math.min(Math.log10(lensUser.totalPosts + 1) * 5, 15);
+          score += postBonus;
+        }
+      }
 
       // Social engagement (for whale classification in games) - IMPROVED
       if (user.followerCount > 0) {
@@ -396,11 +409,7 @@ export class LensUserCollector {
         score += followingBonus;
       }
 
-      // Lens-specific engagement (shows platform activity)
-      if (user.totalPosts && user.totalPosts > 0) {
-        const postBonus = Math.min(Math.log10(user.totalPosts + 1) * 5, 15);
-        score += postBonus;
-      }
+      // This is now handled above in the Lens-specific section
 
       // Reward activity (ecosystem engagement bonus)
       const rewardAmount = parseFloat(user.rewardAmount || '0');
@@ -423,12 +432,19 @@ export class LensUserCollector {
   private selectFinalUserSet(users: CollectedLensUser[]): CollectedLensUser[] {
     // AGGRESSIVE CONSOLIDATION: Remove duplicates by ID
     const uniqueUsers = users.reduce((acc, user) => {
-      const existing = acc.find(u => u.id === user.id);
+      const userId = user.network === 'lens' && 'id' in user ? (user as any).id : (user as any).fid?.toString();
+      const existing = acc.find(u => {
+        const existingId = u.network === 'lens' && 'id' in u ? (u as any).id : (u as any).fid?.toString();
+        return existingId === userId;
+      });
       if (!existing) {
         acc.push(user);
       } else if (user.gameScore > existing.gameScore) {
         // Keep the version with higher game score
-        const index = acc.findIndex(u => u.id === user.id);
+        const index = acc.findIndex(u => {
+          const existingId = u.network === 'lens' && 'id' in u ? (u as any).id : (u as any).fid?.toString();
+          return existingId === userId;
+        });
         acc[index] = user;
       }
       return acc;

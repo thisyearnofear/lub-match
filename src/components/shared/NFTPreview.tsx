@@ -1,8 +1,15 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { SocialUser } from "@/types/socialGames";
+import { PlatformAdapter, UnifiedUtils } from "@/utils/platformAdapter";
+import { 
+  calculateSocialInfluenceMetrics, 
+  calculateCollectionRarity,
+  getPlatformStyling,
+  getRarityStyling 
+} from "@/utils/socialInfluenceCalculator";
 
 interface NFTPreviewProps {
   images: string[];
@@ -27,22 +34,39 @@ export default function NFTPreview({
   showSocialGraph = true,
   onUserClick,
 }: NFTPreviewProps) {
-  const [activeView, setActiveView] = useState<"heart" | "social" | "stats">(
+  const [activeView, setActiveView] = useState<"heart" | "social" | "networks" | "stats">(
     "heart"
   );
   const [hoveredUser, setHoveredUser] = useState<number | null>(null);
 
   const displayImages = Array.from(new Set(images)).slice(0, 8);
-  // For matching games, we might have duplicate users, so we need to deduplicate them
-  const uniqueUsers = Array.from(new Set(users.map(u => u.fid || u.id))).map(fidOrId => 
-    users.find(u => (u.fid || u.id) === fidOrId)
-  ).filter(Boolean) as SocialUser[];
+  // CLEAN: Deduplicate users using unified utility
+  const uniqueUsers = UnifiedUtils.deduplicateByUsername(users);
   
   const featuredUsers = uniqueUsers.slice(0, 8);
-  const verifiedUsers = uniqueUsers.filter(
-    (u) => u.verifiedAddresses?.ethAddresses && u.verifiedAddresses.ethAddresses.length > 0
-  );
+  const verifiedUsers = UnifiedUtils.getVerifiedUsers(uniqueUsers);
   const totalFollowers = uniqueUsers.reduce((sum, u) => sum + u.followerCount, 0);
+  
+  // ENHANCEMENT FIRST: Calculate social influence and rarity metrics
+  const socialMetrics = useMemo(() => {
+    if (uniqueUsers.length === 0) return null;
+    return calculateSocialInfluenceMetrics(uniqueUsers);
+  }, [uniqueUsers]);
+  
+  const collectionRarity = useMemo(() => {
+    if (uniqueUsers.length === 0) return null;
+    return calculateCollectionRarity(uniqueUsers);
+  }, [uniqueUsers]);
+  
+  // Platform analysis
+  const platforms = useMemo(() => {
+    const platformSet = new Set(uniqueUsers.map(u => u.network));
+    return Array.from(platformSet);
+  }, [uniqueUsers]);
+  
+  const networkType = platforms.length > 1 ? 'mixed' : platforms[0] as 'farcaster' | 'lens';
+  const platformStyling = getPlatformStyling(networkType || 'farcaster');
+  const rarityStyling = collectionRarity ? getRarityStyling(collectionRarity.tier) : null;
 
   return (
     <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 rounded-3xl p-6 border border-pink-200 shadow-xl">
@@ -52,6 +76,7 @@ export default function NFTPreview({
           {[
             { key: "heart", icon: "💝", label: "Heart" },
             { key: "social", icon: "👥", label: "Social" },
+            { key: "networks", icon: platformStyling.icon, label: "Networks" },
             { key: "stats", icon: "📊", label: "Stats" },
           ].map(({ key, icon, label }) => (
             <button
@@ -150,63 +175,73 @@ export default function NFTPreview({
             className="space-y-6"
           >
             {/* Social Network Visualization */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-purple-100">
+            <div className={`bg-white rounded-2xl p-6 shadow-lg border ${platformStyling.borderColor}`}>
               <h3 className="text-lg font-bold text-center mb-4 text-gray-800">
-                Featured Farcaster Community
+                Featured {platformStyling.name} Community
               </h3>
 
               {/* User Grid with Enhanced Interactions */}
               <div className="grid grid-cols-4 gap-3">
-                {featuredUsers.map((user, index) => (
-                  <motion.div
-                    key={user.fid || user.id}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.05 }}
-                    onHoverStart={() => setHoveredUser(user.fid || parseInt(user.id))}
-                    onHoverEnd={() => setHoveredUser(null)}
-                    onClick={() => onUserClick?.(user)}
-                    className="relative cursor-pointer"
-                  >
-                    <div className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-white shadow-md">
-                      <img
-                        src={user.pfpUrl}
-                        alt={user.username}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-
-                    {/* Verified Address Indicator */}
-                    {user.verifiedAddresses?.ethAddresses && user.verifiedAddresses.ethAddresses.length > 0 && (
-                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center text-xs shadow-lg">
-                        ✓
+                {featuredUsers.map((user, index) => {
+                  const userPlatformStyling = getPlatformStyling(user.network);
+                  return (
+                    <motion.div
+                      key={UnifiedUtils.getUniqueKey(user)}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ scale: 1.05 }}
+                      onHoverStart={() => setHoveredUser(index)}
+                      onHoverEnd={() => setHoveredUser(null)}
+                      onClick={() => onUserClick?.(user)}
+                      className="relative cursor-pointer"
+                    >
+                      <div className={`aspect-square rounded-xl overflow-hidden bg-gradient-to-br ${userPlatformStyling.backgroundColor} border-2 border-white shadow-md`}>
+                        <img
+                          src={user.pfpUrl}
+                          alt={user.username}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
                       </div>
-                    )}
 
-                    {/* Hover Info */}
-                    <AnimatePresence>
-                      {hoveredUser === user.fid && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded-lg whitespace-nowrap z-10"
-                        >
-                          @{user.username}
-                          <div className="text-gray-300">
-                            {user.followerCount.toLocaleString()} followers
-                          </div>
-                        </motion.div>
+                      {/* Platform Badge */}
+                      <div className={`absolute -top-1 -left-1 w-6 h-6 bg-gradient-to-r ${userPlatformStyling.primaryColor} rounded-full flex items-center justify-center text-xs text-white shadow-lg`}>
+                        {userPlatformStyling.icon}
+                      </div>
+
+                      {PlatformAdapter.isVerified(user) && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">✓</span>
+                        </div>
                       )}
-                    </AnimatePresence>
-                  </motion.div>
-                ))}
+
+                      {/* Hover Info */}
+                      <AnimatePresence>
+                        {hoveredUser === index && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded-lg whitespace-nowrap z-10"
+                          >
+                            @{user.username}
+                            <div className="text-gray-300">
+                              {user.followerCount.toLocaleString()} followers
+                            </div>
+                            <div className={`text-xs ${userPlatformStyling.textColor.replace('text-', 'text-')}`}>
+                              {userPlatformStyling.name}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Community Metrics */}
+            {/* Enhanced Community Metrics */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl p-4 text-white">
                 <div className="text-2xl font-bold">{verifiedUsers.length}</div>
@@ -219,6 +254,102 @@ export default function NFTPreview({
                 <div className="text-sm opacity-90">Total Reach</div>
               </div>
             </div>
+
+            {/* Rarity Display */}
+            {collectionRarity && (
+              <div className={`bg-gradient-to-r ${rarityStyling?.gradient} rounded-xl p-4 text-white ${rarityStyling?.animation}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-bold">{collectionRarity.tier}</div>
+                    <div className="text-sm opacity-90">Collection Rarity</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold">{collectionRarity.score}</div>
+                    <div className="text-xs opacity-75">Influence Score</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {activeView === "networks" && (
+          <motion.div
+            key="networks"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-6"
+          >
+            {/* Platform Distribution */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+              <h3 className="text-lg font-bold text-center mb-4 text-gray-800">
+                Network Distribution
+              </h3>
+              
+              <div className="space-y-4">
+                {platforms.map((platform) => {
+                  const platformUsers = uniqueUsers.filter(u => u.network === platform);
+                  const styling = getPlatformStyling(platform as 'farcaster' | 'lens');
+                  const percentage = (platformUsers.length / uniqueUsers.length) * 100;
+                  
+                  return (
+                    <div key={platform} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{styling.icon}</span>
+                          <span className={`font-medium ${styling.textColor}`}>
+                            {styling.name}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {platformUsers.length} users ({percentage.toFixed(0)}%)
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`bg-gradient-to-r ${styling.primaryColor} h-2 rounded-full transition-all duration-500`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Cross-Platform Bonus */}
+            {platforms.length > 1 && (
+              <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-green-500 rounded-xl p-4 text-white">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🌈</span>
+                  <div>
+                    <div className="font-bold">Cross-Platform Collection!</div>
+                    <div className="text-sm opacity-90">
+                      This NFT features users from multiple social networks
+                    </div>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <div className="text-lg font-bold">+100</div>
+                    <div className="text-xs opacity-75">Rarity Bonus</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Social Influence Breakdown */}
+            {socialMetrics && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl p-4 text-white">
+                  <div className="text-2xl font-bold">{socialMetrics.platformBreakdown.farcaster}</div>
+                  <div className="text-sm opacity-90">🟣 Farcaster Score</div>
+                </div>
+                <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl p-4 text-white">
+                  <div className="text-2xl font-bold">{socialMetrics.platformBreakdown.lens}</div>
+                  <div className="text-sm opacity-90">🌿 Lens Score</div>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 

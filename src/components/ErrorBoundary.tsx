@@ -254,18 +254,58 @@ export function Web3ErrorBoundary({ children, fallback }: Web3ErrorBoundaryProps
 
 // Loading States Component
 interface LoadingStateProps {
-  type?: "game" | "web3" | "social" | "general";
+  type?: "game" | "web3" | "social" | "general" | "celebrating" | "preparing_nft" | "loading_proposal";
   message?: string;
   size?: "sm" | "md" | "lg";
+  // ENHANCEMENT FIRST: Added platform theming and game stats
+  platformTheme?: 'farcaster' | 'lens' | 'mixed' | 'default';
+  gameStats?: {
+    completionTime: number;
+    accuracy: number;
+    socialDiscoveries: number;
+  };
+  showProgress?: boolean;
+  progress?: number;
 }
 
 export function LoadingState({ 
   type = "general", 
   message, 
-  size = "md" 
+  size = "md",
+  platformTheme = 'default',
+  gameStats,
+  showProgress = false,
+  progress = 0
 }: LoadingStateProps) {
   const getLoadingContent = () => {
+    // ENHANCEMENT FIRST: Import platform styling utilities
+    const { PlatformAdapter } = require('@/utils/platformAdapter');
+    const platformStyling = PlatformAdapter.getPlatformStyling(platformTheme);
+    
     switch (type) {
+      case "celebrating":
+        return {
+          emoji: "🎉",
+          defaultMessage: gameStats 
+            ? `Amazing! ${gameStats.accuracy}% accuracy in ${gameStats.completionTime}s!`
+            : "Amazing! You completed the heart!",
+          color: platformStyling.primary,
+          showHeartPulse: true
+        };
+      case "preparing_nft":
+        return {
+          emoji: platformStyling.icon,
+          defaultMessage: `Preparing ${platformStyling.name} NFT`,
+          color: platformStyling.primary,
+          showHeartPulse: false
+        };
+      case "loading_proposal":
+        return {
+          emoji: "💌",
+          defaultMessage: "Loading Proposal",
+          color: "from-pink-500 to-rose-500",
+          showHeartPulse: false
+        };
       case "game":
         return {
           emoji: "🎮",
@@ -293,7 +333,7 @@ export function LoadingState({
     }
   };
 
-  const { emoji, defaultMessage, color } = getLoadingContent();
+  const { emoji, defaultMessage, color, showHeartPulse } = getLoadingContent();
   const sizeClasses = {
     sm: "text-sm p-3",
     md: "text-base p-4",
@@ -302,20 +342,128 @@ export function LoadingState({
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className={`bg-gradient-to-r ${color} bg-opacity-10 rounded-xl ${sizeClasses[size]} text-center`}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`bg-gradient-to-r ${color} bg-opacity-10 rounded-xl ${sizeClasses[size]} text-center relative overflow-hidden`}
     >
+      {/* ENHANCEMENT FIRST: Heart pulse effect for celebration */}
+      {showHeartPulse && (
+        <>
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              className="absolute inset-0 rounded-xl border-4 border-pink-400"
+              initial={{ scale: 0, opacity: 0.8 }}
+              animate={{ 
+                scale: [0, 1.5, 2],
+                opacity: [0.8, 0.4, 0]
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                delay: i * 0.4,
+                ease: "easeOut"
+              }}
+            />
+          ))}
+        </>
+      )}
+      
       <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        className="text-2xl mb-2"
+        animate={showHeartPulse ? {
+          scale: [1, 1.2, 1],
+          rotate: [0, 5, -5, 0]
+        } : {
+          rotate: 360
+        }}
+        transition={showHeartPulse ? {
+          duration: 1.5,
+          repeat: Infinity,
+          ease: "easeInOut"
+        } : {
+          duration: 2,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+        className="text-2xl mb-2 relative z-10"
       >
         {emoji}
       </motion.div>
-      <p className="text-gray-700 font-medium">
+      
+      <p className="text-gray-700 font-medium mb-2 relative z-10">
         {message || defaultMessage}
       </p>
+      
+      {/* ENHANCEMENT FIRST: Progress bar for loading states */}
+      {showProgress && (
+        <div className="w-full max-w-xs mx-auto mt-4 relative z-10">
+          <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+            <motion.div
+              className={`h-full bg-gradient-to-r ${color} rounded-full`}
+              initial={{ width: "0%" }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            />
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {Math.round(progress)}%
+          </div>
+        </div>
+      )}
+      
+      {/* ENHANCEMENT FIRST: Game stats for celebration */}
+      {type === "celebrating" && gameStats && (
+        <motion.div
+          className="grid grid-cols-3 gap-2 mt-4 relative z-10"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.3 }}
+        >
+          <div className="bg-white bg-opacity-20 rounded-lg p-2 backdrop-blur-sm">
+            <div className="text-lg font-bold text-gray-800">{gameStats.accuracy}%</div>
+            <div className="text-xs text-gray-600">Accuracy</div>
+          </div>
+          <div className="bg-white bg-opacity-20 rounded-lg p-2 backdrop-blur-sm">
+            <div className="text-lg font-bold text-gray-800">{gameStats.completionTime}s</div>
+            <div className="text-xs text-gray-600">Time</div>
+          </div>
+          <div className="bg-white bg-opacity-20 rounded-lg p-2 backdrop-blur-sm">
+            <div className="text-lg font-bold text-gray-800">{gameStats.socialDiscoveries}</div>
+            <div className="text-xs text-gray-600">Profiles</div>
+          </div>
+        </motion.div>
+      )}
+      
+      {/* ENHANCEMENT FIRST: Floating hearts for celebration */}
+      {type === "celebrating" && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute text-lg"
+              initial={{
+                x: Math.random() * 100 + "%",
+                y: "100%",
+                opacity: 0,
+                scale: 0
+              }}
+              animate={{
+                y: "-20%",
+                opacity: [0, 1, 0],
+                scale: [0, 1, 0.5],
+                rotate: 360
+              }}
+              transition={{
+                duration: 3,
+                delay: i * 0.3,
+                ease: "easeOut"
+              }}
+            >
+              💝
+            </motion.div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }

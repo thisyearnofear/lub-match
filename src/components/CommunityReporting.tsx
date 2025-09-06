@@ -9,6 +9,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FarcasterUser } from "@/types/user";
 import { SocialUser } from "@/types/socialGames";
+import { PlatformAdapter } from "@/utils/platformAdapter";
 import { antiSpamService } from "@/services/antiSpamService";
 import ActionButton from "./shared/ActionButton";
 
@@ -81,13 +82,16 @@ export default function CommunityReporting({
       // In a real implementation, we'd get the current user's ID
       const reporterId = 1; // Placeholder - would come from user context
 
-      if (!targetUser.fid) {
+      // CLEAN: Use PlatformAdapter for type-safe ID extraction
+      const userId = PlatformAdapter.getNumericId(targetUser);
+
+      if (!userId) {
         throw new Error("Cannot report user without valid ID");
       }
 
       const result = antiSpamService.submitReport(
         reporterId,
-        targetUser.fid,
+        userId,
         selectedType,
         description.trim(),
         evidence.trim() || undefined

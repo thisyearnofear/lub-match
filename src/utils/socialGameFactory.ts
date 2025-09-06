@@ -1,7 +1,8 @@
 // Social game factory for creating different types of Farcaster-based games
 
+import { SocialUser } from '@/types/socialGames';
+import { PlatformAdapter } from '@/utils/platformAdapter';
 import {
-  SocialUser,
   GameFactory,
   UsernameGuessingGame,
   PfpMatchingGame,
@@ -16,7 +17,7 @@ import {
 } from '@/hooks/useFarcasterUsers';
 
 // ENHANCED: Social Game Factory with whale classification (ENHANCEMENT FIRST)
-export class SocialGameFactory implements GameFactory {
+export class SocialGameFactory {
   
   createUsernameGuessingGame(
     users: SocialUser[], 
@@ -43,7 +44,7 @@ export class SocialGameFactory implements GameFactory {
       minUsers: 4,
       maxUsers: 16,
       estimatedDuration: gameUsers.length * (difficulty === 'easy' ? 10 : difficulty === 'medium' ? 15 : 20),
-      users: gameUsers,
+      users: gameUsers.map(user => PlatformAdapter.toLegacyFarcasterUser(user)),
       options: [...new Set(options)], // Remove duplicates
       correctAnswers: gameUsers.map(u => u.username)
     };
@@ -63,7 +64,7 @@ export class SocialGameFactory implements GameFactory {
       minUsers: 4,
       maxUsers: 16,
       estimatedDuration: gameUsers.length * (difficulty === 'easy' ? 8 : difficulty === 'medium' ? 12 : 18),
-      users: gameUsers,
+      users: gameUsers.map(user => PlatformAdapter.toLegacyFarcasterUser(user)),
       shuffledPfps: shuffleArray(gameUsers.map(u => u.pfpUrl)),
       shuffledUsernames: shuffleArray(gameUsers.map(u => u.username))
     };
@@ -84,7 +85,10 @@ export class SocialGameFactory implements GameFactory {
       minUsers: 3,
       maxUsers: 20,
       estimatedDuration: questions.length * (difficulty === 'easy' ? 15 : difficulty === 'medium' ? 20 : 30),
-      questions
+      questions: questions.map(q => ({
+        ...q,
+        relatedUsers: q.relatedUsers?.map(user => PlatformAdapter.toLegacyFarcasterUser(user))
+      }))
     };
   }
 
@@ -196,14 +200,14 @@ export class SocialGameFactory implements GameFactory {
     
     // Follower count questions
     for (const user of users.slice(0, 3)) {
-      const otherUsers = users.filter(u => u.id !== user.id);
+      const otherUsers = users.filter(u => u.username !== user.username);
       const options = shuffleArray([
         this.formatFollowerCount(user.followerCount),
          ...otherUsers.slice(0, 3).map(u => this.formatFollowerCount(u.followerCount))
       ]);
       
       questions.push({
-        id: `followers-${user.id}`,
+        id: `followers-${user.username}`,
         question: `How many followers does @${user.username} have?`,
         options,
         correctAnswer: this.formatFollowerCount(user.followerCount),
@@ -220,14 +224,14 @@ export class SocialGameFactory implements GameFactory {
       const keyPhrase = bioWords.slice(0, Math.min(4, bioWords.length)).join(' ');
       
       const otherBios = usersWithBios
-        .filter(u => u.id !== user.id)
+        .filter(u => u.username !== user.username)
         .map(u => u.bio!.split(' ').slice(0, 4).join(' '))
         .slice(0, 3);
       
       const options = shuffleArray([keyPhrase, ...otherBios]);
       
       questions.push({
-        id: `bio-${user.id}`,
+        id: `bio-${user.username}`,
         question: `Which bio snippet belongs to @${user.username}?`,
         options,
         correctAnswer: keyPhrase,

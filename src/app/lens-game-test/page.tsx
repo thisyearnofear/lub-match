@@ -18,10 +18,8 @@ export default function LensGameTestPage() {
     loading,
     error,
     getRandomPairs,
-    network,
   } = useFarcasterUsers({
     count: 16,
-    network: 'lens', // 🌿 Test Lens network specifically
     minFollowers: 100,
   });
 
@@ -96,7 +94,7 @@ export default function LensGameTestPage() {
                 Playing with <span className="font-bold">{users.length} Lens users</span> 
                 {users.length > 0 && (
                   <span className="ml-2 text-green-200">
-                    (Network: {network})
+                    (Mixed Networks)
                   </span>
                 )}
               </p>
@@ -138,7 +136,7 @@ export default function LensGameTestPage() {
         <div className="fixed bottom-4 right-4 bg-black/50 backdrop-blur text-white text-xs p-3 rounded-lg max-w-xs">
           <div><strong>Debug Info:</strong></div>
           <div>Users: {users.length}</div>
-          <div>Network: {network}</div>
+          <div>Network: Mixed</div>
           <div>Loading: {loading ? 'Yes' : 'No'}</div>
           <div>Game Ready: {gameImages.length === 8 ? 'Yes' : 'No'}</div>
           {users.length > 0 && (

@@ -9,6 +9,8 @@ import Confetti from "../Confetti";
 import { Challenge } from "@/services/challengeEngine";
 import { ViralDetection } from "@/services/viralDetectionService";
 import { getWhaleEmoji } from "@/hooks/useFarcasterUsers";
+import { SocialUser } from "@/types/socialGames";
+import { calculateCollectionRarity, getPlatformStyling } from "@/utils/socialInfluenceCalculator";
 
 export interface SuccessAction {
   label: string;
@@ -40,6 +42,13 @@ interface SuccessScreenProps {
   };
   // NEW: Viral detection context
   viralDetection?: ViralDetection;
+  // ENHANCEMENT FIRST: Social platform context for celebrations
+  socialUsers?: SocialUser[];
+  platformSpecific?: {
+    network: 'farcaster' | 'lens' | 'mixed';
+    achievements?: string[];
+    crossPlatformBonus?: boolean;
+  };
 }
 
 export default function SuccessScreen({
@@ -56,6 +65,8 @@ export default function SuccessScreen({
   sessionRewards,
   challengeResult,
   viralDetection,
+  socialUsers,
+  platformSpecific,
 }: SuccessScreenProps) {
   const [triggerConfetti, setTriggerConfetti] = useState(false);
 
@@ -69,6 +80,10 @@ export default function SuccessScreen({
     }
   }, [showConfetti, challengeResult, viralDetection]);
 
+  // ENHANCEMENT FIRST: Platform-aware celebration configuration
+  const platformStyling = platformSpecific ? getPlatformStyling(platformSpecific.network) : null;
+  const collectionRarity = socialUsers ? calculateCollectionRarity(socialUsers) : null;
+  
   // NEW: Enhanced celebration logic for challenges and viral detection
   const getCelebrationConfig = () => {
     if (viralDetection) {
@@ -118,6 +133,29 @@ export default function SuccessScreen({
       }
     }
 
+    // Platform-specific celebration enhancement
+    if (platformSpecific && !challengeResult && !viralDetection) {
+      const styling = getPlatformStyling(platformSpecific.network);
+      const rarityBonus = collectionRarity?.tier === 'Legendary' ? ' 🏆' : 
+                         collectionRarity?.tier === 'Epic' ? ' ⭐' : '';
+      
+      if (platformSpecific.network === 'mixed') {
+        return {
+          icon: "🌈💎",
+          level: "epic" as const,
+          title: `Cross-Platform ${title}${rarityBonus}`,
+          message: `${message} This ${collectionRarity?.tier || 'unique'} collection bridges Farcaster and Lens communities!`
+        };
+      } else {
+        return {
+          icon: `${styling.icon}${celebrationIcon}${rarityBonus}`,
+          level: platformSpecific.crossPlatformBonus ? "epic" as const : celebrationLevel,
+          title: `${styling.name} ${title}${rarityBonus}`,
+          message: `${message} ${collectionRarity ? `This ${collectionRarity.tier} rarity NFT` : 'Your NFT'} celebrates the ${styling.name} community!`
+        };
+      }
+    }
+    
     return {
       icon: celebrationIcon,
       level: celebrationLevel,
@@ -231,7 +269,7 @@ export default function SuccessScreen({
           </motion.p>
         </div>
 
-        {/* NFT Preview (Priority Content) */}
+        {/* NFT Preview (Priority Content) with Platform Enhancement */}
         {nftPreview && (
           <motion.div
             className="mb-6"
@@ -239,7 +277,35 @@ export default function SuccessScreen({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.4 }}
           >
-            {nftPreview}
+            {/* Platform-specific frame enhancement */}
+            {platformStyling && (
+              <div className={`p-1 rounded-3xl bg-gradient-to-r ${platformStyling.primaryColor} mb-4`}>
+                <div className="bg-white rounded-3xl p-2">
+                  {nftPreview}
+                </div>
+              </div>
+            )}
+            {!platformStyling && nftPreview}
+            
+            {/* Collection Rarity Badge */}
+            {collectionRarity && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6, duration: 0.3 }}
+                className="flex justify-center mt-4"
+              >
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${collectionRarity.tier === 'Legendary' ? 'from-yellow-400 to-orange-500' : collectionRarity.tier === 'Epic' ? 'from-purple-400 to-pink-500' : 'from-blue-400 to-cyan-500'} text-white font-semibold shadow-lg`}>
+                  <span className="text-lg">
+                    {collectionRarity.tier === 'Legendary' ? '🏆' : 
+                     collectionRarity.tier === 'Epic' ? '⭐' : 
+                     collectionRarity.tier === 'Rare' ? '💎' : '✨'}
+                  </span>
+                  <span>{collectionRarity.tier} Rarity</span>
+                  <span className="text-sm opacity-90">({collectionRarity.score} pts)</span>
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         )}
 
@@ -360,6 +426,35 @@ export default function SuccessScreen({
           </motion.div>
         )}
 
+        {/* Platform-Specific Achievements */}
+        {platformSpecific?.achievements && platformSpecific.achievements.length > 0 && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: viralDetection ? 0.7 : challengeResult ? 0.6 : nftPreview ? 0.5 : 0.4, duration: 0.3 }}
+          >
+            <div className={`bg-gradient-to-r ${platformStyling?.backgroundColor || 'from-gray-50 to-gray-100'} rounded-xl p-4 border ${platformStyling?.borderColor || 'border-gray-200'}`}>
+              <h4 className="font-semibold text-gray-800 mb-3 text-center flex items-center justify-center gap-2">
+                {platformStyling?.icon} Platform Achievements
+              </h4>
+              <div className="flex justify-center gap-2 flex-wrap">
+                {platformSpecific.achievements.map((achievement, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 * index, duration: 0.2 }}
+                    className={`bg-gradient-to-r ${platformStyling?.primaryColor || 'from-gray-400 to-gray-500'} text-white px-3 py-1 rounded-full text-xs font-medium`}
+                  >
+                    {achievement}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+        
         {/* Additional Content */}
         {additionalContent && (
           <motion.div
