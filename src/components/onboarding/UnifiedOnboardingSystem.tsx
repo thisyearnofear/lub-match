@@ -1,9 +1,10 @@
 /**
  * Unified Onboarding System
  * CLEAN: Single source of truth for all onboarding experiences
- * MODULAR: Composable sequences with progressive disclosure
+ * MODULAR: Self-contained with no external dependencies
  * USER-CONTROLLED: Easy to pause, restart, skip
- * GAME-FOCUSED: Uses our new messaging that emphasizes fun first
+ * GAME-FOCUSED: Uses messaging that emphasizes fun first
+ * ENHANCEMENT FIRST: Enhanced existing component, removed bloat
  */
 
 "use client";
@@ -11,6 +12,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, SkipForward } from "lucide-react";
+import { useSubtleOnboarding, UserLevel } from "@/hooks/useSubtleOnboarding";
 
 export interface OnboardingStep {
   id: string;
@@ -32,16 +34,21 @@ export interface OnboardingStep {
 }
 
 interface UnifiedOnboardingProps {
-  steps: OnboardingStep[];
-  userLevel?: "newcomer" | "player" | "challenger" | "whale_hunter";
-  completedSteps?: string[];
+  sequence?: "welcome" | "game-complete" | "advanced-features" | "custom";
+  customSteps?: OnboardingStep[];
   onStepComplete?: (stepId: string) => void;
   onSequenceComplete?: () => void;
   autoStart?: boolean;
   delay?: number;
   allowRestart?: boolean;
   onRestart?: () => void;
-  sequenceKey?: string; // Unique identifier to prevent conflicts
+  // Action handlers
+  onLearnMore?: () => void;
+  onConnectWallet?: () => void;
+  onExploreGames?: () => void;
+  onMintNFT?: () => void;
+  onPlayMore?: () => void;
+  onTryChallenges?: () => void;
 }
 
 interface OnboardingState {
@@ -52,57 +59,111 @@ interface OnboardingState {
 }
 
 export default function UnifiedOnboardingSystem({
-  steps,
-  userLevel = "newcomer",
-  completedSteps = [],
+  sequence = "welcome",
+  customSteps,
   onStepComplete,
   onSequenceComplete,
   autoStart = true,
   delay = 1000,
   allowRestart = true,
   onRestart,
-  sequenceKey,
+  // Action handlers
+  onLearnMore,
+  onConnectWallet,
+  onExploreGames,
+  onMintNFT,
+  onPlayMore,
+  onTryChallenges,
 }: UnifiedOnboardingProps) {
-  // Unique instance ID for debugging multiple mounts
+  // Use the centralized onboarding hook
+  const {
+    hasSeenOnboarding,
+    markOnboardingCompleted,
+    getUserLevel,
+    getEngagementLevel,
+    getRecommendedSequence,
+  } = useSubtleOnboarding();
+  
+  // Unique instance ID for debugging
   const instanceId = useRef(
     `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   ).current;
+  
+  // Get current user level
+  const userLevel = getUserLevel();
+  
+  // Check if this sequence should be shown
+  const shouldShow = !hasSeenOnboarding(
+    sequence === "welcome" ? "MAIN_INTRO" :
+    sequence === "game-complete" ? "GAME_COMPLETE" :
+    sequence === "advanced-features" ? "ADVANCED_FEATURES" :
+    "MAIN_INTRO"
+  );
+  
   console.log(
-    `[OnboardingSystem ${instanceId}] Mounted instance for sequenceKey: ${sequenceKey}`
+    `[OnboardingSystem ${instanceId}] Mounted for sequence: ${sequence}, shouldShow: ${shouldShow}`
   );
 
   const [state, setState] = useState<OnboardingState>({
     currentStepIndex: 0,
     isVisible: false,
     availableSteps: [],
-    completedSteps: [...completedSteps],
+    completedSteps: [],
   });
 
-  // For static sequences, just use the steps as provided
+  // Generate steps based on sequence type and user level
   useEffect(() => {
-    setState((prev) => {
-      // Only update if steps actually changed to prevent infinite loops
-      if (JSON.stringify(prev.availableSteps) !== JSON.stringify(steps)) {
-        return {
-          ...prev,
-          availableSteps: steps,
-          currentStepIndex: 0,
-        };
+    if (!shouldShow) return;
+    
+    let steps: OnboardingStep[] = [];
+    
+    if (customSteps) {
+      steps = customSteps;
+    } else {
+      const options = {
+        onLearnMore,
+        onConnectWallet,
+        onExploreGames,
+        onMintNFT,
+        onPlayMore,
+        onTryChallenges,
+      };
+      
+      switch (sequence) {
+        case "welcome":
+          steps = createWelcomeSequence(userLevel, options);
+          break;
+        case "game-complete":
+          steps = createGameCompleteSequence(options);
+          break;
+        case "advanced-features":
+          steps = createAdvancedFeaturesSequence(options);
+          break;
+        default:
+          steps = [];
       }
-      return prev;
-    });
-  }, [steps]); // Use steps directly for static sequences
+    }
+    
+    setState((prev) => ({
+      ...prev,
+      availableSteps: steps,
+      currentStepIndex: 0,
+    }));
+  }, [sequence, customSteps, userLevel, shouldShow, onLearnMore, onConnectWallet, onExploreGames, onMintNFT, onPlayMore, onTryChallenges]);
 
-  // Auto-start onboarding
+  // Auto-start onboarding (with completion guard)
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
+  
   useEffect(() => {
-    if (autoStart && state.availableSteps.length > 0 && !state.isVisible) {
+    if (autoStart && shouldShow && state.availableSteps.length > 0 && !state.isVisible && !hasAutoStarted) {
       console.log(
-        `[OnboardingSystem ${instanceId}] Auto-starting for sequence: ${sequenceKey}`
+        `[OnboardingSystem ${instanceId}] Auto-starting for sequence: ${sequence}`
       );
+      setHasAutoStarted(true);
       const timer = setTimeout(() => {
         setState((prev) => {
           console.log(
-            `[OnboardingSystem ${instanceId}] Setting isVisible to true for sequence: ${sequenceKey}`
+            `[OnboardingSystem ${instanceId}] Setting isVisible to true for sequence: ${sequence}`
           );
           return { ...prev, isVisible: true };
         });
@@ -112,11 +173,13 @@ export default function UnifiedOnboardingSystem({
     }
   }, [
     autoStart,
+    shouldShow,
     delay,
     state.availableSteps.length,
     state.isVisible,
+    hasAutoStarted,
     instanceId,
-    sequenceKey,
+    sequence,
   ]);
 
   // Current step
@@ -128,20 +191,20 @@ export default function UnifiedOnboardingSystem({
   // Handle step completion
   const handleStepComplete = useCallback(() => {
     console.log(
-      `[OnboardingSystem ${instanceId}] handleStepComplete called for sequence: ${sequenceKey}, currentIndex: ${state.currentStepIndex}`
+      `[OnboardingSystem ${instanceId}] handleStepComplete called for sequence: ${sequence}, currentIndex: ${state.currentStepIndex}`
     );
     setState((prev) => {
       const currentStep = prev.availableSteps[prev.currentStepIndex];
       if (!currentStep) {
         console.log(
-          `[OnboardingSystem ${instanceId}] No current step for sequence: ${sequenceKey}, returning`
+          `[OnboardingSystem ${instanceId}] No current step for sequence: ${sequence}, returning`
         );
         return prev;
       }
 
       const newCompletedSteps = [...prev.completedSteps, currentStep.id];
       console.log(
-        `[OnboardingSystem ${instanceId}] Completing step: ${currentStep.id} for sequence: ${sequenceKey}`
+        `[OnboardingSystem ${instanceId}] Completing step: ${currentStep.id} for sequence: ${sequence}`
       );
       onStepComplete?.(currentStep.id);
 
@@ -149,7 +212,7 @@ export default function UnifiedOnboardingSystem({
       if (prev.currentStepIndex < prev.availableSteps.length - 1) {
         // Move to next step
         console.log(
-          `[OnboardingSystem ${instanceId}] Moving to next step for sequence: ${sequenceKey}`
+          `[OnboardingSystem ${instanceId}] Moving to next step for sequence: ${sequence}`
         );
         return {
           ...prev,
@@ -157,9 +220,17 @@ export default function UnifiedOnboardingSystem({
           currentStepIndex: prev.currentStepIndex + 1,
         };
       } else {
-        // Sequence complete - hide onboarding
+        // Sequence complete - mark as completed and hide
+        const onboardingType = 
+          sequence === "welcome" ? "MAIN_INTRO" :
+          sequence === "game-complete" ? "GAME_COMPLETE" :
+          sequence === "advanced-features" ? "ADVANCED_FEATURES" :
+          "MAIN_INTRO";
+          
+        markOnboardingCompleted(onboardingType as any);
+        
         console.log(
-          `[OnboardingSystem ${instanceId}] Sequence complete for sequence: ${sequenceKey}, calling onSequenceComplete`
+          `[OnboardingSystem ${instanceId}] Sequence complete for sequence: ${sequence}, calling onSequenceComplete`
         );
         setTimeout(() => {
           onSequenceComplete?.();
@@ -174,7 +245,8 @@ export default function UnifiedOnboardingSystem({
   }, [
     onStepComplete,
     onSequenceComplete,
-    sequenceKey,
+    markOnboardingCompleted,
+    sequence,
     state.currentStepIndex,
     instanceId,
   ]);
@@ -197,30 +269,29 @@ export default function UnifiedOnboardingSystem({
 
   const handleSkip = useCallback(() => {
     console.log(
-      `[OnboardingSystem ${instanceId}] handleSkip called for sequence: ${sequenceKey}`
+      `[OnboardingSystem ${instanceId}] handleSkip called for sequence: ${sequence}`
     );
     setState((prev) => ({ ...prev, isVisible: false }));
     onSequenceComplete?.();
-  }, [onSequenceComplete, sequenceKey, instanceId]);
+  }, [onSequenceComplete, sequence, instanceId]);
 
   // No pause functionality needed for manual progression
 
   const handleRestart = useCallback(() => {
     console.log(
-      `[OnboardingSystem ${instanceId}] handleRestart called for sequence: ${sequenceKey}`
+      `[OnboardingSystem ${instanceId}] handleRestart called for sequence: ${sequence}`
     );
     setState((prev) => ({
       ...prev,
       currentStepIndex: 0,
       isVisible: true,
-      isPaused: false,
       completedSteps: [],
     }));
     onRestart?.();
-  }, [onRestart, sequenceKey, instanceId]);
+  }, [onRestart, sequence, instanceId]);
 
-  // Don't render if no steps available
-  if (!currentStep || !state.isVisible) {
+  // Don't render if sequence shouldn't be shown or no steps available
+  if (!shouldShow || !currentStep || !state.isVisible) {
     return null;
   }
 
@@ -415,63 +486,83 @@ export default function UnifiedOnboardingSystem({
   );
 }
 
-// Predefined step sequences with our new game-focused messaging
-export const createWelcomeSequence = (options: {
-  onLearnMore?: () => void;
-  onConnectWallet?: () => void;
-  onExploreGames?: () => void;
-}): OnboardingStep[] => [
-  {
-    id: "welcome",
-    title: "Welcome to Lub Match! 💝",
-    message:
-      "A fun memory game where you match pairs of real people to complete a heart puzzle!",
-    icon: "🧩",
-    category: "intro",
-    complexity: "basic",
-    duration: 6000,
-  },
-  {
-    id: "how-to-play",
-    title: "How to Play",
-    message:
-      "🔍 Find matching pairs • 💝 Complete the heart shape • 🎉 Share your creation with friends!",
-    icon: "🎮",
-    category: "game",
-    complexity: "basic",
-    duration: 8000,
-  },
-  {
-    id: "real-people",
-    title: "Real People, Real Fun",
-    message:
-      "Match actual people from the community - discover interesting profiles and make connections!",
-    icon: "👥",
-    category: "social",
-    complexity: "basic",
-    duration: 7000,
-  },
-  {
-    id: "social-connection",
-    title: "Connect & Share",
-    message:
-      "Discover interesting people and share your completed hearts with the community!",
-    icon: "🌟",
-    category: "social",
-    complexity: "basic",
-    duration: 7000,
-  },
-  {
-    id: "optional-rewards",
-    title: "Bonus: Earn LUB",
-    message:
-      "Playing earns you LUB tokens - use them for special features or just have fun without them!",
-    icon: "🎁",
-    category: "rewards",
-    complexity: "intermediate",
-    duration: 8000,
-  },
-  {
+// Smart sequence generation based on user level
+function createWelcomeSequence(
+  userLevel: UserLevel,
+  options: {
+    onLearnMore?: () => void;
+    onConnectWallet?: () => void;
+    onExploreGames?: () => void;
+  }
+): OnboardingStep[] {
+  // Base sequence for all users
+  const baseSequence: OnboardingStep[] = [
+    {
+      id: "welcome",
+      title: "Welcome to Lub Match! 💝",
+      message:
+        "A fun memory game where you match pairs of real people to complete a heart puzzle!",
+      icon: "🧩",
+      category: "intro",
+      complexity: "basic",
+      duration: 6000,
+    },
+    {
+      id: "how-to-play",
+      title: "How to Play",
+      message:
+        "🔍 Find matching pairs • 💝 Complete the heart shape • 🎉 Share your creation with friends!",
+      icon: "🎮",
+      category: "game",
+      complexity: "basic",
+      duration: 8000,
+    },
+  ];
+
+  // Add social features for players and above
+  if (userLevel !== "newcomer") {
+    baseSequence.push({
+      id: "social-features",
+      title: "Connect & Share",
+      message:
+        "Discover interesting people and share your completed hearts with the community!",
+      icon: "👥",
+      category: "social",
+      complexity: "basic",
+      duration: 7000,
+    });
+  }
+
+  // Add rewards for challengers and whale hunters
+  if (userLevel === "challenger" || userLevel === "whale_hunter") {
+    baseSequence.push({
+      id: "rewards-intro",
+      title: "Bonus: Earn LUB",
+      message:
+        "Playing earns you LUB tokens - use them for special features or just have fun without them!",
+      icon: "🎁",
+      category: "rewards",
+      complexity: "intermediate",
+      duration: 8000,
+    });
+  }
+
+  // Add advanced features for whale hunters
+  if (userLevel === "whale_hunter") {
+    baseSequence.push({
+      id: "advanced-features",
+      title: "🚀 Advanced Features",
+      message:
+        "Ready for more? Try creating custom challenges and connecting with the community!",
+      icon: "🌟",
+      category: "advanced",
+      complexity: "intermediate",
+      duration: 6000,
+    });
+  }
+
+  // Add final step
+  baseSequence.push({
     id: "ready-to-play",
     title: "Ready to Play?",
     message:
@@ -484,14 +575,17 @@ export const createWelcomeSequence = (options: {
       onClick: () => options.onExploreGames?.(),
     },
     duration: 6000,
-  },
-];
+  });
 
-export const createGameCompleteSequence = (options: {
+  return baseSequence;
+}
+
+function createGameCompleteSequence(options: {
   onMintNFT?: () => void;
   onPlayMore?: () => void;
   onTryChallenges?: () => void;
-}): OnboardingStep[] => [
+}): OnboardingStep[] {
+  return [
   {
     id: "congratulations",
     title: "Amazing! 🎉",
@@ -530,44 +624,47 @@ export const createGameCompleteSequence = (options: {
     },
     duration: 7000,
   },
-];
+  ];
+}
 
-export const createAdvancedFeaturesSequence = (options: {
+function createAdvancedFeaturesSequence(options: {
   onTryChallenges?: () => void;
   onConnectWallet?: () => void;
-}): OnboardingStep[] => [
-  {
-    id: "advanced-challenges",
-    title: "🎯 Advanced Features",
-    message:
-      "Ready for more? Try creating custom challenges and connecting with the community!",
-    icon: "🌟",
-    category: "advanced",
-    complexity: "intermediate",
-    duration: 6000,
-  },
-  {
-    id: "community-challenges",
-    title: "🌟 Community Challenges",
-    message:
-      "Connect with popular community members and earn bonus rewards for successful interactions!",
-    icon: "🌟",
-    category: "advanced",
-    complexity: "intermediate",
-    duration: 7000,
-  },
-  {
-    id: "save-memories",
-    title: "💝 Save Your Creations",
-    message:
-      "Turn your beautiful heart puzzles into keepsakes you can share and treasure!",
-    icon: "💝",
-    category: "advanced",
-    complexity: "intermediate",
-    actionButton: {
-      text: "Save as NFT",
-      onClick: () => options.onConnectWallet?.(),
+}): OnboardingStep[] {
+  return [
+    {
+      id: "advanced-challenges",
+      title: "🎯 Advanced Features",
+      message:
+        "Ready for more? Try creating custom challenges and connecting with the community!",
+      icon: "🌟",
+      category: "advanced",
+      complexity: "intermediate",
+      duration: 6000,
     },
-    duration: 6000,
-  },
-];
+    {
+      id: "community-challenges",
+      title: "🌟 Community Challenges",
+      message:
+        "Connect with popular community members and earn bonus rewards for successful interactions!",
+      icon: "🌟",
+      category: "advanced",
+      complexity: "intermediate",
+      duration: 7000,
+    },
+    {
+      id: "save-memories",
+      title: "💝 Save Your Creations",
+      message:
+        "Turn your beautiful heart puzzles into keepsakes you can share and treasure!",
+      icon: "💝",
+      category: "advanced",
+      complexity: "intermediate",
+      actionButton: {
+        text: "Save as NFT",
+        onClick: () => options.onConnectWallet?.(),
+      },
+      duration: 6000,
+    },
+  ];
+}

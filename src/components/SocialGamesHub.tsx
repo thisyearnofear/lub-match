@@ -21,7 +21,7 @@ import {
 } from "@/services/challengeEngine";
 import { ChallengeSocialProfile } from "./SocialProfile";
 import { useReporting } from "./CommunityReporting";
-import UnifiedOnboardingIntegration from "./onboarding/UnifiedOnboardingIntegration";
+import UnifiedOnboardingSystem from "./onboarding/UnifiedOnboardingSystem";
 
 import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
@@ -1067,7 +1067,7 @@ export default function SocialGamesHub({
       {ReportingModal}
 
       {/* Unified Onboarding System */}
-      <UnifiedOnboardingIntegration
+      <UnifiedOnboardingSystem
         sequence="advanced-features"
         allowRestart={false}
         onTryChallenges={startChallengeSelection}
@@ -1076,7 +1076,7 @@ export default function SocialGamesHub({
 
       {/* Challenge Success Onboarding */}
       {gameResult?.challengeResult && (
-        <UnifiedOnboardingIntegration
+        <UnifiedOnboardingSystem
           sequence="game-complete"
           allowRestart={false}
           onPlayMore={startChallengeSelection}

@@ -13,7 +13,7 @@ import { PaymentMethodSelector, PaymentMethod } from "@/components/shared/Paymen
 import { formatEthAmount } from "@/utils/pricingEngine";
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import { trackNFTMinted } from "@/utils/analytics";
-import { useOnboardingContext } from "@/components/onboarding/OnboardingProvider";
+// Removed OnboardingProvider dependency - using existing toast system
 import { useWeb3ErrorHandler } from "@/hooks/useWeb3ErrorHandler";
 import { SocialUser } from "@/types/socialGames";
 import { calculateCollectionRarity, getPlatformStyling } from "@/utils/socialInfluenceCalculator";
@@ -57,7 +57,7 @@ export default function HeartNFTMinter({
   const [isMinting, setIsMinting] = React.useState(false);
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
-  const { showToast } = useOnboardingContext();
+  // Using existing toast system instead of onboarding toasts
   const { stats } = useUnifiedStats();
   const {
     mintCompletedHeartWithMetadata,
@@ -170,20 +170,12 @@ export default function HeartNFTMinter({
       // Validate payment method before proceeding
       const validationResult = validatePaymentMethod();
       if (!validationResult.isValid) {
-        showToast(
-          "❌ Payment Method Error",
-          validationResult.message,
-          { icon: "⚠️", duration: 5000 }
-        );
+        console.log(`Payment Method Error: ${validationResult.message}`);
         return;
       }
 
       // Show payment method confirmation
-      showToast(
-        "🔄 Processing Payment",
-        `Minting NFT using ${getPaymentMethodDisplayName(paymentMethod)}...`,
-        { icon: "💳", duration: 3000 }
-      );
+      console.log(`Processing Payment: Minting NFT using ${getPaymentMethodDisplayName(paymentMethod)}...`);
 
       // Prepare heart data for metadata/mint
       const completedAt = BigInt(Math.floor(Date.now() / 1000));
@@ -236,14 +228,7 @@ export default function HeartNFTMinter({
           ? "https://sepolia.arbiscan.io/tx/" // Arbitrum Sepolia uses Arbiscan testnet domain
           : "https://arbiscan.io/tx/";
       const txHash = tx as `0x${string}`;
-      showToast("Transaction Submitted", "Waiting for confirmation...", {
-        icon: "⏳",
-        duration: 6000,
-        actionButton: {
-          text: "View on Explorer",
-          onClick: () => window.open(`${explorerBase}${txHash}`, "_blank"),
-        },
-      });
+      console.log("Transaction Submitted: Waiting for confirmation...");
 
       // Wait for receipt and decode tokenId from on-chain event
       const { tokenId } = await waitForMintReceiptAndTokenId(
@@ -259,19 +244,7 @@ export default function HeartNFTMinter({
         `${platformAnalysis.platformStyling.icon} ${platformAnalysis.collectionRarity.tier} rarity ${platformAnalysis.networkType === 'mixed' ? 'cross-platform' : platformAnalysis.platformStyling.name} NFT` :
         'NFT';
 
-      showToast(
-        `💎 ${platformMessage} Minted!`,
-        tokenId
-          ? `Your ${platformMessage} #${tokenId.toString()} has been minted successfully using ${paymentMethodText}${platformAnalysis?.crossPlatformBonus ? ' with cross-platform bonus!' : '.'}`
-          : `Your ${platformMessage} has been minted successfully using ${paymentMethodText}${platformAnalysis?.crossPlatformBonus ? ' with cross-platform bonus!' : '.'}.`,
-        {
-          icon: platformAnalysis?.platformStyling.icon || "🎉",
-          duration: 8000,
-          actionButton: onViewCollection
-            ? { text: "View Collection", onClick: onViewCollection }
-            : undefined,
-        }
-      );
+      console.log(`${platformMessage} Minted! Your ${platformMessage} has been minted successfully using ${paymentMethodText}${platformAnalysis?.crossPlatformBonus ? ' with cross-platform bonus!' : '.'}.`);
 
       if (tokenId) {
         // Pass enhanced context to success handler
@@ -305,11 +278,7 @@ export default function HeartNFTMinter({
         errorMessage = `Transaction rejected. Your ${getPaymentMethodDisplayName(paymentMethod)} payment was not processed.`;
       }
 
-      showToast(
-        "❌ Mint Failed",
-        errorMessage,
-        { icon: "⚠️", duration: 6000 }
-      );
+      console.log(`Mint Failed: ${errorMessage}`);
 
       // Use the new Web3 error handler for additional context
       await handleWeb3Error(e);

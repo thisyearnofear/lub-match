@@ -2,9 +2,8 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import UnifiedOnboardingIntegration, {
-  useUnifiedOnboarding,
-} from "@/components/onboarding/UnifiedOnboardingIntegration";
+import UnifiedOnboardingSystem from "@/components/onboarding/UnifiedOnboardingSystem";
+import { useSubtleOnboarding } from "@/hooks/useSubtleOnboarding";
 import ActionButton from "@/components/shared/ActionButton";
 
 interface HelpSystemProps {
@@ -14,8 +13,7 @@ interface HelpSystemProps {
 
 export function HelpSystem({ isOpen, onClose }: HelpSystemProps) {
   const [activeSection, setActiveSection] = useState<string>("overview");
-  const { startOnboarding, stopOnboarding, restartOnboarding } =
-    useUnifiedOnboarding();
+  const { startOnboarding, skipOnboarding } = useSubtleOnboarding();
 
   const helpSections = [
     {
@@ -49,7 +47,7 @@ export function HelpSystem({ isOpen, onClose }: HelpSystemProps) {
             variant="gradient-pink"
             size="sm"
             onClick={() => {
-              startOnboarding("welcome");
+              startOnboarding("MAIN_INTRO", "welcome");
               onClose();
             }}
           >

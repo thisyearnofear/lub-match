@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useUserProgression } from "@/utils/userProgression";
 
 // Storage keys for tracking onboarding state
 const STORAGE_KEYS = {
@@ -8,7 +9,7 @@ const STORAGE_KEYS = {
   GAME_INTRO: "subtle_onboarding_game",
   GAME_COMPLETE: "subtle_onboarding_complete",
   ADVANCED_FEATURES: "subtle_onboarding_advanced",
-  // NEW: Enhanced onboarding keys (ENHANCEMENT FIRST)
+  // Enhanced onboarding keys
   CHALLENGE_INTRO: "enhanced_onboarding_challenge",
   WHALE_HUNTING: "enhanced_onboarding_whale",
   VIRAL_SYSTEM: "enhanced_onboarding_viral",
@@ -17,6 +18,8 @@ const STORAGE_KEYS = {
 } as const;
 
 type OnboardingType = keyof typeof STORAGE_KEYS;
+export type UserLevel = "newcomer" | "player" | "challenger" | "whale_hunter";
+export type EngagementLevel = "none" | "curious" | "engaged" | "expert";
 
 export function useSubtleOnboarding() {
   const [activeSequence, setActiveSequence] = useState<string | null>(null);
@@ -90,19 +93,50 @@ export function useSubtleOnboarding() {
     return false;
   }, [startOnboarding, hasSeenOnboarding]);
 
-  // NEW: Enhanced onboarding utilities (ENHANCEMENT FIRST)
-  const getUserLevel = useCallback((): 'newcomer' | 'player' | 'challenger' | 'whale_hunter' => {
-    if (typeof window === "undefined") return 'newcomer';
+  // Enhanced user level detection using userProgression system
+  const { progress } = useUserProgression();
+  
+  const getUserLevel = useCallback((): UserLevel => {
+    const {
+      gamesCompleted,
+      nftsMinted,
+      socialGamesPlayed,
+      hasConnectedWallet,
+    } = progress;
 
-    const hasPlayedGame = hasSeenOnboarding("GAME_COMPLETE");
-    const hasChallenged = hasSeenOnboarding("CHALLENGE_INTRO");
-    const hasWhaleHunted = hasSeenOnboarding("WHALE_HUNTING");
+    if (gamesCompleted >= 10 || nftsMinted >= 3 || socialGamesPlayed >= 5) {
+      return "whale_hunter";
+    } else if (
+      gamesCompleted >= 5 ||
+      nftsMinted >= 1 ||
+      (hasConnectedWallet && socialGamesPlayed >= 2)
+    ) {
+      return "challenger";
+    } else if (
+      gamesCompleted >= 2 ||
+      hasConnectedWallet ||
+      socialGamesPlayed >= 1
+    ) {
+      return "player";
+    } else {
+      return "newcomer";
+    }
+  }, [progress]);
+  
+  const getEngagementLevel = useCallback((): EngagementLevel => {
+    const { gamesCompleted, socialGamesPlayed, gamesShared } = progress;
+    const totalGamesPlayed = gamesCompleted + socialGamesPlayed;
 
-    if (hasWhaleHunted) return 'whale_hunter';
-    if (hasChallenged) return 'challenger';
-    if (hasPlayedGame) return 'player';
-    return 'newcomer';
-  }, [hasSeenOnboarding]);
+    if (totalGamesPlayed >= 5 || gamesShared >= 3) {
+      return "expert";
+    } else if (totalGamesPlayed >= 2 || gamesShared >= 1) {
+      return "engaged";
+    } else if (totalGamesPlayed >= 1) {
+      return "curious";
+    } else {
+      return "none";
+    }
+  }, [progress]);
 
   const getCompletedSteps = useCallback((): string[] => {
     if (typeof window === "undefined") return [];
@@ -116,37 +150,33 @@ export function useSubtleOnboarding() {
     return completed;
   }, []);
 
-  const shouldShowEnhancedOnboarding = useCallback((context: {
+  // Smart onboarding sequence generation based on user level and context
+  const getRecommendedSequence = useCallback((context?: {
+    isGameComplete?: boolean;
     isFirstChallenge?: boolean;
     justCompletedWhaleChallenge?: boolean;
-    justWentViral?: boolean;
-    justEarnedMajorReward?: boolean;
-  }): boolean => {
+  }) => {
     const userLevel = getUserLevel();
-    const { isFirstChallenge, justCompletedWhaleChallenge, justWentViral, justEarnedMajorReward } = context;
-
-    // Show challenge intro for players who haven't seen it
-    if (isFirstChallenge && userLevel === 'player' && !hasSeenOnboarding("CHALLENGE_INTRO")) {
-      return true;
+    const engagementLevel = getEngagementLevel();
+    
+    // Game completion sequence
+    if (context?.isGameComplete && !hasSeenOnboarding("GAME_COMPLETE")) {
+      return "game-complete";
     }
-
-    // Show whale hunting intro after successful whale challenge
-    if (justCompletedWhaleChallenge && !hasSeenOnboarding("WHALE_HUNTING")) {
-      return true;
+    
+    // Main intro sequence
+    if (!hasSeenOnboarding("MAIN_INTRO")) {
+      return "welcome";
     }
-
-    // Show viral system explanation after first viral detection
-    if (justWentViral && !hasSeenOnboarding("VIRAL_SYSTEM")) {
-      return true;
+    
+    // Advanced features for experienced users
+    if ((userLevel === "challenger" || userLevel === "whale_hunter") && 
+        !hasSeenOnboarding("ADVANCED_FEATURES")) {
+      return "advanced-features";
     }
-
-    // Show rewards system after major earning
-    if (justEarnedMajorReward && !hasSeenOnboarding("REWARDS_SYSTEM")) {
-      return true;
-    }
-
-    return false;
-  }, [getUserLevel, hasSeenOnboarding]);
+    
+    return null;
+  }, [getUserLevel, getEngagementLevel, hasSeenOnboarding]);
 
   return {
     // State
@@ -162,9 +192,10 @@ export function useSubtleOnboarding() {
     hasSeenOnboarding,
     markOnboardingCompleted,
 
-    // NEW: Enhanced onboarding (ENHANCEMENT FIRST)
+    // Enhanced onboarding utilities
     getUserLevel,
+    getEngagementLevel,
     getCompletedSteps,
-    shouldShowEnhancedOnboarding,
+    getRecommendedSequence,
   };
 }
