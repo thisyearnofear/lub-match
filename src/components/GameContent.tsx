@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 import PhotoPairGame from "@/components/PhotoPairGame";
 import ValentinesProposal from "@/components/ValentinesProposal";
-import HeartNFTMinter from "@/components/HeartNFTMinter";
+import SimpleHeartNFTMinter from "@/components/SimpleHeartNFTMinter";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 
@@ -161,38 +161,20 @@ export default function GameContent({
     <div className="flex flex-col items-center justify-center w-full">
       {/* Heart NFT Minter Modal (only after demo game) */}
       {showHeartMinter && (
-        <HeartNFTMinter
+        <SimpleHeartNFTMinter
           gameImages={pairUrls}
-          gameLayout={[0, 1, 2, 3, 4, 5, 6, 7]} // Simple layout for now
+          gameLayout={[0, 1, 2, 3, 4, 5, 6, 7]}
           message={message}
           gameType="demo"
-          creator={
-            message.includes("lub")
-              ? "0x0000000000000000000000000000000000000000"
-              : "0x1234567890123456789012345678901234567890"
-          }
+          creator="0x0000000000000000000000000000000000000000"
           onClose={handleNFTMinterClose}
-          onViewCollection={goToSocialGames}
+          onMinted={(tokenId) => console.log("NFT minted:", tokenId)}
           users={users}
-          gameStats={
-            gameStats
-              ? {
-                  completionTime: gameStats.completionTime,
-                  accuracy: gameStats.accuracy,
-                  socialDiscoveries: Math.min(
-                    users?.length ? Math.floor(users.length / 2) : 0,
-                    8
-                  ),
-                }
-              : {
-                  completionTime: 90, // Default completion time for custom games
-                  accuracy: 85, // More realistic accuracy
-                  socialDiscoveries: Math.min(
-                    users?.length ? Math.floor(users.length / 2) : 0,
-                    8
-                  ),
-                }
-          }
+          gameStats={gameStats ? {
+            completionTime: gameStats.completionTime,
+            accuracy: gameStats.accuracy,
+            socialDiscoveries: Math.min(users?.length ? Math.floor(users.length / 2) : 0, 8),
+          } : undefined}
         />
       )}
 

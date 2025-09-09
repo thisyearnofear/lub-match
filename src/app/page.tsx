@@ -36,7 +36,7 @@ const SocialGamesHub = dynamic(() => import("@/components/SocialGamesHub"), {
   ssr: false,
 });
 
-const HeartNFTMinter = dynamic(() => import("@/components/HeartNFTMinter"), {
+const SimpleHeartNFTMinter = dynamic(() => import("@/components/SimpleHeartNFTMinter"), {
   loading: () => (
     <div className="flex items-center justify-center p-8">
       <div className="text-center">
@@ -561,7 +561,7 @@ export default function Home() {
 
       {/* Heart NFT Minter Modal */}
       {showHeartNFTMinter && gameImages.length === 10 && (
-        <HeartNFTMinter
+        <SimpleHeartNFTMinter
           gameImages={gameImages}
           gameLayout={[
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
@@ -572,10 +572,6 @@ export default function Home() {
           creator="0x0000000000000000000000000000000000000000"
           onClose={handleNFTMinterClose}
           onMinted={handleNFTMinted}
-          onViewCollection={() => {
-            setShowHeartNFTMinter(false);
-            setShowWalletDrawer(true);
-          }}
           users={gameUsers}
           gameStats={
             gameStats || {

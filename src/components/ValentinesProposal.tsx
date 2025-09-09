@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
-import HeartNFTMinter from "./HeartNFTMinter";
+import SimpleHeartNFTMinter from "./SimpleHeartNFTMinter";
 import { useUserProgression } from "@/utils/userProgression";
 import { WEB3_CONFIG } from "@/config";
 import NavigationFooter from "./NavigationFooter";
@@ -310,7 +310,7 @@ export default function ValentinesProposal({
 
       {/* NFT Minter Modal */}
       {showNFTMinter && creator && address && (
-        <HeartNFTMinter
+        <SimpleHeartNFTMinter
           gameImages={sourceImages}
           gameLayout={gameLayout}
           message={heading}
@@ -347,7 +347,6 @@ export default function ValentinesProposal({
 
             setShowNFTMinter(false);
           }}
-          onViewCollection={undefined}
         />
       )}
     </div>
