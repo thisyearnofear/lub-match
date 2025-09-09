@@ -216,11 +216,11 @@ const PhotoPairGame = memo(function PhotoPairGame({
         } else {
           // Reset streak on miss
           setStreakCount(0);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 600)); // Reduced from 1000ms
           setIncorrect([firstIndex, index]);
-          setTimeout(() => setIncorrect([]), 1000);
+          setTimeout(() => setIncorrect([]), 600); // Reduced from 1000ms
         }
-        setTimeout(() => setSelected([]), 1000);
+        setTimeout(() => setSelected([]), 600); // Reduced from 1000ms
       }
     },
     [selected, matched, shuffledPairs, usersProp, streakCount]
@@ -691,7 +691,7 @@ const PhotoPairGame = memo(function PhotoPairGame({
           isVisible={showMatchNotification}
           onClose={handleCloseMatchNotification}
           position="bottom"
-          autoCloseDelay={4000}
+          autoCloseDelay={3000} // Reduced from 4000ms for better mobile UX
         />
       )}
     </div>

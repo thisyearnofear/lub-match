@@ -36,9 +36,9 @@ export default function MatchNotification({
   const getPositionClasses = () => {
     switch (position) {
       case "top":
-        return "top-8 left-1/2 transform -translate-x-1/2";
+        return "top-4 left-1/2 transform -translate-x-1/2";
       case "bottom":
-        return "bottom-8 left-1/2 transform -translate-x-1/2";
+        return "bottom-20 left-1/2 transform -translate-x-1/2"; // More space from bottom
       case "center":
       default:
         return "top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2";
@@ -63,11 +63,11 @@ export default function MatchNotification({
             duration: 0.3,
           }}
         >
-          <div className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-2xl shadow-2xl border border-purple-600 p-6 max-w-sm mx-4">
+          <div className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-2xl shadow-2xl border border-purple-600 p-4 sm:p-6 max-w-xs sm:max-w-sm mx-4">
             {/* Header */}
-            <div className="text-center mb-4">
+            <div className="text-center mb-3 sm:mb-4">
               <motion.div
-                className="text-4xl mb-2"
+                className="text-3xl sm:text-4xl mb-2"
                 animate={{
                   scale: [1, 1.2, 1],
                   rotate: [0, 10, -10, 0],
@@ -80,17 +80,17 @@ export default function MatchNotification({
               >
                 💝
               </motion.div>
-              <h3 className="text-lg font-bold text-white mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-white mb-1">
                 Perfect Match!
               </h3>
-              <p className="text-purple-200 text-sm">
+              <p className="text-purple-200 text-xs sm:text-sm">
                 You found a {user.network === "lens" ? "Lens" : "Farcaster"}{" "}
                 user
               </p>
             </div>
 
             {/* User Profile Link */}
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-3 sm:mb-4">
               <MatchProfileLink user={user} className="w-full justify-center" />
             </div>
 
