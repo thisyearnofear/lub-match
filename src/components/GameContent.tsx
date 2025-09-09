@@ -11,7 +11,7 @@ import { useMiniAppReady } from "@/hooks/useMiniAppReady";
 
 import { useUnifiedStats } from "@/hooks/useUnifiedStats";
 import ActionButton from "@/components/shared/ActionButton";
-import UnifiedOnboardingSystem from "@/components/onboarding/UnifiedOnboardingSystem";
+import SimpleOnboarding, { WELCOME_TIPS, GAME_COMPLETE_TIPS } from "@/components/onboarding/SimpleOnboarding";
 // Removed enhanced rewards integration (AGGRESSIVE CONSOLIDATION)
 
 interface GameContentProps {
@@ -243,23 +243,21 @@ export default function GameContent({
         </motion.div>
       )}
 
-      {/* Game Completion Unified Onboarding */}
-      {demoGameFinished && (
-        <UnifiedOnboardingSystem
-          sequence="game-complete"
-          onPlayMore={() => {
-            // Reset game state for another round
-            setGameState("playing");
-            setSelectedCells([]);
-            setMatchedPairs([]);
-            setGameStartTime(Date.now());
-            setAttempts(0);
-          }}
-          onMintNFT={() => {
-            // Trigger NFT minting flow
-            handleShowProposalAction();
-          }}
+      {/* Welcome Tips */}
+      {!demoGameFinished && (
+        <SimpleOnboarding 
+          tips={WELCOME_TIPS} 
+          onComplete={() => {}} 
         />
+      )}
+
+      {/* Game Complete Tips */}
+      {demoGameFinished && (
+        <SimpleOnboarding 
+          tips={GAME_COMPLETE_TIPS} 
+          onComplete={() => setShowValentinesProposal(true)} 
+        />
+      )}
     </div>
   );
 }

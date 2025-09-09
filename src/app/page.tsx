@@ -60,7 +60,7 @@ const WalletDrawer = dynamic(() => import("@/components/shared/WalletDrawer"), {
 });
 
 import ClientOnly from "@/components/ClientOnly";
-import UnifiedOnboardingSystem from "@/components/onboarding/UnifiedOnboardingSystem";
+import SimpleOnboarding, { WELCOME_TIPS } from "@/components/onboarding/SimpleOnboarding";
 import {
   AnimatedTile,
   AnimatedTileContainer,
@@ -598,10 +598,10 @@ export default function Home() {
         onClose={() => setShowWalletDrawer(false)}
       />
 
-      {/* Unified Onboarding System - Simplified and consolidated */}
-      <UnifiedOnboardingSystem
-        sequence="welcome"
-        onExploreGames={() => startSocialGames()}
+      {/* Welcome Tips */}
+      <SimpleOnboarding 
+        tips={WELCOME_TIPS} 
+        onComplete={() => {}} 
       />
 
       {/* Onboarding Debug Panel */}

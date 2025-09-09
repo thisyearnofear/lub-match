@@ -21,7 +21,7 @@ import {
 } from "@/services/challengeEngine";
 import { ChallengeSocialProfile } from "./SocialProfile";
 import { useReporting } from "./CommunityReporting";
-import UnifiedOnboardingSystem from "./onboarding/UnifiedOnboardingSystem";
+import SimpleOnboarding, { GAME_COMPLETE_TIPS } from "./onboarding/SimpleOnboarding";
 
 import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
@@ -1066,20 +1066,23 @@ export default function SocialGamesHub({
       {/* Community Reporting Modal */}
       {ReportingModal}
 
-      {/* Unified Onboarding System */}
-      <UnifiedOnboardingSystem
-        sequence="advanced-features"
-        allowRestart={false}
-        onTryChallenges={startChallengeSelection}
-        onExploreGames={backToMenu}
+      {/* Advanced Features Tips */}
+      <SimpleOnboarding 
+        tips={[{
+          id: "advanced",
+          icon: "🌟",
+          title: "Advanced Features",
+          message: "Try creating custom challenges and connecting with the community!",
+          action: { text: "Try Challenges", onClick: startChallengeSelection }
+        }]} 
+        onComplete={() => {}} 
       />
 
-      {/* Challenge Success Onboarding */}
+      {/* Challenge Success Tips */}
       {gameResult?.challengeResult && (
-        <UnifiedOnboardingSystem
-          sequence="game-complete"
-          allowRestart={false}
-          onPlayMore={startChallengeSelection}
+        <SimpleOnboarding 
+          tips={GAME_COMPLETE_TIPS} 
+          onComplete={() => {}} 
         />
       )}
     </div>
