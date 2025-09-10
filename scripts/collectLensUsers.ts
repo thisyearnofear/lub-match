@@ -12,6 +12,7 @@ import { join } from 'path';
 // DRY: Reuse existing types and services
 import { SocialUser } from '../src/types/socialGames';
 import { lensActions, LensActions, createLensClient } from '../src/services/lensService';
+import { UnifiedUtils } from '../src/utils/platformAdapter';
 
 // Collection interfaces
 interface LensRewardRecipient {
@@ -430,21 +431,14 @@ export class LensUserCollector {
    * CLEAN: Final user set selection with quality distribution
    */
   private selectFinalUserSet(users: CollectedLensUser[]): CollectedLensUser[] {
-    // AGGRESSIVE CONSOLIDATION: Remove duplicates by ID
+    // AGGRESSIVE CONSOLIDATION: Use unified deduplication utility
     const uniqueUsers = users.reduce((acc, user) => {
-      const userId = user.network === 'lens' && 'id' in user ? (user as any).id : (user as any).fid?.toString();
-      const existing = acc.find(u => {
-        const existingId = u.network === 'lens' && 'id' in u ? (u as any).id : (u as any).fid?.toString();
-        return existingId === userId;
-      });
+      const existing = acc.find(u => u.username === user.username);
       if (!existing) {
         acc.push(user);
       } else if (user.gameScore > existing.gameScore) {
         // Keep the version with higher game score
-        const index = acc.findIndex(u => {
-          const existingId = u.network === 'lens' && 'id' in u ? (u as any).id : (u as any).fid?.toString();
-          return existingId === userId;
-        });
+        const index = acc.findIndex(u => u.username === user.username);
         acc[index] = user;
       }
       return acc;

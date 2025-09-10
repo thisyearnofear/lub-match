@@ -1,537 +1,181 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  CACHE_DURATION,
-  REFRESH_INTERVAL,
-  DEFAULT_USER_COUNT,
-  MIN_FOLLOWERS
-} from "@/config";
-import {
-  FarcasterUser
-} from "@/utils/mockData";
-import { SocialUser, LensUser } from "@/types/socialGames";
+import { useState, useEffect, useCallback } from 'react';
+import { FarcasterUser } from '@/types/socialGames';
 
-// Whale classification utility functions
-export function classifyUserByFollowers(followerCount: number): WhaleType {
-  if (followerCount >= WHALE_THRESHOLDS.MEGA_WHALE) return 'mega_whale';
-  if (followerCount >= WHALE_THRESHOLDS.WHALE) return 'whale';
-  if (followerCount >= WHALE_THRESHOLDS.SHARK) return 'shark';
-  if (followerCount >= WHALE_THRESHOLDS.FISH) return 'fish';
-  return 'minnow';
-}
-
-export function getWhaleMultiplier(whaleType: WhaleType): number {
-  const multipliers = {
-    minnow: 1,
-    fish: 2,
-    shark: 5,
-    whale: 10,
-    mega_whale: 25
-  };
-  return multipliers[whaleType];
-}
-
-export function getWhaleEmoji(whaleType: WhaleType): string {
-  const emojis = {
-    minnow: '🐟',
-    fish: '🐠',
-    shark: '🦈',
-    whale: '🐋',
-    mega_whale: '🌊'
-  };
-  return emojis[whaleType];
-}
-
-// Whale classification thresholds
-export const WHALE_THRESHOLDS = {
-  FISH: 1000,      // 1k+ followers
-  SHARK: 5000,     // 5k+ followers
-  WHALE: 10000,    // 10k+ followers
-  MEGA_WHALE: 50000 // 50k+ followers
-} as const;
-
-export type WhaleType = 'fish' | 'shark' | 'whale' | 'mega_whale' | 'minnow';
-
-// Enhanced hook options interface
 interface UseFarcasterUsersOptions {
   count?: number;
   minFollowers?: number;
-  refreshInterval?: number;
+  type?: 'trending' | 'active' | 'quality';
+  searchQuery?: string;
   enableAutoRefresh?: boolean;
-  whaleFilter?: WhaleType | 'all'; // NEW: Filter by whale type
-  challengeMode?: boolean; // NEW: Optimize for challenge targets
 }
 
-// Enhanced hook return interface
 interface UseFarcasterUsersReturn {
-  users: SocialUser[];
+  users: FarcasterUser[];
   loading: boolean;
   error: string | null;
-  refreshUsers: () => Promise<void>;
+  refetch: () => Promise<void>;
+  refreshUsers: () => Promise<void>; // Alias for refetch for backward compatibility
   getRandomPairs: () => string[];
-  isUsingMockData: boolean;
-  hasApiKey: boolean | null; // null = checking, true/false = determined
+  hasApiKey: boolean | null;
   apiCheckComplete: boolean;
-  // NEW: Whale detection utilities
-  getWhalesByType: (type: WhaleType) => SocialUser[];
-  getTopWhales: (limit?: number) => SocialUser[];
-  classifyUser: (user: SocialUser) => WhaleType;
-  getChallengeTargets: (difficulty: 'easy' | 'medium' | 'hard') => SocialUser[];
 }
 
-// API response interface
-interface FarcasterUsersResponse {
-  users: FarcasterUser[];
-  count: number;
-  timestamp: number;
-}
-
-// Cache for API responses to avoid excessive calls
-const userCache = new Map<string, { data: SocialUser[]; timestamp: number }>();
+/**
+ * Whale type classification
+ */
+export type WhaleType = 'minnow' | 'fish' | 'shark' | 'whale' | 'mega_whale';
 
 /**
  * Hook for fetching and managing Farcaster users
- * Handles server-side API calls, caching, and fallback to mock data
  */
-export function useFarcasterUsers(
-  options: UseFarcasterUsersOptions = {},
-): UseFarcasterUsersReturn {
+export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFarcasterUsersReturn {
   const {
-    count = DEFAULT_USER_COUNT,
-    minFollowers = MIN_FOLLOWERS,
-    refreshInterval = REFRESH_INTERVAL,
-    enableAutoRefresh = false,
-    whaleFilter = 'all',
-    challengeMode = false,
+    count = 20,
+    minFollowers = 100,
+    type = 'trending',
+    searchQuery,
+    enableAutoRefresh = true
   } = options;
 
-  const [users, setUsers] = useState<SocialUser[]>([]);
+  const [users, setUsers] = useState<FarcasterUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
-  const [isUsingMockData, setIsUsingMockData] = useState(false);
-
-  // Check if API features are available by testing the API endpoint
-  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null); // null = checking, true/false = determined
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [apiCheckComplete, setApiCheckComplete] = useState(false);
 
-  // Check API availability on mount with improved timing and retry logic
-  useEffect(() => {
-    if (!isClient) return;
-
-    const checkApiAvailability = async () => {
-      const startTime = Date.now();
-      const MIN_LOADING_TIME = 2500; // Minimum 2.5 seconds for smooth UX
-      const MAX_RETRIES = 3;
-      const RETRY_DELAY = 1000; // 1 second between retries
-
-      let lastError: Error | null = null;
-
-      // Try multiple times with exponential backoff
-      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          const controller = new AbortController();
-          const timeoutMs = 3000 + (attempt * 2000); // Progressive timeout: 5s, 7s, 9s
-          const timeoutId = setTimeout(() => {
-            controller.abort('Request timeout');
-          }, timeoutMs);
-
-          const response = await fetch('/api/farcaster-users?count=1', {
-            signal: controller.signal,
-            headers: {
-              'Cache-Control': 'no-cache'
-            }
-          });
-          clearTimeout(timeoutId);
-
-          const data = await response.json();
-          
-          // If we get a successful response without error, API is available
-          if (!data.error) {
-            setHasApiKey(true);
-            break;
-          } else {
-            // API responded but with an error (likely missing key)
-            lastError = new Error(data.error);
-            if (attempt === MAX_RETRIES) {
-              setHasApiKey(false);
-            }
-          }
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error('Unknown error');
-          console.log(`API check attempt ${attempt}/${MAX_RETRIES} failed:`, lastError.message);
-          
-          // If this is the last attempt, mark as unavailable
-          if (attempt === MAX_RETRIES) {
-            setHasApiKey(false);
-          } else {
-            // Wait before retrying (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
-          }
-        }
-      }
-
-      // Ensure minimum loading time for smooth UX
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
-      
-      if (remainingTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
-      }
-
-      setApiCheckComplete(true);
-    };
-
-    checkApiAvailability();
-  }, [isClient]);
-
-  // Request deduplication and throttling
-  const activeRequestsRef = useRef<Set<string>>(new Set());
-  const lastRequestTimeRef = useRef<number>(0);
-  const REQUEST_THROTTLE_MS = 500; // Minimum time between requests
-
-  // Check cache first
-  const getCachedUsers = useCallback(
-    (cacheKey: string): SocialUser[] | null => {
-      const cached = userCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
-      }
-      return null;
-    },
-    [],
-  );
-
-  // Fetch users from our API route
-  const fetchUsersFromAPI = useCallback(async (): Promise<SocialUser[]> => {
-    if (hasApiKey === false) {
-      throw new Error("NEYNAR_API_KEY not configured - Farcaster features unavailable");
-    }
-
-    if (hasApiKey === null) {
-      throw new Error("API availability check in progress");
-    }
-
-    const requestKey = `trending-${count}-${minFollowers}`;
-    
-    // Prevent duplicate requests
-    if (activeRequestsRef.current.has(requestKey)) {
-      throw new Error("Request already in progress");
-    }
-
-    // Throttle requests
-    const now = Date.now();
-    const timeSinceLastRequest = now - lastRequestTimeRef.current;
-    if (timeSinceLastRequest < REQUEST_THROTTLE_MS) {
-      const delay = REQUEST_THROTTLE_MS - timeSinceLastRequest;
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-
+  // Check if API key is available
+  const checkApiKey = useCallback(async () => {
     try {
-      const cached = getCachedUsers(requestKey);
-      if (cached) {
-        setIsUsingMockData(false);
-        return cached;
-      }
-
-      // Mark request as active
-      activeRequestsRef.current.add(requestKey);
-      lastRequestTimeRef.current = Date.now();
-
-      // Fetch from our server-side API route - use 'active' type for better user quality
-      const response = await fetch(
-        `/api/farcaster-users?count=${count}&minFollowers=${minFollowers}&type=active`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data: FarcasterUsersResponse = await response.json();
-
-      // Convert FarcasterUser to SocialUser format
-      const socialUsers: SocialUser[] = data.users.map(user => ({
-        ...user,
-        network: 'farcaster' as const
-      })) as SocialUser[];
-
-      // Cache the results
-      userCache.set(requestKey, {
-        data: socialUsers,
-        timestamp: Date.now(),
-      });
-
-      setIsUsingMockData(false);
-      return socialUsers;
-    } catch (err) {
-      console.error("Error fetching Farcaster users:", err);
-      throw err;
+      const response = await fetch('/api/farcaster-users?check=true');
+      const result = await response.json();
+      setHasApiKey(result.hasApiKey || false);
+    } catch {
+      setHasApiKey(false);
     } finally {
-      // Always cleanup active request tracking
-      activeRequestsRef.current.delete(requestKey);
+      setApiCheckComplete(true);
     }
-  }, [hasApiKey, count, minFollowers, getCachedUsers]);
+  }, []);
 
-
-
-  // Load Lens users from static JSON file
-  const loadLensUsers = useCallback(async (): Promise<LensUser[]> => {
-    try {
-      const lensData = await import('../data/lensRewardsUsers.json');
-      if (!lensData.users || !Array.isArray(lensData.users)) {
-        console.warn('No Lens users data available');
-        return [];
-      }
-
-      // Convert Lens users to LensUser format
-      const lensUsers: LensUser[] = lensData.users
-        .filter((user: any) =>
-          user.followerCount >= minFollowers &&
-          user.pfpUrl &&
-          user.pfpUrl !== '' &&
-          user.username
-        )
-        .map((user: any) => ({
-          id: user.id,
-          username: user.username.replace('lens/', ''),
-          displayName: user.displayName,
-          pfpUrl: user.pfpUrl,
-          bio: user.bio,
-          followerCount: user.followerCount,
-          followingCount: user.followingCount,
-          lensHandle: user.lensHandle,
-          lensProfileId: user.lensProfileId,
-          ownedBy: user.ownedBy,
-          totalPosts: user.totalPosts,
-          totalCollects: user.totalCollects,
-          totalMirrors: user.totalMirrors,
-          totalComments: user.totalComments,
-          totalReactions: user.totalReactions,
-        }));
-
-      console.log(`📊 Loaded ${lensUsers.length} Lens users from static data`);
-      return lensUsers;
-    } catch (error) {
-      console.warn('Failed to load Lens users:', error);
-      return [];
-    }
-  }, [minFollowers]);
-
-  // Main function to refresh users
-  const refreshUsers = useCallback(async () => {
-    // Don't try to refresh if API check hasn't completed yet
-    if (!apiCheckComplete) {
-      return;
-    }
-
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Load both Farcaster and Lens users
-      const [farcasterUsers, lensUsers] = await Promise.all([
-        fetchUsersFromAPI(),
-        loadLensUsers()
-      ]);
+      const params = new URLSearchParams({
+        type,
+        count: count.toString(),
+        minFollowers: minFollowers.toString(),
+        ...(searchQuery && { query: searchQuery })
+      });
 
-      // Convert to SocialUser format with type assertions
-      const farcasterSocialUsers: SocialUser[] = farcasterUsers.map(user => ({
-        ...user,
-        network: 'farcaster' as const
-      })) as SocialUser[];
+      const response = await fetch(`/api/farcaster-users?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+      }
 
-      const lensSocialUsers: SocialUser[] = lensUsers.map(user => ({
-        ...user,
-        network: 'lens' as const
-      })) as SocialUser[];
-
-      // Combine and shuffle users for variety
-      const combinedUsers = [...farcasterSocialUsers, ...lensSocialUsers];
-      const shuffledUsers = combinedUsers.sort(() => Math.random() - 0.5);
-
-      // Limit to requested count
-      const finalUsers = shuffledUsers.slice(0, count);
-
-      setUsers(finalUsers);
-
-      console.log(`🎯 Combined users: ${farcasterUsers.length} Farcaster + ${lensUsers.length} Lens = ${finalUsers.length} total`);
-
-      // Clear any previous errors on successful fetch
-      setError(null);
+      const data = await response.json();
+      setUsers(data);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to fetch users";
-
-      // Only set error if API check is complete and we know the API should work
-      if (hasApiKey === true) {
-        setError(errorMessage);
-      } else if (hasApiKey === false) {
-        // Set a more user-friendly error message for missing API key
-        setError("Neynar API key not configured - social features unavailable");
-      }
-
-      // Try to load just Lens users as fallback
-      try {
-        const lensUsers = await loadLensUsers();
-        if (lensUsers.length > 0) {
-          const lensSocialUsers: SocialUser[] = lensUsers.map(user => ({
-            ...user,
-            network: 'lens' as const
-          })) as SocialUser[];
-          setUsers(lensSocialUsers.slice(0, count));
-          setError(null); // Clear error if we have Lens users
-          console.log(`📊 Fallback: Loaded ${lensUsers.length} Lens users`);
-        } else {
-          setUsers([]);
-        }
-      } catch (fallbackErr) {
-        setUsers([]);
-      }
-
-      setIsUsingMockData(false);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+      console.error('Error fetching Farcaster users:', err);
     } finally {
       setLoading(false);
     }
-  }, [fetchUsersFromAPI, loadLensUsers, apiCheckComplete, hasApiKey, count]);
+  }, [type, count, minFollowers, searchQuery]);
 
-  // Generate random pairs from users for the memory game
+  // Get random pairs for memory game
   const getRandomPairs = useCallback((): string[] => {
-    if (users.length < 10) {
-      // Not enough users, return empty array to indicate unavailable
+    if (users.length < 8) {
+      console.warn('Not enough users for game pairs');
       return [];
     }
 
-    // Take first 10 users and use their profile pictures
-    return users.slice(0, 10).map((user) => user.pfpUrl);
+    // Shuffle users and take first 8
+    const shuffled = [...users].sort(() => 0.5 - Math.random());
+    const selectedUsers = shuffled.slice(0, 8);
+    
+    // Return profile picture URLs
+    return selectedUsers.map(user => user.pfpUrl).filter(Boolean);
   }, [users]);
 
-  // Set client-side flag
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    checkApiKey();
+  }, [checkApiKey]);
 
-  // Auto-refresh effect - only run on client after API check is complete
   useEffect(() => {
-    if (isClient && apiCheckComplete && hasApiKey === true) {
-      refreshUsers();
+    if (apiCheckComplete && hasApiKey && enableAutoRefresh) {
+      fetchUsers();
     }
-  }, [refreshUsers, isClient, apiCheckComplete, hasApiKey]);
-
-  useEffect(() => {
-    if (!enableAutoRefresh || !isClient) return;
-
-    const interval = setInterval(refreshUsers, refreshInterval);
-    return () => clearInterval(interval);
-  }, [enableAutoRefresh, refreshInterval, refreshUsers, isClient]);
-
-  // Whale detection utility functions
-  const getWhalesByType = useCallback((type: WhaleType): SocialUser[] => {
-    return users.filter(user => classifyUserByFollowers(user.followerCount) === type);
-  }, [users]);
-
-  const getTopWhales = useCallback((limit: number = 10): SocialUser[] => {
-    return [...users]
-      .sort((a, b) => b.followerCount - a.followerCount)
-      .slice(0, limit);
-  }, [users]);
-
-  const classifyUser = useCallback((user: SocialUser): WhaleType => {
-    return classifyUserByFollowers(user.followerCount);
-  }, []);
-
-  const getChallengeTargets = useCallback((difficulty: 'easy' | 'medium' | 'hard'): SocialUser[] => {
-    const difficultyMap = {
-      easy: ['minnow', 'fish'] as WhaleType[],
-      medium: ['fish', 'shark'] as WhaleType[],
-      hard: ['shark', 'whale', 'mega_whale'] as WhaleType[]
-    };
-
-    const targetTypes = difficultyMap[difficulty];
-    return users.filter(user =>
-      targetTypes.includes(classifyUserByFollowers(user.followerCount))
-    );
-  }, [users, classifyUser]);
+  }, [apiCheckComplete, hasApiKey, enableAutoRefresh, fetchUsers]);
 
   return {
     users,
     loading,
     error,
-    refreshUsers,
+    refetch: fetchUsers,
+    refreshUsers: fetchUsers, // Alias for backward compatibility
     getRandomPairs,
-    isUsingMockData,
     hasApiKey,
-    apiCheckComplete,
-    // NEW: Whale detection utilities
-    getWhalesByType,
-    getTopWhales,
-    classifyUser,
-    getChallengeTargets,
+    apiCheckComplete
   };
 }
 
-
+/**
+ * Utility function to get whale emoji based on follower count
+ */
+export function getWhaleEmoji(whaleType: WhaleType): string {
+  switch (whaleType) {
+    case 'minnow':
+      return '🐟';
+    case 'fish':
+      return '🐠';
+    case 'shark':
+      return '🦈';
+    case 'whale':
+      return '🐋';
+    case 'mega_whale':
+      return '🐳';
+    default:
+      return '🐟';
+  }
+}
 
 /**
- * Hook for getting a single Farcaster user profile by FID
- * Uses the server-side API route for secure authentication
+ * Classify user based on follower count
  */
-export function useFarcasterUser(fid: number | null) {
-  const [user, setUser] = useState<FarcasterUser | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function classifyWhaleType(followerCount: number): WhaleType {
+  if (followerCount >= 50000) return 'mega_whale';
+  if (followerCount >= 10000) return 'whale';
+  if (followerCount >= 5000) return 'shark';
+  if (followerCount >= 1000) return 'fish';
+  return 'minnow';
+}
 
-  const [hasApiKey, setHasApiKey] = useState(false);
+/**
+ * Legacy alias for classifyWhaleType
+ */
+export function classifyUserByFollowers(followerCount: number): WhaleType {
+  return classifyWhaleType(followerCount);
+}
 
-  const fetchUser = useCallback(
-    async (userFid: number) => {
-      if (!hasApiKey) return;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch("/api/farcaster-users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ fids: [userFid] }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch user: ${response.status}`);
-        }
-
-        const data: FarcasterUsersResponse = await response.json();
-        const userData = data.users?.[0];
-
-        if (userData) {
-          setUser(userData);
-        } else {
-          setError("User not found");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch user");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [hasApiKey],
-  );
-
-  useEffect(() => {
-    if (fid) {
-      fetchUser(fid);
-    } else {
-      setUser(null);
-      setError(null);
-    }
-  }, [fid, fetchUser]);
-
-  return { user, loading, error };
+/**
+ * Get whale multiplier for reward calculations
+ */
+export function getWhaleMultiplier(whaleType: WhaleType): number {
+  switch (whaleType) {
+    case 'minnow':
+      return 1;
+    case 'fish':
+      return 1.2;
+    case 'shark':
+      return 1.5;
+    case 'whale':
+      return 2;
+    case 'mega_whale':
+      return 3;
+    default:
+      return 1;
+  }
 }

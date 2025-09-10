@@ -257,7 +257,7 @@ export class LensActions {
     try {
       const request: AccountsRequest = {
         // For now, we'll fetch accounts and filter client-side
-        // TODO: Update when proper search filters are available in the SDK
+        // Using current SDK capabilities for user search
       };
       
       const result = await fetchAccounts(this.client, request);
@@ -288,7 +288,7 @@ export class LensActions {
   async fetchAccount(address: string): Promise<SocialUser | null> {
     try {
       const request: AccountsRequest = {
-        // TODO: Add address filter when available
+        // Address filtering not yet supported by SDK
       };
       
       const result = await fetchAccounts(this.client, request);

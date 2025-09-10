@@ -130,10 +130,102 @@ class NeynarCache {
     console.log('🧹 Neynar cache cleared');
   }
 
-  getStats(): { size: number; hits: number } {
+  // Cache invalidation - remove specific entries
+  invalidate(params: Record<string, any>): void {
+    const key = this.generateKey(params);
+    const deleted = this.cache.delete(key);
+    if (deleted) {
+      console.log(`🗑️ Cache invalidated: ${key}`);
+    }
+  }
+
+  // Cache invalidation by pattern (useful for clearing related entries)
+  invalidateByType(type: string): void {
+    const keysToDelete: string[] = [];
+    for (const key of this.cache.keys()) {
+      try {
+        const parsedKey = JSON.parse(key);
+        if (parsedKey.type === type) {
+          keysToDelete.push(key);
+        }
+      } catch {
+        // Skip malformed keys
+        continue;
+      }
+    }
+    
+    keysToDelete.forEach(key => {
+      this.cache.delete(key);
+    });
+    
+    if (keysToDelete.length > 0) {
+      console.log(`🗑️ Cache invalidated ${keysToDelete.length} entries for type: ${type}`);
+    }
+  }
+
+  // Cache warming - pre-populate with frequently accessed data
+  async warmUp(): Promise<void> {
+    if (!this.canMakeRequest()) {
+      console.warn('⚠️ Skipping cache warm-up due to rate limiting');
+      return;
+    }
+
+    console.log('🔥 Starting cache warm-up...');
+    
+    try {
+      // Warm up the most frequently requested data types
+      const warmUpTasks = [
+        this.preFetch({ type: 'trending', count: 20 }),
+        this.preFetch({ type: 'active', count: 15 }),
+        this.preFetch({ type: 'quality', count: 15 })
+      ];
+
+      await Promise.allSettled(warmUpTasks);
+      console.log('✅ Cache warm-up completed');
+    } catch (error) {
+      console.error('❌ Cache warm-up failed:', error);
+    }
+  }
+
+  // Pre-fetch data and store in cache
+  private async preFetch(params: Record<string, any>): Promise<void> {
+    try {
+      // Build query string
+      const queryString = Object.entries(params)
+        .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+        .join('&');
+      
+      const endpoint = `/api/farcaster-users?${queryString}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Pre-fetch failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Store in cache using the same key generation as normal requests
+      this.set(params, data);
+      this.recordRequest(); // Track API usage
+      
+      console.log(`🎯 Pre-fetched and cached: ${JSON.stringify(params)} (${data.length} users)`);
+      
+    } catch (error) {
+      console.error(`Failed to pre-fetch ${JSON.stringify(params)}:`, error);
+    }
+  }
+
+  getStats(): { size: number; hits: number; rateLimit: any } {
     return {
       size: this.cache.size,
-      hits: 0 // We could track this if needed
+      hits: 0, // We could track this if needed
+      rateLimit: this.getRateLimitStatus()
     };
   }
 }

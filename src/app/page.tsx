@@ -551,7 +551,7 @@ export default function Home() {
       {/* Social Games Modal */}
       {isGameActive && (
         <SocialGamesHub
-          users={users}
+          users={users.map(user => ({ ...user, network: 'farcaster' as const }))}
           onClose={handleSocialGamesClose}
           onSkipToProposal={() => {
             setShowValentinesProposal(true);

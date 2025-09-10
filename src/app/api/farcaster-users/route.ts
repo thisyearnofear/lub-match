@@ -421,6 +421,14 @@ async function fetchRecentActiveUsers(count: number, minFollowers: number): Prom
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
+    
+    // Handle API key check request
+    if (searchParams.get('check') === 'true') {
+      return NextResponse.json({ 
+        hasApiKey: !!NEYNAR_API_KEY 
+      });
+    }
+    
     const count = parseInt(searchParams.get("count") || "16");
     const minFollowers = parseInt(searchParams.get("minFollowers") || "100");
     const type = searchParams.get("type") || "trending";

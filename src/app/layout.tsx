@@ -83,6 +83,7 @@ export const metadata: Metadata = {
 };
 
 import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 // OnboardingProvider removed - using simplified onboarding system
 
 export default function RootLayout({
@@ -135,7 +136,9 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning={true}>
-        <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
+        <ErrorBoundary>
+          <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
+        </ErrorBoundary>
       </body>
     </html>
   );

@@ -144,12 +144,12 @@ export default function LensTestPage() {
                             @{user.username}
                           </div>
                           <div className="text-xs text-gray-400">
-                            {user.network} • {user.followerCount?.toLocaleString() || '0'} followers
+                            {(user as any).network || 'farcaster'} • {user.followerCount?.toLocaleString() || '0'} followers
                             {(user as any).gameScore && <span className="ml-2 text-green-600">• {(user as any).gameScore}/100 🎮</span>}
                           </div>
                         </div>
                         <div className="text-2xl">
-                          {user.network === 'farcaster' ? '🟣' : '🌿'}
+                          {(user as any).network === 'lens' ? '🌿' : '🟣'}
                         </div>
                       </div>
                       {user.bio && (

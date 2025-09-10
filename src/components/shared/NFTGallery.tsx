@@ -8,14 +8,8 @@ import { ContractInfo } from "./ContractInfo";
 import { SocialUser } from "@/types/socialGames";
 import { calculateCollectionRarity, getPlatformStyling, getRarityStyling } from "@/utils/socialInfluenceCalculator";
 
-// Cache for NFT data to prevent excessive API calls
-const nftCache = new Map<string, {
-  data: any;
-  timestamp: number;
-  stats?: CollectionStats | null;
-  totalSupply?: bigint | null;
-}>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+// PERFORMANT: Use unified caching system
+import { neynarCache } from "@/utils/neynarCache";
 
 interface NFTItem {
   tokenId: bigint;
@@ -78,15 +72,17 @@ export function NFTGallery({
     }
     abortControllerRef.current = new AbortController();
 
-    // Check cache first
-    const cached = nftCache.get(cacheKey);
-    const now = Date.now();
+    // PERFORMANT: Check unified cache first
+    const cacheParams = { type: 'nft', address, balance: nftBalance?.toString() };
+    const cached = neynarCache.get(cacheParams);
     
-    if (!forceRefresh && cached && now - cached.timestamp < CACHE_DURATION) {
+    if (!forceRefresh && cached) {
       console.log('🎯 Using cached NFT data');
-      setNfts(cached.data);
-      if (cached.stats !== undefined) setCollectionStats(cached.stats);
-      if (cached.totalSupply !== undefined) setTotalSupply(cached.totalSupply);
+      // Parse cached NFT data (stored as FarcasterUser[], adapt for NFTs)
+      const cachedNFTs = (cached as any).nftData || [];
+      setNfts(cachedNFTs);
+      if ((cached as any).stats) setCollectionStats((cached as any).stats);
+      if ((cached as any).totalSupply) setTotalSupply((cached as any).totalSupply);
       return;
     }
 
@@ -153,11 +149,12 @@ export function NFTGallery({
         .filter((result): result is PromiseFulfilledResult<NFTItem & { socialInfluence?: any; networkType?: string }> => result.status === 'fulfilled')
         .map(result => result.value);
 
-      // Cache the results
-      nftCache.set(cacheKey, {
-        data: validNFTs,
-        timestamp: now,
-      });
+      // PERFORMANT: Cache using unified system
+      const cacheData = { 
+        nftData: validNFTs,
+        timestamp: Date.now()
+      } as any;
+      neynarCache.set(cacheParams, [cacheData]); // Adapt to FarcasterUser[] format
 
       setNfts(validNFTs);
       
@@ -172,14 +169,15 @@ export function NFTGallery({
         setCollectionStats(stats);
         setTotalSupply(supply);
         
-        // Update cache with stats
-        if (nftCache.has(cacheKey)) {
-          const existing = nftCache.get(cacheKey)!;
-          nftCache.set(cacheKey, {
-            ...existing,
+        // PERFORMANT: Update unified cache with stats
+        const existingCache = neynarCache.get(cacheParams);
+        if (existingCache && existingCache[0]) {
+          const updatedCacheData = {
+            ...existingCache[0],
             stats,
             totalSupply: supply,
-          });
+          };
+          neynarCache.set(cacheParams, [updatedCacheData]);
         }
       });
 
