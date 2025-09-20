@@ -43,6 +43,9 @@ type PhotoPairGameProps = {
     totalAttempts: number;
     totalMatches: number;
   }) => void;
+  // ENHANCEMENT FIRST: Add fallback mode instead of creating new component
+  fallbackMode?: boolean;
+  fallbackImages?: string[];
 };
 
 const PhotoPairGame = memo(function PhotoPairGame({
@@ -50,11 +53,28 @@ const PhotoPairGame = memo(function PhotoPairGame({
   users: usersProp,
   handleShowProposalAction,
   onGameComplete,
+  fallbackMode,
+  fallbackImages,
 }: PhotoPairGameProps) {
-  // Create stable references with memoization (moved before validation)
+  // ENHANCEMENT FIRST: Enhanced validation with fallback support
+  const shouldUseFallback = fallbackMode || (!imagesProp || imagesProp.length !== 10);
+  const gameImages = shouldUseFallback ? (fallbackImages || [
+    "/game-photos/lub.png",
+    "/game-photos/lubber.jpeg", 
+    "/game-photos/lubmatch.png",
+    "/sad_hamster.png",
+    "/game-photos/lub.png",
+    "/game-photos/lubber.jpeg",
+    "/game-photos/lubmatch.png", 
+    "/sad_hamster.png",
+    "/game-photos/lub.png",
+    "/game-photos/lubber.jpeg",
+  ]) : imagesProp;
+
+  // Use gameImages for pairs
   const imagePairs = useMemo(
-    () => imagesProp?.flatMap((img) => [img, img]) || [],
-    [imagesProp]
+    () => gameImages?.flatMap((img) => [img, img]) || [],
+    [gameImages]
   );
 
   // Initialize all hooks before any conditional logic
@@ -134,14 +154,14 @@ const PhotoPairGame = memo(function PhotoPairGame({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Validate that we have exactly 10 images (after hooks are initialized)
-  if (!imagesProp || imagesProp.length !== 10) {
+  // Final validation
+  if (!gameImages || gameImages.length !== 10) {
     return (
       <div className="text-center p-8">
         <div className="text-4xl mb-4">🚫</div>
         <h3 className="text-xl font-bold text-white mb-2">Game Unavailable</h3>
         <p className="text-purple-200">
-          Need exactly 10 images to play. Got {imagesProp?.length || 0}.
+          Unable to load game images. Please try again.
         </p>
       </div>
     );

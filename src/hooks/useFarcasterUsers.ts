@@ -43,13 +43,26 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [apiCheckComplete, setApiCheckComplete] = useState(false);
 
-  // Check if API key is available
+  // Check if API key is available with timeout and error handling
   const checkApiKey = useCallback(async () => {
     try {
-      const response = await fetch('/api/farcaster-users?check=true');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const response = await fetch('/api/farcaster-users?check=true', {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`API check failed: ${response.status}`);
+      }
+      
       const result = await response.json();
       setHasApiKey(result.hasApiKey || false);
-    } catch {
+    } catch (err) {
+      console.warn('API key check failed:', err);
       setHasApiKey(false);
     } finally {
       setApiCheckComplete(true);
@@ -57,6 +70,12 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
   }, []);
 
   const fetchUsers = useCallback(async () => {
+    // Don't fetch if we know there's no API key
+    if (hasApiKey === false) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -68,47 +87,96 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
         ...(searchQuery && { query: searchQuery })
       });
 
-      const response = await fetch(`/api/farcaster-users?${params}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(`/api/farcaster-users?${params}`, {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      setUsers(data);
+      
+      // Handle different response formats
+      const usersArray = data.users || data || [];
+      setUsers(usersArray);
+      
+      // If we got users, we know the API key works
+      if (usersArray.length > 0 && hasApiKey === null) {
+        setHasApiKey(true);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
       console.error('Error fetching Farcaster users:', err);
+      
+      // If this is a timeout or network error, don't mark API as unavailable
+      if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('timeout'))) {
+        console.warn('Request timed out, but API might still be available');
+      } else if (hasApiKey === null) {
+        // Only set to false if we haven't determined API availability yet
+        setHasApiKey(false);
+      }
     } finally {
       setLoading(false);
     }
-  }, [type, count, minFollowers, searchQuery]);
+  }, [type, count, minFollowers, searchQuery, hasApiKey]);
 
   // Get random pairs for memory game
   const getRandomPairs = useCallback((): string[] => {
-    if (users.length < 8) {
-      console.warn('Not enough users for game pairs');
+    if (users.length < 10) {
+      console.warn('Not enough users for game pairs, need at least 10');
       return [];
     }
 
-    // Shuffle users and take first 8
+    // Shuffle users and take first 10 for 20 cards (10 pairs)
     const shuffled = [...users].sort(() => 0.5 - Math.random());
-    const selectedUsers = shuffled.slice(0, 8);
+    const selectedUsers = shuffled.slice(0, 10);
     
-    // Return profile picture URLs
-    return selectedUsers.map(user => user.pfpUrl).filter(Boolean);
+    // Return profile picture URLs, duplicated for pairs
+    const images = selectedUsers.map(user => user.pfpUrl).filter(Boolean);
+    return [...images, ...images]; // Duplicate for pairs
   }, [users]);
 
+  // Check API key on mount
   useEffect(() => {
     checkApiKey();
   }, [checkApiKey]);
 
+  // ENHANCEMENT FIRST: Consolidated timeout logic
   useEffect(() => {
-    if (apiCheckComplete && hasApiKey && enableAutoRefresh) {
-      fetchUsers();
+    if (apiCheckComplete && hasApiKey === true && enableAutoRefresh) {
+      // Add a small delay to prevent rapid-fire requests
+      const timer = setTimeout(() => {
+        fetchUsers();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [apiCheckComplete, hasApiKey, enableAutoRefresh, fetchUsers]);
+
+  // ENHANCEMENT FIRST: Global timeout to prevent infinite loading
+  useEffect(() => {
+    if (loading || !apiCheckComplete) {
+      const timeout = setTimeout(() => {
+        console.warn('Loading timeout reached, forcing completion');
+        if (!apiCheckComplete) {
+          setApiCheckComplete(true);
+        }
+        if (hasApiKey === null) {
+          setHasApiKey(false); // Force fallback mode
+        }
+        setLoading(false);
+      }, 15000); // 15 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [loading, apiCheckComplete, hasApiKey]);
 
   return {
     users,

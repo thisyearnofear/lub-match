@@ -134,6 +134,38 @@ export default function RootLayout({
           `,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            // Global error handler for wallet injection conflicts
+            window.addEventListener('error', function(e) {
+              if (e.message && (
+                e.message.includes('Cannot set property ethereum') ||
+                e.message.includes('window.ethereum') ||
+                e.message.includes('Backpack') ||
+                e.message.includes('pageProvider')
+              )) {
+                console.warn('Wallet injection conflict detected, continuing...', e.message);
+                e.preventDefault();
+                return false;
+              }
+            });
+            
+            // Suppress specific wallet-related console errors
+            const originalError = console.error;
+            console.error = function(...args) {
+              const message = args.join(' ');
+              if (message.includes('Cannot set property ethereum') ||
+                  message.includes('Backpack') ||
+                  message.includes('pageProvider') ||
+                  message.includes('cca-lite.coinbase.com')) {
+                return; // Suppress these specific errors
+              }
+              originalError.apply(console, args);
+            };
+            `,
+          }}
+        />
       </head>
       <body suppressHydrationWarning={true}>
         <ErrorBoundary>
