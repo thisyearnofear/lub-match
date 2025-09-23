@@ -601,7 +601,15 @@ export default function Home() {
       />
 
       {/* Onboarding Debug Panel */}
-      <OnboardingDebug />
+      <OnboardingDebug 
+        loading={loading}
+        apiCheckComplete={apiCheckComplete}
+        hasApiKey={hasApiKey}
+        usersLength={users.length}
+        error={error}
+        isInFarcaster={isInFarcaster}
+        miniAppReady={miniAppReady}
+      />
     </div>
   );
 }
