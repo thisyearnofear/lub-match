@@ -108,6 +108,7 @@ export default function Home() {
   const {
     users,
     loading,
+    error,
     getRandomPairs,
     hasApiKey,
     apiCheckComplete,
