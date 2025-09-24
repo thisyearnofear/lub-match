@@ -118,6 +118,8 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
     if (DEBUG) console.log('🔄 Fetching users...');
     setLoading(true);
     setError(null);
+    
+    let fetchedUsersCount = 0;
 
     try {
       const params = new URLSearchParams({
@@ -142,8 +144,9 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
 
       const data = await response.json();
       const usersArray = data.users || data || [];
+      fetchedUsersCount = usersArray.length;
       
-      if (DEBUG) console.log('📥 Received users:', usersArray.length);
+      if (DEBUG) console.log('📥 Received users:', fetchedUsersCount);
       setUsers(usersArray);
       
       if (usersArray.length > 0 && hasApiKey === null) {
@@ -162,8 +165,7 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
     } finally {
       setLoading(false);
       setInitialFetchDone(true);
-      // Note: usersArray.length is the correct value since state hasn't updated yet
-      if (DEBUG) console.log('🏁 Fetch complete:', { usersCount: usersArray.length, hasApiKey, error });
+      if (DEBUG) console.log('🏁 Fetch complete:', { usersCount: fetchedUsersCount, hasApiKey, error });
     }
   }, [type, count, minFollowers, searchQuery, hasApiKey]);
 

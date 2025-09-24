@@ -176,13 +176,15 @@ export default function MobileOptimizedChallengeSelection({
               const whaleType = classifyUserByFollowers(user.followerCount);
               const whaleEmoji = getWhaleEmoji(whaleType);
               const rewardMultiplier =
-                whaleType === "mega_whale"
+                whaleType === "orca"
+                  ? "50x"
+                  : whaleType === "mega_whale"
                   ? "25x"
                   : whaleType === "whale"
                   ? "10x"
-                  : whaleType === "shark"
+                  : whaleType === "mini"
                   ? "5x"
-                  : whaleType === "fish"
+                  : whaleType === "micro"
                   ? "2x"
                   : "1x";
 
@@ -205,7 +207,7 @@ export default function MobileOptimizedChallengeSelection({
                         alt={user.displayName}
                         className="w-12 h-12 rounded-full border-2 border-white/30"
                       />
-                      {whaleType !== "minnow" && (
+                      {whaleType !== "nano" && (
                         <div className="absolute -top-1 -right-1 text-lg">
                           {whaleEmoji}
                         </div>

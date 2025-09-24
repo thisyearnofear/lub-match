@@ -219,7 +219,7 @@ class ChallengeEngine {
     if (creatorSkillLevel) {
       // For advanced/expert users, increase difficulty against easier targets
       if ((creatorSkillLevel === 'advanced' || creatorSkillLevel === 'expert') && 
-          (whaleType === 'minnow' || whaleType === 'fish')) {
+          (whaleType === 'nano' || whaleType === 'micro')) {
         adjustedDifficulty = 'hard';
       }
       // For beginners, reduce difficulty against harder targets
@@ -292,7 +292,7 @@ class ChallengeEngine {
       if (difficulty === 'hard' && type.baseReward < 300) return false;
       
       // Whale-specific challenges only for whales
-      if (type.category === 'whale_specific' && whaleType === 'minnow') return false;
+      if (type.category === 'whale_specific' && whaleType === 'nano') return false;
       
       return true;
     });

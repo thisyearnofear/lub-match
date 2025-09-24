@@ -103,7 +103,7 @@ export class SocialGameFactory {
     } else if (difficulty === 'medium') {
       return this.selectMixedWhaleUsers(users, count);
     } else {
-      // Easy: Mostly minnows and fish for approachable gameplay
+      // Easy: Mostly nano and micro whales for approachable gameplay
       return this.selectEasyUsers(users, count);
     }
   }
@@ -114,21 +114,21 @@ export class SocialGameFactory {
     const selected: SocialUser[] = [];
 
     // Hard difficulty: Include whales for high-stakes gameplay
-    // 25% whales/mega_whales, 25% sharks, 50% fish/minnows
+    // 25% whales/mega_whales, 25% mini whales, 50% micro/nano whales
     const whaleCount = Math.max(1, Math.floor(count * 0.25));
-    const sharkCount = Math.max(1, Math.floor(count * 0.25));
-    const fishCount = count - whaleCount - sharkCount;
+    const miniCount = Math.max(1, Math.floor(count * 0.25));
+    const microCount = count - whaleCount - miniCount;
 
     // Add whales (highest reward potential)
     const whales = [...(whaleGroups.whale || []), ...(whaleGroups.mega_whale || [])];
     selected.push(...shuffleArray(whales).slice(0, whaleCount));
 
-    // Add sharks (medium-high reward)
-    selected.push(...shuffleArray(whaleGroups.shark || []).slice(0, sharkCount));
+    // Add mini whales (medium-high reward)
+    selected.push(...shuffleArray(whaleGroups.mini || []).slice(0, miniCount));
 
-    // Fill remaining with fish and minnows
-    const smallFish = [...(whaleGroups.fish || []), ...(whaleGroups.minnow || [])];
-    selected.push(...shuffleArray(smallFish).slice(0, fishCount));
+    // Fill remaining with micro and nano whales
+    const smallWhales = [...(whaleGroups.micro || []), ...(whaleGroups.nano || [])];
+    selected.push(...shuffleArray(smallWhales).slice(0, microCount));
 
     return shuffleArray(selected).slice(0, count);
   }
@@ -139,20 +139,20 @@ export class SocialGameFactory {
     const selected: SocialUser[] = [];
 
     // Medium difficulty: Balanced mix with some challenge
-    // 10% whales, 30% sharks, 60% fish/minnows
+    // 10% whales, 30% mini whales, 60% micro/nano whales
     const whaleCount = Math.max(0, Math.floor(count * 0.1));
-    const sharkCount = Math.max(1, Math.floor(count * 0.3));
-    const fishCount = count - whaleCount - sharkCount;
+    const miniCount = Math.max(1, Math.floor(count * 0.3));
+    const microCount = count - whaleCount - miniCount;
 
     if (whaleCount > 0) {
       const whales = [...(whaleGroups.whale || []), ...(whaleGroups.mega_whale || [])];
       selected.push(...shuffleArray(whales).slice(0, whaleCount));
     }
 
-    selected.push(...shuffleArray(whaleGroups.shark || []).slice(0, sharkCount));
+    selected.push(...shuffleArray(whaleGroups.mini || []).slice(0, miniCount));
 
-    const smallFish = [...(whaleGroups.fish || []), ...(whaleGroups.minnow || [])];
-    selected.push(...shuffleArray(smallFish).slice(0, fishCount));
+    const smallWhales = [...(whaleGroups.micro || []), ...(whaleGroups.nano || [])];
+    selected.push(...shuffleArray(smallWhales).slice(0, microCount));
 
     return shuffleArray(selected).slice(0, count);
   }
@@ -162,16 +162,16 @@ export class SocialGameFactory {
     const whaleGroups = this.groupUsersByWhaleType(users);
 
     // Easy difficulty: Mostly approachable users
-    // 80% minnows/fish, 20% sharks (no whales for easy mode)
-    const easyUsers = [...(whaleGroups.minnow || []), ...(whaleGroups.fish || [])];
-    const sharks = whaleGroups.shark || [];
+    // 80% nano/micro whales, 20% mini whales (no big whales for easy mode)
+    const easyUsers = [...(whaleGroups.nano || []), ...(whaleGroups.micro || [])];
+    const miniWhales = whaleGroups.mini || [];
 
-    const sharkCount = Math.min(Math.floor(count * 0.2), sharks.length);
-    const easyCount = count - sharkCount;
+    const miniCount = Math.min(Math.floor(count * 0.2), miniWhales.length);
+    const easyCount = count - miniCount;
 
     const selected = [
       ...shuffleArray(easyUsers).slice(0, easyCount),
-      ...shuffleArray(sharks).slice(0, sharkCount)
+      ...shuffleArray(miniWhales).slice(0, miniCount)
     ];
 
     return shuffleArray(selected).slice(0, count);
@@ -180,11 +180,12 @@ export class SocialGameFactory {
   // NEW: Group users by whale classification (PERFORMANT caching)
   private groupUsersByWhaleType(users: SocialUser[]): Record<WhaleType, SocialUser[]> {
     const groups: Record<WhaleType, SocialUser[]> = {
-      minnow: [],
-      fish: [],
-      shark: [],
+      nano: [],
+      micro: [],
+      mini: [],
       whale: [],
-      mega_whale: []
+      mega_whale: [],
+      orca: []
     };
 
     users.forEach(user => {
@@ -316,10 +317,11 @@ export class SocialGameFactory {
     const whaleGroups = this.groupUsersByWhaleType(users);
 
     // Bonus points for each whale type in the game
-    bonus += (whaleGroups.fish?.length || 0) * 2;      // 2 LUB per fish
-    bonus += (whaleGroups.shark?.length || 0) * 5;     // 5 LUB per shark
-    bonus += (whaleGroups.whale?.length || 0) * 15;    // 15 LUB per whale
+    bonus += (whaleGroups.micro?.length || 0) * 2;      // 2 LUB per micro whale
+    bonus += (whaleGroups.mini?.length || 0) * 5;       // 5 LUB per mini whale
+    bonus += (whaleGroups.whale?.length || 0) * 15;     // 15 LUB per whale
     bonus += (whaleGroups.mega_whale?.length || 0) * 40; // 40 LUB per mega whale
+    bonus += (whaleGroups.orca?.length || 0) * 100;     // 100 LUB per orca
 
     return bonus;
   }
@@ -333,14 +335,15 @@ export class SocialGameFactory {
   } {
     const whaleGroups = this.groupUsersByWhaleType(users);
     const whaleBreakdown: Record<WhaleType, number> = {
-      minnow: whaleGroups.minnow?.length || 0,
-      fish: whaleGroups.fish?.length || 0,
-      shark: whaleGroups.shark?.length || 0,
+      nano: whaleGroups.nano?.length || 0,
+      micro: whaleGroups.micro?.length || 0,
+      mini: whaleGroups.mini?.length || 0,
       whale: whaleGroups.whale?.length || 0,
-      mega_whale: whaleGroups.mega_whale?.length || 0
+      mega_whale: whaleGroups.mega_whale?.length || 0,
+      orca: whaleGroups.orca?.length || 0
     };
 
-    const whaleCount = users.length - whaleBreakdown.minnow;
+    const whaleCount = users.length - whaleBreakdown.nano;
     const totalMultiplier = users.reduce((sum, user) => {
       return sum + getWhaleMultiplier(classifyUserByFollowers(user.followerCount));
     }, 0) / users.length;

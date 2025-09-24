@@ -186,7 +186,7 @@ export default function SocialProfile({
             <span className="font-medium text-gray-900 truncate">
               {user.displayName}
             </span>
-            {showWhaleStatus && whaleType !== 'minnow' && (
+            {showWhaleStatus && whaleType !== 'nano' && (
               <span className="text-sm">{whaleEmoji}</span>
             )}
             {gameCreator && <span className="text-xs">💝</span>}

@@ -99,8 +99,8 @@ export default function SuccessScreen({
       const { challenge, success, viralDetected, totalReward, bonuses } = challengeResult;
       const whaleEmoji = getWhaleEmoji(challenge.targetUser.followerCount >= 50000 ? 'mega_whale' :
                                       challenge.targetUser.followerCount >= 10000 ? 'whale' :
-                                      challenge.targetUser.followerCount >= 5000 ? 'shark' :
-                                      challenge.targetUser.followerCount >= 1000 ? 'fish' : 'minnow');
+                                      challenge.targetUser.followerCount >= 1000 ? 'mini' :
+                                      challenge.targetUser.followerCount >= 100 ? 'micro' : 'nano');
 
       if (success && viralDetected) {
         return {
