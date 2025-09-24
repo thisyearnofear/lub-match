@@ -19,89 +19,95 @@ interface AnimatedTileProps {
   disabled?: boolean;
   ariaLabel?: string;
   testId?: string;
-  variant?: 'default' | 'heart-game' | 'heart-deco';
-  gameState?: 'idle' | 'selected' | 'matched' | 'incorrect' | 'anticipation';
+  variant?: "default" | "heart-game" | "heart-deco";
+  gameState?: "idle" | "selected" | "matched" | "incorrect" | "anticipation";
   staggerDelay?: number;
-  interactiveHint?: 'wiggle' | 'pulse' | null;
+  interactiveHint?: "wiggle" | "pulse" | null;
 }
 
 /**
  * Animated tile with consistent motion language
  * Automatically optimizes animations based on device capabilities
  */
-export function AnimatedTile({ 
-  children, 
-  index, 
-  isPrimary = false, 
-  onClick, 
+export function AnimatedTile({
+  children,
+  index,
+  isPrimary = false,
+  onClick,
   className = "",
   disabled = false,
   ariaLabel,
   testId,
-  variant = 'default',
-  gameState = 'idle',
+  variant = "default",
+  gameState = "idle",
   staggerDelay = 0,
-  interactiveHint = null
+  interactiveHint = null,
 }: AnimatedTileProps) {
   // Get optimized animations based on variant and hints
   const getAnimations = () => {
-    if (variant === 'heart-game') {
+    // Helper function to safely get animation or fallback
+    const safeAnimation = (animationType: string, enabled: boolean) => {
+      const animation = useOptimizedAnimation(animationType as any, enabled);
+      return animation || {};
+    };
+
+    if (variant === "heart-game") {
       // Interactive hints override normal idle animations
-      if (interactiveHint === 'wiggle' && gameState === 'idle') {
+      if (interactiveHint === "wiggle" && gameState === "idle") {
         return {
-          entry: useOptimizedAnimation('tileEntry', !disabled),
-          hover: useOptimizedAnimation('heartTileHover', !disabled),
-          idle: useOptimizedAnimation('onboardingWiggle', !disabled)
+          entry: safeAnimation("tileEntry", !disabled),
+          hover: safeAnimation("heartTileHover", !disabled),
+          idle: safeAnimation("onboardingWiggle", !disabled),
         };
       }
-      
-      if (interactiveHint === 'pulse' && gameState === 'idle') {
+
+      if (interactiveHint === "pulse" && gameState === "idle") {
         return {
-          entry: useOptimizedAnimation('tileEntry', !disabled),
-          hover: useOptimizedAnimation('heartTileHover', !disabled),
-          idle: useOptimizedAnimation('curiosityPulse', !disabled)
+          entry: safeAnimation("tileEntry", !disabled),
+          hover: safeAnimation("heartTileHover", !disabled),
+          idle: safeAnimation("curiosityPulse", !disabled),
         };
       }
 
       switch (gameState) {
-        case 'idle':
+        case "idle":
           return {
-            entry: useOptimizedAnimation('tileEntry', !disabled),
-            hover: useOptimizedAnimation('heartTileHover', !disabled),
-            idle: useOptimizedAnimation('heartTileIdle', !disabled)
+            entry: safeAnimation("tileEntry", !disabled),
+            hover: safeAnimation("heartTileHover", !disabled),
+            idle: safeAnimation("heartTileIdle", !disabled),
           };
-        case 'anticipation':
+        case "anticipation":
           return {
-            entry: useOptimizedAnimation('tileEntry', !disabled),
+            entry: safeAnimation("tileEntry", !disabled),
             hover: {},
-            idle: useOptimizedAnimation('heartTileFlipAnticipation', !disabled)
+            idle: safeAnimation("heartTileFlipAnticipation", !disabled),
           };
-        case 'matched':
+        case "matched":
           return {
-            entry: useOptimizedAnimation('tileEntry', !disabled),
+            entry: safeAnimation("tileEntry", !disabled),
             hover: {},
-            idle: useOptimizedAnimation('heartMatchCelebration', !disabled)
+            idle: safeAnimation("heartMatchCelebration", !disabled),
           };
-        case 'incorrect':
+        case "incorrect":
           return {
-            entry: useOptimizedAnimation('tileEntry', !disabled),
+            entry: safeAnimation("tileEntry", !disabled),
             hover: {},
-            idle: useOptimizedAnimation('heartIncorrectShake', !disabled)
+            idle: safeAnimation("heartIncorrectShake", !disabled),
           };
         default:
           return {
-            entry: useOptimizedAnimation('tileEntry', !disabled),
-            hover: useOptimizedAnimation('heartTileHover', !disabled),
-            idle: {}
+            entry: safeAnimation("tileEntry", !disabled),
+            hover: safeAnimation("heartTileHover", !disabled),
+            idle: {},
           };
       }
     }
-    
+
     // Default variant animations
     return {
-      entry: useOptimizedAnimation('tileEntry', !disabled),
-      hover: useOptimizedAnimation('tileHover', !disabled),
-      idle: useOptimizedAnimation('breathe', isPrimary && !disabled)
+      entry: safeAnimation("tileEntry", !disabled),
+      hover: safeAnimation("tileHover", !disabled),
+      idle: safeAnimation("breathe", isPrimary && !disabled),
     };
   };
 
@@ -114,7 +120,7 @@ export function AnimatedTile({
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (!disabled && onClick && (event.key === 'Enter' || event.key === ' ')) {
+    if (!disabled && onClick && (event.key === "Enter" || event.key === " ")) {
       event.preventDefault();
       onClick();
     }
@@ -128,44 +134,49 @@ export function AnimatedTile({
       variants={{
         ...animations.entry,
         visible: {
-          ...animations.entry.visible,
+          ...(animations.entry.visible || {}),
           transition: {
             ...(animations.entry.visible?.transition || {}),
-            delay: staggerDelay + (animations.entry.visible?.transition?.delay || 0)
-          }
-        }
+            delay:
+              staggerDelay + (animations.entry.visible?.transition?.delay || 0),
+          },
+        },
       }}
       whileHover={disabled ? {} : animations.hover}
       whileTap={disabled ? {} : { scale: 0.98 }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={`
-        ${onClick ? 'cursor-pointer' : ''} 
-        ${disabled ? 'opacity-50 cursor-not-allowed' : ''} 
-        ${variant === 'heart-game' ? 'heart-game-tile' : ''}
+        ${onClick ? "cursor-pointer" : ""} 
+        ${disabled ? "opacity-50 cursor-not-allowed" : ""} 
+        ${variant === "heart-game" ? "heart-game-tile" : ""}
         ${className}
       `}
-      style={{ 
+      style={{
         // Ensure animations use transform (GPU accelerated)
-        willChange: 'transform',
-        backfaceVisibility: 'hidden'
+        willChange: "transform",
+        backfaceVisibility: "hidden",
       }}
       role={onClick ? "button" : undefined}
       tabIndex={onClick && !disabled ? 0 : undefined}
       aria-label={ariaLabel}
       data-testid={testId}
     >
-      <motion.div 
-        animate={{
-          ...animations.idle,
-          transition: {
-            ...(animations.idle?.transition || {}),
-            delay: staggerDelay * 0.1 // Stagger idle animations
-          }
-        }}
+      <motion.div
+        animate={
+          animations.idle
+            ? {
+                ...animations.idle,
+                transition: {
+                  ...(animations.idle?.transition || {}),
+                  delay: staggerDelay * 0.1, // Stagger idle animations
+                },
+              }
+            : {}
+        }
         style={{
           // Prevent layout shifts during animation
-          transformOrigin: 'center'
+          transformOrigin: "center",
         }}
       >
         {children}
@@ -184,10 +195,10 @@ interface AnimatedTileContainerProps {
   testId?: string;
 }
 
-export function AnimatedTileContainer({ 
-  children, 
+export function AnimatedTileContainer({
+  children,
   className = "",
-  testId 
+  testId,
 }: AnimatedTileContainerProps) {
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -195,9 +206,9 @@ export function AnimatedTileContainer({
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
+        delayChildren: 0.2,
+      },
+    },
   };
 
   return (
@@ -222,15 +233,20 @@ interface FloatingHeartsProps {
   className?: string;
 }
 
-export function FloatingHearts({ count = 5, className = "" }: FloatingHeartsProps) {
-  const floatingAnimation = useOptimizedAnimation('floatingHeart');
+export function FloatingHearts({
+  count = 5,
+  className = "",
+}: FloatingHeartsProps) {
+  const floatingAnimation = useOptimizedAnimation("floatingHeart");
 
   if (!floatingAnimation || Object.keys(floatingAnimation).length === 0) {
     return null; // Don't render if animations are disabled
   }
 
   return (
-    <div className={`fixed inset-0 pointer-events-none overflow-hidden ${className}`}>
+    <div
+      className={`fixed inset-0 pointer-events-none overflow-hidden ${className}`}
+    >
       {Array.from({ length: count }).map((_, i) => (
         <motion.div
           key={i}
@@ -262,14 +278,15 @@ interface PulseIndicatorProps {
   className?: string;
 }
 
-export function PulseIndicator({ isActive, children, className = "" }: PulseIndicatorProps) {
-  const pulseAnimation = useOptimizedAnimation('connectedPulse', isActive);
+export function PulseIndicator({
+  isActive,
+  children,
+  className = "",
+}: PulseIndicatorProps) {
+  const pulseAnimation = useOptimizedAnimation("connectedPulse", isActive);
 
   return (
-    <motion.div
-      animate={pulseAnimation}
-      className={className}
-    >
+    <motion.div animate={pulseAnimation} className={className}>
       {children}
     </motion.div>
   );

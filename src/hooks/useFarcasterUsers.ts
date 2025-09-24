@@ -1,6 +1,43 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FarcasterUser } from '@/types/socialGames';
 
+// Types for whale classification
+export type WhaleType = 'nano' | 'micro' | 'mini' | 'whale' | 'mega_whale' | 'orca';
+
+// Utility functions for user classification
+export function classifyUserByFollowers(followerCount: number): WhaleType {
+  if (followerCount >= 100000) return 'orca';
+  if (followerCount >= 50000) return 'mega_whale';
+  if (followerCount >= 10000) return 'whale';
+  if (followerCount >= 1000) return 'mini';
+  if (followerCount >= 100) return 'micro';
+  return 'nano';
+}
+
+export function getWhaleEmoji(whaleType: WhaleType): string {
+  const emojiMap: Record<WhaleType, string> = {
+    nano: '🐠',
+    micro: '🐟',
+    mini: '🐡', 
+    whale: '🐋',
+    mega_whale: '🐳',
+    orca: '🐆'
+  };
+  return emojiMap[whaleType] || '🐠';
+}
+
+export function getWhaleMultiplier(whaleType: WhaleType): number {
+  const multiplierMap: Record<WhaleType, number> = {
+    nano: 1.0,
+    micro: 1.2,
+    mini: 1.5,
+    whale: 2.0,
+    mega_whale: 3.0,
+    orca: 5.0
+  };
+  return multiplierMap[whaleType] || 1.0;
+}
+
 // Debug flag for development
 const DEBUG = process.env.NODE_ENV === 'development';
 
@@ -58,13 +95,16 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
       
       const result = await response.json();
       if (DEBUG) console.log('🔑 API check result:', result);
-      setHasApiKey(result.hasApiKey || false);
+      
+      const hasKey = result.hasApiKey || false;
+      setHasApiKey(hasKey);
+      if (DEBUG) console.log('✅ API check complete, hasApiKey:', hasKey);
     } catch (err) {
       console.warn('API key check failed:', err);
       setHasApiKey(false);
+      if (DEBUG) console.log('❌ API check failed, setting hasApiKey to false');
     } finally {
       setApiCheckComplete(true);
-      if (DEBUG) console.log('✅ API check complete, hasApiKey:', hasApiKey);
     }
   }, []);
 
@@ -122,7 +162,8 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
     } finally {
       setLoading(false);
       setInitialFetchDone(true);
-      if (DEBUG) console.log('🏁 Fetch complete:', { usersCount: users.length, hasApiKey, error });
+      // Note: usersArray.length is the correct value since state hasn't updated yet
+      if (DEBUG) console.log('🏁 Fetch complete:', { usersCount: usersArray.length, hasApiKey, error });
     }
   }, [type, count, minFollowers, searchQuery, hasApiKey]);
 
@@ -133,9 +174,16 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
     }
 
     const shuffled = [...users].sort(() => 0.5 - Math.random());
-    const selectedUsers = shuffled.slice(0, 10);
+    const selectedUsers = shuffled.slice(0, 5); // Select 5 users for 10 images (pairs)
     const images = selectedUsers.map(user => user.pfpUrl).filter(Boolean);
-    return [...images, ...images];
+    
+    // Ensure we have enough valid images
+    if (images.length < 5) {
+      console.warn('Not enough valid profile images, got:', images.length);
+      return [];
+    }
+    
+    return [...images, ...images]; // Return 10 images (5 pairs)
   }, [users]);
 
   // Initial API key check
@@ -148,6 +196,10 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
     if (apiCheckComplete && hasApiKey === true && !initialFetchDone) {
       if (DEBUG) console.log('🚀 Triggering initial fetch');
       fetchUsers();
+    } else if (apiCheckComplete && hasApiKey === false) {
+      if (DEBUG) console.log('❌ Skipping fetch - no API key available');
+      setLoading(false);
+      setInitialFetchDone(true);
     }
   }, [apiCheckComplete, hasApiKey, initialFetchDone, fetchUsers]);
 
@@ -162,12 +214,17 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
 
   // Safety timeout
   useEffect(() => {
-    if (loading || !apiCheckComplete) {
+    if (!apiCheckComplete || (loading && hasApiKey !== false)) {
       const timeout = setTimeout(() => {
         console.warn('⚠️ Loading timeout reached, forcing completion');
-        if (!apiCheckComplete) setApiCheckComplete(true);
-        if (hasApiKey === null) setHasApiKey(false);
-        setLoading(false);
+        if (!apiCheckComplete) {
+          setApiCheckComplete(true);
+          setHasApiKey(false);
+        }
+        if (loading) {
+          setLoading(false);
+          setInitialFetchDone(true);
+        }
       }, 15000);
 
       return () => clearTimeout(timeout);

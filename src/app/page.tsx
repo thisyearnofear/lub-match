@@ -165,16 +165,29 @@ export default function Home() {
 
   // Update game images only on client side after API check is complete
   useEffect(() => {
+    console.log('🎮 Game images useEffect triggered:', {
+      isClient,
+      apiCheckComplete,
+      loading,
+      usersLength: users.length,
+      currentGameImagesLength: gameImages.length
+    });
+    
     if (isClient && apiCheckComplete && !loading && users.length >= 10) {
       const farcasterPairs = getRandomPairs();
+      console.log('🎮 Generated farcaster pairs:', farcasterPairs.length);
+      
       if (farcasterPairs.length === 10) {
+        console.log('✅ Setting game images with', farcasterPairs.length, 'images');
         setGameImages(farcasterPairs);
 
-        // Set the corresponding users (first 10 users whose images are used)
-        setGameUsers(users.slice(0, 10));
+        // Set the corresponding users (first 5 users whose images are used for pairs)
+        setGameUsers(users.slice(0, 5));
 
         // Legacy onboarding - will be replaced by enhanced system
         // showOnboardingMessage("FARCASTER_INTRO", { delay: 1000 });
+      } else {
+        console.log('❌ Not setting game images, got', farcasterPairs.length, 'instead of 10');
       }
     }
     // Only depend on stable values, not functions that change on every render
