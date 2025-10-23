@@ -19,10 +19,14 @@ interface AnimatedTileProps {
   disabled?: boolean;
   ariaLabel?: string;
   testId?: string;
-  variant?: "default" | "heart-game" | "heart-deco";
+  variant?: "default" | "heart-game" | "heart-deco" | "collaboration";
   gameState?: "idle" | "selected" | "matched" | "incorrect" | "anticipation";
   staggerDelay?: number;
   interactiveHint?: "wiggle" | "pulse" | null;
+  // NEW: Collaboration-specific props
+  collaborationState?: 'idle' | 'compatible' | 'matched' | 'requesting' | 'spark_sent';
+  collaborationHint?: 'skill-match' | 'project-fit' | 'cross-platform' | null;
+  experienceTier?: 'love' | 'social' | 'professional';
 }
 
 /**
@@ -30,18 +34,21 @@ interface AnimatedTileProps {
  * Automatically optimizes animations based on device capabilities
  */
 export function AnimatedTile({
-  children,
-  index,
-  isPrimary = false,
-  onClick,
-  className = "",
-  disabled = false,
-  ariaLabel,
-  testId,
-  variant = "default",
-  gameState = "idle",
-  staggerDelay = 0,
-  interactiveHint = null,
+children,
+index,
+isPrimary = false,
+onClick,
+className = "",
+disabled = false,
+ariaLabel,
+testId,
+variant = "default",
+gameState = "idle",
+staggerDelay = 0,
+interactiveHint = null,
+  collaborationState = 'idle',
+  collaborationHint = null,
+  experienceTier = 'love',
 }: AnimatedTileProps) {
   // Get optimized animations based on variant and hints
   const getAnimations = () => {
@@ -50,6 +57,67 @@ export function AnimatedTile({
       const animation = useOptimizedAnimation(animationType as any, enabled);
       return animation || {};
     };
+
+    // NEW: Collaboration variant animations
+    if (variant === "collaboration") {
+      // Collaboration hints override normal animations
+      if (collaborationHint === "skill-match" && collaborationState === "idle") {
+        return {
+          entry: safeAnimation("tileEntry", !disabled),
+          hover: safeAnimation("heartTileHover", !disabled),
+          idle: safeAnimation("collaborationSpark", !disabled),
+        };
+      }
+
+      if (collaborationHint === "project-fit" && collaborationState === "idle") {
+        return {
+          entry: safeAnimation("tileEntry", !disabled),
+          hover: safeAnimation("heartTileHover", !disabled),
+          idle: safeAnimation("collaborationRequest", !disabled),
+        };
+      }
+
+      if (collaborationHint === "cross-platform" && collaborationState === "idle") {
+        return {
+          entry: safeAnimation("tileEntry", !disabled),
+          hover: safeAnimation("heartTileHover", !disabled),
+          idle: safeAnimation("crossPlatformCelebration", !disabled),
+        };
+      }
+
+      switch (collaborationState) {
+        case "compatible":
+          return {
+            entry: safeAnimation("tileEntry", !disabled),
+            hover: safeAnimation("heartTileHover", !disabled),
+            idle: safeAnimation("collaborationSpark", !disabled),
+          };
+        case "matched":
+          return {
+            entry: safeAnimation("tileEntry", !disabled),
+            hover: {},
+            idle: safeAnimation("collaborationMatch", !disabled),
+          };
+        case "requesting":
+          return {
+            entry: safeAnimation("tileEntry", !disabled),
+            hover: {},
+            idle: safeAnimation("collaborationRequest", !disabled),
+          };
+        case "spark_sent":
+          return {
+            entry: safeAnimation("tileEntry", !disabled),
+            hover: {},
+            idle: safeAnimation("collaborationSpark", !disabled),
+          };
+        default:
+          return {
+            entry: safeAnimation("tileEntry", !disabled),
+            hover: safeAnimation("heartTileHover", !disabled),
+            idle: {},
+          };
+      }
+    }
 
     if (variant === "heart-game") {
       // Interactive hints override normal idle animations
@@ -103,11 +171,22 @@ export function AnimatedTile({
       }
     }
 
-    // Default variant animations
+    // Default variant animations with experience tier support
+    let idleAnimation = "breathe";
+    
+    // NEW: Experience tier-specific idle animations
+    if (experienceTier === 'love') {
+      idleAnimation = "loveTierPulse";
+    } else if (experienceTier === 'social') {
+      idleAnimation = "socialTierBounce";
+    } else if (experienceTier === 'professional') {
+      idleAnimation = "professionalTierGlow";
+    }
+    
     return {
       entry: safeAnimation("tileEntry", !disabled),
       hover: safeAnimation("tileHover", !disabled),
-      idle: safeAnimation("breathe", isPrimary && !disabled),
+      idle: safeAnimation(idleAnimation as any, isPrimary && !disabled),
     };
   };
 

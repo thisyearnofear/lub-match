@@ -67,12 +67,21 @@ import {
   FloatingHearts,
 } from "@/components/shared/AnimatedTile";
 import OnboardingDebug from "@/components/debug/OnboardingDebug";
+import SurpriseCelebration from "@/components/delights/SurpriseCelebration";
+import PersonalizedWelcome from "@/components/delights/PersonalizedWelcome";
+import DailyCreativeChallenge from "@/components/engagement/DailyCreativeChallenge";
+import ContextualHelp from "@/components/intuitive/ContextualHelp";
+import SocialEngagement from "@/components/engagement/SocialEngagement";
+import ProfessionalOnboardingModal from "@/components/ProfessionalOnboardingModal";
 
 import { useFarcasterUsers } from "@/hooks/useFarcasterUsers";
 import { useAccount } from "wagmi";
 import { defaultRevealImages, defaultMessage } from "@/data/defaultGame";
 import { useUserProgression } from "@/utils/userProgression";
 import { LoadingState } from "@/components/ErrorBoundary";
+import { useExperienceTier } from "@/hooks/useExperienceTier";
+import { CollaborationService } from "@/services/collaborationService";
+import { SocialUser } from "@/types/socialGames";
 
 const ANIM_DURATION = 2;
 
@@ -91,6 +100,10 @@ export default function Home() {
   const [showWalletDrawer, setShowWalletDrawer] = useState(false);
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [showHeartNFTMinter, setShowHeartNFTMinter] = useState(false);
+  const [showProfessionalOnboarding, setShowProfessionalOnboarding] = useState(false);
+  const [celebrationType, setCelebrationType] = useState<'hearts' | 'stars' | 'sparkles' | 'rainbow' | 'fireworks'>('hearts');
+  const [celebrationMessage, setCelebrationMessage] = useState<string>('');
+  const [showSocialEngagement, setShowSocialEngagement] = useState(false);
   const [isClient, setIsClient] = useState(false);
   
   // ENHANCEMENT FIRST: Sequential loading states using existing patterns
@@ -102,6 +115,12 @@ export default function Home() {
     completionTime: number;
     accuracy: number;
     socialDiscoveries: number;
+    collaborationInsights?: {
+      skillsDiscovered: string[];
+      compatibleUsers: SocialUser[];
+      crossPlatformConnections: number;
+      professionalOpportunities: number;
+    };
   } | null>(null);
 
   // Dynamic Farcaster users for social experience - only on client
@@ -157,6 +176,33 @@ export default function Home() {
 
   // Get current Farcaster user from context
   const farcasterUser = farcasterContext?.user;
+  
+  // ENHANCEMENT FIRST: Three-tier experience integration
+  const currentUser: SocialUser | undefined = farcasterUser ? {
+    fid: farcasterUser.fid,
+    username: farcasterUser.username || 'anonymous',
+    displayName: farcasterUser.displayName || farcasterUser.username || 'Anonymous',
+    pfpUrl: farcasterUser.pfpUrl || '',
+    followerCount: (farcasterUser as any).followerCount || 0,
+    followingCount: (farcasterUser as any).followingCount || 0,
+    network: 'farcaster' as const
+  } : undefined;
+  
+  const {
+    currentTier,
+    tierConfig,
+    canAccessFeature,
+    getTierStyling,
+    upgradeToTier,
+    getNextTier,
+    canUpgrade
+  } = useExperienceTier({
+    user: currentUser,
+    gameHistory: [], // TODO: Get from user progression
+    autoDetect: true
+  });
+  
+  const tierStyling = getTierStyling();
 
   // Set client flag
   useEffect(() => {
@@ -254,13 +300,54 @@ export default function Home() {
     totalAttempts: number;
     totalMatches: number;
   }) => {
+    // Show celebration based on performance
+    if (stats.accuracy === 100) {
+      setCelebrationType('fireworks');
+      setCelebrationMessage('Perfect game! 🎆');
+    } else if (stats.completionTime < 60) {
+      setCelebrationType('stars');
+      setCelebrationMessage('Speed demon! ⚡');
+    } else {
+      setCelebrationType('hearts');
+      setCelebrationMessage('Beautiful game! 💝');
+    }
+
+    // Show social engagement prompt after a delay
+    setTimeout(() => {
+      setShowSocialEngagement(true);
+    }, 3000);
     // Calculate social discoveries based on unique users actually used in the game
     const socialDiscoveries = Math.min(gameUsers.length, 10);
+    
+    // ENHANCEMENT FIRST: Generate collaboration insights for professional tier
+    let collaborationInsights;
+    if (canAccessFeature('collaboration') && currentUser && gameUsers.length > 0) {
+      const socialUsers: SocialUser[] = gameUsers.map(user => ({
+        ...user,
+        network: 'farcaster' as const
+      }));
+      
+      const skillsDiscovered = socialUsers.flatMap(user => 
+        CollaborationService.analyzeSkills(user)
+      );
+      
+      const compatibleUsers = socialUsers.filter(user => 
+        CollaborationService.calculateCompatibility(currentUser, user) >= 60
+      );
+      
+      collaborationInsights = {
+        skillsDiscovered: [...new Set(skillsDiscovered)],
+        compatibleUsers,
+        crossPlatformConnections: 0, // Only Farcaster users in this game
+        professionalOpportunities: compatibleUsers.length
+      };
+    }
 
     const enhancedStats = {
       completionTime: stats.completionTime,
       accuracy: stats.accuracy,
       socialDiscoveries,
+      collaborationInsights,
     };
 
     setGameStats(enhancedStats);
@@ -308,8 +395,8 @@ export default function Home() {
           }}
         >
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent">
-              💝 Lub Match
+            <h1 className={`text-xl font-bold bg-gradient-to-r ${tierStyling.primaryColor} bg-clip-text text-transparent`}>
+              {tierStyling.icon} Lub Match
             </h1>
             {farcasterUser && (
               <div className="text-sm text-gray-300">
@@ -319,26 +406,72 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
-            {canPlayGames(users) && (
+            {/* ENHANCED: Professional tier upgrade with clear value proposition */}
+            {canUpgrade && (
+              <button
+                onClick={() => {
+                  const nextTier = getNextTier();
+                  if (nextTier === 'professional') {
+                    // Show professional onboarding instead of direct upgrade
+                    setShowProfessionalOnboarding(true);
+                  } else if (nextTier) {
+                    upgradeToTier(nextTier);
+                  }
+                }}
+                className={`px-3 py-1.5 bg-gradient-to-r ${tierStyling.primaryColor} text-white rounded-lg text-sm font-semibold hover:opacity-90 transition-all backdrop-blur-sm border border-white/20 shadow-lg`}
+              >
+                {getNextTier() === 'professional' ? '🎨 Spark Creativity' : '✨ Upgrade'}
+              </button>
+            )}
+            
+            {canPlayGames(users) && canAccessFeature('socialGames') && (
               <button
                 onClick={startSocialGames}
-                className="px-3 py-1.5 bg-blue-500/80 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-all backdrop-blur-sm border border-blue-400/20"
+                className={`px-3 py-1.5 text-white rounded-lg text-sm font-medium transition-all backdrop-blur-sm border ${
+                  currentTier === 'professional'
+                    ? 'bg-blue-500 hover:bg-blue-600 border-blue-400/30'
+                    : 'bg-blue-500/80 hover:bg-blue-500 border-blue-400/20'
+                }`}
               >
-                Hab Fun
+                {currentTier === 'professional' ? '🤝 Network' : 'Hab Fun'}
               </button>
             )}
 
             {gameImages && gameImages.length >= 10 && (
               <Link
                 href="/create"
-                className="px-3 py-1.5 bg-gradient-to-r from-pink-500/80 to-purple-600/80 text-white rounded-lg text-sm font-medium hover:from-pink-500 hover:to-purple-600 transition-all backdrop-blur-sm border border-pink-400/20"
+                className={`px-3 py-1.5 bg-gradient-to-r ${tierStyling.primaryColor}/80 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all backdrop-blur-sm border border-white/20`}
               >
-                Make Lub
+                {currentTier === 'love' ? 'Make Lub' : currentTier === 'social' ? 'Create Game' : 'Build Together'}
               </Link>
             )}
           </div>
         </div>
       </header>
+
+      {/* Personalized Welcome */}
+      {currentUser && (
+        <PersonalizedWelcome
+          user={currentUser}
+          gameHistory={[]} // TODO: Get from user progression
+          currentTier={currentTier}
+        />
+      )}
+
+      {/* Daily Creative Challenge */}
+      {currentUser && (
+        <div className="fixed top-32 right-4 z-30">
+          <DailyCreativeChallenge
+            user={currentUser}
+            currentTier={currentTier}
+            onChallengeComplete={(challengeId, reward) => {
+              // Handle challenge completion with celebration
+              setCelebrationType('sparkles');
+              setCelebrationMessage(`Challenge completed! ${reward.type === 'lub' ? `💰 +${reward.value} LUB` : '🏆 Achievement unlocked!'}`);
+            }}
+          />
+        </div>
+      )}
 
       {/* Main game area */}
       <div
@@ -374,12 +507,12 @@ export default function Home() {
                   💝
                 </motion.div>
                 <h2 className="text-2xl font-bold text-white mb-4">
-                  Preparing Your Lub Experience
+                  Preparing Your {tierConfig.tier === 'love' ? 'Romantic' : tierConfig.tier === 'social' ? 'Social' : 'Professional'} Experience
                 </h2>
                 <p className="text-purple-200 mb-6">
                   {!apiCheckComplete
-                    ? "Checking social features and setting up your personalized game..."
-                    : "Loading Farcaster users for your social experience..."}
+                    ? `Setting up your ${tierConfig.styling.description.toLowerCase()}...`
+                    : `Loading ${tierConfig.tier === 'professional' ? 'creators and builders' : 'users'} for your experience...`}
                 </p>
 
                 {/* Progress bar */}
@@ -449,13 +582,13 @@ export default function Home() {
                 </motion.div>
                 <h2 className="text-2xl font-bold text-white mb-4">
                   {hasApiKey === false
-                    ? "Demo Mode Active"
-                    : "Loading Social Features"}
+                    ? `${tierConfig.tier === 'love' ? 'Love' : 'Demo'} Mode Active`
+                    : `Loading ${tierConfig.tier === 'professional' ? 'Collaboration' : 'Social'} Features`}
                 </h2>
                 <p className="text-purple-200 mb-4">
                   {hasApiKey === false
-                    ? "Social features are currently unavailable, but you can still create and play custom games!"
-                    : "Setting up your personalized social experience..."}
+                    ? `${tierConfig.tier === 'love' ? 'Romantic memory games' : 'Social features'} are ${tierConfig.tier === 'love' ? 'ready' : 'currently unavailable'}, ${tierConfig.tier === 'love' ? 'perfect for a cozy experience' : 'but you can still create and play custom games'}!`
+                    : `Setting up your personalized ${tierConfig.tier === 'professional' ? 'collaboration platform' : 'social experience'}...`}
                 </p>
                 {hasApiKey === false && (
                   <p className="text-sm text-gray-400 mb-6">
@@ -491,9 +624,9 @@ export default function Home() {
                       >
                         <Link
                           href="/create"
-                          className="block w-full px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-semibold shadow-lg text-center"
+                          className={`block w-full px-6 py-3 bg-gradient-to-r ${tierStyling.primaryColor} text-white rounded-full font-semibold shadow-lg text-center`}
                         >
-                          ✨ Create Custom Game
+                          {tierStyling.icon} {currentTier === 'love' ? 'Create Love Game' : currentTier === 'social' ? 'Create Social Game' : 'Start Collaboration'}
                         </Link>
                       </AnimatedTile>
                     </>
@@ -557,10 +690,38 @@ export default function Home() {
       >
         {isClient && apiCheckComplete && hasApiKey === false && (
           <p className="text-purple-300 text-xs">
-            💡 Add Neynar API key to unlock social features
+            {currentTier === 'love' 
+              ? '💝 Perfect for romantic memory games' 
+              : '💡 Add Neynar API key to unlock social features'
+            }
           </p>
         )}
+        {isClient && currentTier !== 'professional' && canUpgrade && (
+        <p className="text-blue-300 text-xs mt-1">
+        ✨ {currentTier === 'love' ? 'Play more to unlock social features' : 'Complete challenges to unlock collaboration features'}
+        </p>
+        )}
+        {isClient && currentTier === 'professional' && (
+        <p className="text-blue-300 text-xs mt-1">
+        🎨 Creative universe active - Spark magical collaborations ✨
+        </p>
+        )}
       </div>
+
+      {/* Professional Onboarding Modal */}
+      {showProfessionalOnboarding && (
+        <ProfessionalOnboardingModal
+          currentUser={currentUser}
+          gameHistory={[]} // TODO: Get from user progression
+          onComplete={(upgraded) => {
+            setShowProfessionalOnboarding(false);
+            if (upgraded) {
+              upgradeToTier('professional');
+            }
+          }}
+          onClose={() => setShowProfessionalOnboarding(false)}
+        />
+      )}
 
       {/* Social Games Modal */}
       {isGameActive && (
@@ -570,6 +731,9 @@ export default function Home() {
           onSkipToProposal={() => {
             setShowValentinesProposal(true);
           }}
+          experienceTier={currentTier}
+          currentUser={currentUser}
+          showCollaborationFeatures={canAccessFeature('collaboration')}
         />
       )}
 
@@ -615,7 +779,7 @@ export default function Home() {
       />
 
       {/* Onboarding Debug Panel */}
-      <OnboardingDebug 
+      <OnboardingDebug
         loading={loading}
         apiCheckComplete={apiCheckComplete}
         hasApiKey={hasApiKey}
@@ -624,6 +788,45 @@ export default function Home() {
         isInFarcaster={isInFarcaster}
         miniAppReady={miniAppReady}
       />
+
+      {/* Contextual Help */}
+      {currentUser && (
+        <ContextualHelp
+          user={currentUser}
+          currentTier={currentTier}
+          gameHistory={[]} // TODO: Get from user progression
+          currentView="home"
+          recentActions={[]} // TODO: Track recent user actions
+          onDismiss={(helpId) => {
+            console.log('Help dismissed:', helpId);
+          }}
+        />
+      )}
+
+      {/* Social Engagement Prompts */}
+      {showSocialEngagement && currentUser && users.length > 0 && (
+        <SocialEngagement
+          users={users.map(user => ({ ...user, network: 'farcaster' as const }))}
+          currentUser={currentUser}
+          context="game_complete"
+          onInteraction={(type, targetUser, data) => {
+            console.log('Social interaction:', type, targetUser.username, data);
+            // Handle social interactions (kudos, collaboration requests, etc.)
+          }}
+          onClose={() => setShowSocialEngagement(false)}
+        />
+      )}
+
+      {/* Surprise Celebrations */}
+      {celebrationMessage && (
+        <SurpriseCelebration
+          type={celebrationType}
+          message={celebrationMessage}
+          onComplete={() => {
+            setCelebrationMessage('');
+          }}
+        />
+      )}
     </div>
   );
 }

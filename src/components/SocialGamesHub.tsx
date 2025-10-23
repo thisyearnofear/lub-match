@@ -22,6 +22,8 @@ import {
 import { ChallengeSocialProfile } from "./SocialProfile";
 import { useReporting } from "./CommunityReporting";
 import SimpleOnboarding, { GAME_COMPLETE_TIPS } from "./onboarding/SimpleOnboarding";
+import { CollaborationService, CollaborationUtils } from "@/services/collaborationService";
+import CollaborationCard from "./shared/CollaborationCard";
 
 import SuccessScreen from "./shared/SuccessScreen";
 import ActionButton from "./shared/ActionButton";
@@ -34,9 +36,13 @@ interface SocialGamesHubProps {
   users: SocialUser[];
   onClose: () => void;
   onSkipToProposal?: () => void;
+  // NEW: Three-tier experience props
+  experienceTier?: 'love' | 'social' | 'professional';
+  currentUser?: SocialUser;
+  showCollaborationFeatures?: boolean;
 }
 
-// ENHANCED: Game modes with challenge system (ENHANCEMENT FIRST)
+// ENHANCED: Game modes with challenge system and collaboration (ENHANCEMENT FIRST)
 type GameMode =
   | "menu"
   | "username-guessing"
@@ -47,12 +53,18 @@ type GameMode =
   | "challenge-creation" // NEW: AI challenge generation
   | "challenge-active" // NEW: Active challenge tracking
   | "whale-hunting" // NEW: Whale-specific challenges
+  | "collaboration-discovery" // NEW: Professional tier collaboration
+  | "collaboration-matching" // NEW: Active collaboration matching
+  | "profile-setup" // ENHANCED: Collaboration profile setup
   | "results";
 
 export default function SocialGamesHub({
   users,
   onClose,
   onSkipToProposal,
+  experienceTier = 'social',
+  currentUser,
+  showCollaborationFeatures = false,
 }: SocialGamesHubProps) {
   const [currentMode, setCurrentMode] = useState<GameMode>("menu");
   const [currentGame, setCurrentGame] = useState<any>(null);
@@ -68,6 +80,10 @@ export default function SocialGamesHub({
   );
   const [challengeDifficulty, setChallengeDifficulty] =
     useState<ChallengeDifficulty>("medium");
+  
+  // NEW: Collaboration state (ENHANCEMENT FIRST)
+  const [collaborationSuggestions, setCollaborationSuggestions] = useState<any[]>([]);
+  const [selectedCollaborator, setSelectedCollaborator] = useState<SocialUser | null>(null);
 
   // Wallet integration
   const { isConnected } = useAccount();
@@ -147,6 +163,28 @@ export default function SocialGamesHub({
 
   const startWhaleHunting = () => {
     setCurrentMode("whale-hunting");
+  };
+  
+  // NEW: Collaboration methods (ENHANCEMENT FIRST)
+  const startCollaborationDiscovery = () => {
+    if (currentUser && showCollaborationFeatures) {
+      const suggestions = CollaborationService.generateCollaborationSuggestions(
+        currentUser,
+        users
+      );
+      setCollaborationSuggestions(suggestions);
+      setCurrentMode("collaboration-discovery");
+    }
+  };
+  
+  const handleCollaborationRequest = (user: SocialUser) => {
+    setSelectedCollaborator(user);
+    setCurrentMode("collaboration-matching");
+    
+    // Show earning notification for collaboration request
+    if (lubTokenEnabled) {
+      showEarning(BigInt(5), "Collaboration Spark Sent! ✨");
+    }
   };
 
   const handleTargetSelection = async (target: SocialUser) => {
@@ -355,12 +393,16 @@ export default function SocialGamesHub({
               <div className="flex justify-between items-start mb-8">
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold text-white mb-2">
-                    🎮{" "}
+                    {experienceTier === 'love' ? '💝' : experienceTier === 'social' ? '🎮' : '💼'}{" "}
                     {farcasterUser?.username
                       ? `@${farcasterUser.username}`
                       : displayName || "Lubbers Anonymous"}
                   </h1>
-                  <p className="text-purple-200">LUB me, or LUB me not?</p>
+                  <p className="text-purple-200">
+                    {experienceTier === 'love' ? 'LUB me, or LUB me not?' : 
+                     experienceTier === 'social' ? 'Ready to play and connect?' : 
+                     'Ready to collaborate and build?'}
+                  </p>
 
                   {/* Wallet Status */}
                   <div className="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
@@ -440,7 +482,9 @@ export default function SocialGamesHub({
                       }}
                       className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all"
                     >
-                      💝 Skip to Proposal
+                      {experienceTier === 'love' ? '💝 Skip to Proposal' : 
+                       experienceTier === 'social' ? '🎮 Continue Journey' : 
+                       '💼 View Results'}
                     </button>
                   </div>
                 </div>
@@ -453,7 +497,38 @@ export default function SocialGamesHub({
                 </button>
               </div>
 
-              {/* Player Stats */}
+              {/* ENHANCED: Professional features prominently displayed */}
+              {experienceTier === 'professional' && (
+              <div className="bg-gradient-to-r from-blue-900/50 to-cyan-900/50 rounded-xl p-6 mb-6 border border-blue-400/30">
+              <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">🎨</span>
+              <div>
+              <h3 className="text-white font-semibold">Creative Universe Active</h3>
+              <p className="text-blue-200 text-sm">Find kindred spirits and co-create magic</p>
+              </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+              <ActionButton
+              variant="collaboration-spark"
+              size="sm"
+              onClick={startCollaborationDiscovery}
+              icon="✨"
+              >
+              Spark Matches
+              </ActionButton>
+              <ActionButton
+              variant="secondary"
+              size="sm"
+              onClick={() => setCurrentMode('profile-setup')}
+              icon="🎭"
+              >
+              Creative Aura
+              </ActionButton>
+              </div>
+              </div>
+            )}
+
+            {/* Player Stats */}
               <div className="bg-purple-800 bg-opacity-50 rounded-xl p-6 mb-8">
                 <h3 className="text-xl font-semibold text-white mb-4">
                   Your Stats
@@ -512,7 +587,7 @@ export default function SocialGamesHub({
               </div>
 
               {/* Game Options */}
-              <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className={`grid ${showCollaborationFeatures ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 mb-8`}>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -621,6 +696,27 @@ export default function SocialGamesHub({
                   </div>
                 </motion.button>
 
+                {/* NEW: Collaboration Discovery (Professional Tier) */}
+                {showCollaborationFeatures && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={startCollaborationDiscovery}
+                    className="bg-gradient-to-br from-teal-600 to-cyan-600 p-6 rounded-xl text-left hover:from-teal-700 hover:to-cyan-700 transition-all"
+                  >
+                    <div className="text-2xl mb-2">🤝</div>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      Collaboration Discovery
+                    </h3>
+                    <p className="text-teal-100 text-sm">
+                      Find creators and builders for your next project. AI-powered skill matching.
+                    </p>
+                    <div className="mt-2 text-xs text-teal-200">
+                      Professional networking • Cross-platform connections
+                    </div>
+                  </motion.button>
+                )}
+
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -700,6 +796,162 @@ export default function SocialGamesHub({
                   );
                 }}
               />
+            </motion.div>
+          )}
+
+          {/* NEW: Collaboration Discovery Mode */}
+          {currentMode === "collaboration-discovery" && showCollaborationFeatures && (
+            <motion.div
+              key="collaboration-discovery"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                  🤝 Collaboration Discovery
+                </h2>
+                <ActionButton
+                  onClick={backToMenu}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Back
+                </ActionButton>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-teal-200 mb-4">
+                  AI-powered matching based on complementary skills and cross-platform connections.
+                </p>
+                
+                {currentUser && (
+                  <div className="bg-teal-900/30 rounded-lg p-4 mb-4">
+                    <h3 className="text-teal-300 font-semibold mb-2">Your Profile</h3>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {CollaborationService.analyzeSkills(currentUser).map((skill) => (
+                        <span
+                          key={skill}
+                          className="px-2 py-1 bg-teal-600 text-teal-100 text-xs rounded-full"
+                        >
+                          {CollaborationUtils.formatSkills([skill])[0]}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-teal-200 text-sm">
+                      Looking for: {CollaborationService.analyzeSkills(currentUser).includes('design') ? 'Developers & Builders' : 'Designers & Creators'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Collaboration Suggestions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {collaborationSuggestions.slice(0, 6).map((suggestion, index) => {
+                  const user = suggestion.participants.find((p: SocialUser) => p.username !== currentUser?.username);
+                  if (!user) return null;
+                  
+                  return (
+                    <CollaborationCard
+                      key={user.username}
+                      user={user}
+                      currentUser={currentUser}
+                      variant="suggestion"
+                      showCompatibilityScore={true}
+                      compatibilityScore={suggestion.matchScore}
+                      matchedSkills={suggestion.collaborationData.skillsMatched}
+                      onCollaborationRequest={handleCollaborationRequest}
+                      experienceTier={experienceTier}
+                      collaborationHint={suggestion.collaborationType === 'cross_platform' ? 'cross-platform' : 'skill-match'}
+                      index={index}
+                    />
+                  );
+                })}
+              </div>
+              
+              {collaborationSuggestions.length === 0 && (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">🔍</div>
+                  <h3 className="text-xl font-bold text-white mb-2">No Matches Found</h3>
+                  <p className="text-teal-200">
+                    Try connecting with more users or updating your collaboration profile.
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* NEW: Collaboration Matching Mode */}
+          {currentMode === "collaboration-matching" && selectedCollaborator && (
+            <motion.div
+              key="collaboration-matching"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                  ✨ Collaboration Spark Sent!
+                </h2>
+                <ActionButton
+                  onClick={backToMenu}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Back
+                </ActionButton>
+              </div>
+
+              <div className="bg-gradient-to-r from-teal-900/50 to-cyan-900/50 rounded-xl p-6 mb-6">
+                <div className="text-center mb-6">
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h3 className="text-2xl font-bold text-white mb-2">
+                    Collaboration Request Sent!
+                  </h3>
+                  <p className="text-teal-200">
+                    Your collaboration spark has been sent to @{selectedCollaborator.username}
+                  </p>
+                </div>
+                
+                <CollaborationCard
+                  user={selectedCollaborator}
+                  currentUser={currentUser}
+                  variant="full"
+                  showCompatibilityScore={true}
+                  experienceTier={experienceTier}
+                  className="mb-6"
+                />
+                
+                <div className="bg-cyan-900/30 rounded-lg p-4">
+                  <h4 className="text-cyan-300 font-semibold mb-2">Next Steps</h4>
+                  <ul className="text-cyan-200 text-sm space-y-1">
+                    <li>• Your collaboration request is now visible to the recipient</li>
+                    <li>• They can accept, decline, or suggest modifications</li>
+                    <li>• Check back later for responses and new opportunities</li>
+                    <li>• Continue exploring other potential collaborators</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <ActionButton
+                  onClick={startCollaborationDiscovery}
+                  variant="collaboration-spark"
+                  icon="🔍"
+                  fullWidth
+                >
+                  Find More Collaborators
+                </ActionButton>
+                <ActionButton
+                  onClick={backToMenu}
+                  variant="secondary"
+                  fullWidth
+                >
+                  Back to Games
+                </ActionButton>
+              </div>
             </motion.div>
           )}
 
@@ -1056,6 +1308,106 @@ export default function SocialGamesHub({
             </motion.div>
           )}
 
+          {/* ENHANCED: Profile Setup Mode */}
+          {currentMode === "profile-setup" && currentUser && (
+            <motion.div
+              key="profile-setup"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="p-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">
+              🎨 Tune Your Creative Aura
+              </h2>
+              <ActionButton
+              onClick={backToMenu}
+              variant="secondary"
+              size="sm"
+              >
+              Back
+              </ActionButton>
+              </div>
+
+              <div className="bg-blue-900/30 rounded-xl p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <img
+                    src={currentUser.pfpUrl}
+                    alt={currentUser.displayName}
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">{currentUser.displayName}</h3>
+                    <p className="text-blue-200">@{currentUser.username}</p>
+                  </div>
+                </div>
+
+                {/* AI-Detected Creative Powers */}
+                <div className="mb-6">
+                <h4 className="text-blue-300 font-semibold mb-3">✨ Your Creative Powers</h4>
+                <div className="flex flex-wrap gap-2 mb-4">
+                {CollaborationService.analyzeSkills(currentUser).map((skill) => (
+                <span
+                key={skill}
+                className="px-3 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm rounded-full shadow-lg"
+                >
+                {CollaborationUtils.formatSkills([skill])[0]}
+                </span>
+                ))}
+                </div>
+                <p className="text-blue-200 text-sm">
+                ✨ Magically detected from your creative journey! We'll use these superpowers to find your perfect creative matches.
+                </p>
+                </div>
+
+                {/* Creative Collaboration Vibes */}
+                <div className="mb-6">
+                <h4 className="text-blue-300 font-semibold mb-3">🎭 Your Creative Vibe</h4>
+                <div className="space-y-3">
+                <div>
+                <label className="block text-blue-200 text-sm mb-2">Creative Availability</label>
+                <select className="w-full bg-blue-800/50 border border-blue-600 rounded-lg px-3 py-2 text-white">
+                <option value="available">Ready for creative adventures ✨</option>
+                <option value="busy">Deep in creative flow 🎨</option>
+                <option value="unavailable">Taking a creative break 🌙</option>
+                </select>
+                </div>
+                <div>
+                <label className="block text-blue-200 text-sm mb-2">Open to creative sparks?</label>
+                <div className="flex gap-3">
+                <label className="flex items-center gap-2">
+                <input type="radio" name="looking" value="yes" defaultChecked className="text-blue-400" />
+                <span className="text-white">Yes! Let's create magic 💫</span>
+                </label>
+                <label className="flex items-center gap-2">
+                <input type="radio" name="looking" value="no" className="text-blue-400" />
+                <span className="text-white">Flying solo for now ✈️</span>
+                </label>
+                </div>
+                </div>
+                </div>
+                </div>
+
+                <div className="bg-blue-800/30 rounded-lg p-4">
+                <p className="text-blue-200 text-sm">
+                💡 <strong>Creative tip:</strong> The more you share your artistic vibes, the more magical collaborations we'll discover for you!
+                </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <ActionButton
+                  onClick={backToMenu}
+                  variant="secondary"
+                  fullWidth
+                >
+                  Save & Continue
+                </ActionButton>
+              </div>
+            </motion.div>
+          )}
+
           {/* Leaderboard mode removed - focusing on personal stats */}
         </AnimatePresence>
       </motion.div>
@@ -1070,10 +1422,15 @@ export default function SocialGamesHub({
       <SimpleOnboarding 
         tips={[{
           id: "advanced",
-          icon: "🌟",
-          title: "Advanced Features",
-          message: "Try creating custom challenges and connecting with the community!",
-          action: { text: "Try Challenges", onClick: startChallengeSelection }
+          icon: experienceTier === 'professional' ? "🤝" : "🌟",
+          title: experienceTier === 'professional' ? "Professional Features" : "Advanced Features",
+          message: experienceTier === 'professional' 
+            ? "Discover collaboration opportunities and build amazing projects together!"
+            : "Try creating custom challenges and connecting with the community!",
+          action: { 
+            text: experienceTier === 'professional' ? "Find Collaborators" : "Try Challenges", 
+            onClick: experienceTier === 'professional' ? startCollaborationDiscovery : startChallengeSelection 
+          }
         }]} 
         onComplete={() => {}} 
       />
@@ -1082,6 +1439,20 @@ export default function SocialGamesHub({
       {gameResult?.challengeResult && (
         <SimpleOnboarding 
           tips={GAME_COMPLETE_TIPS} 
+          onComplete={() => {}} 
+        />
+      )}
+      
+      {/* Collaboration Success Tips */}
+      {currentMode === "collaboration-matching" && (
+        <SimpleOnboarding 
+          tips={[{
+            id: "collaboration",
+            icon: "🤝",
+            title: "Collaboration Sent!",
+            message: "Your collaboration spark is on its way. Great connections start with a simple spark!",
+            action: { text: "Find More", onClick: startCollaborationDiscovery }
+          }]} 
           onComplete={() => {}} 
         />
       )}

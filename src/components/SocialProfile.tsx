@@ -8,11 +8,12 @@ import { SocialUser } from "@/types/socialGames";
 import { PlatformAdapter, UnifiedUtils } from "@/utils/platformAdapter";
 import { socialInteractionService } from "@/services/socialInteractionService";
 import { classifyUserByFollowers, getWhaleEmoji } from "@/hooks/useFarcasterUsers";
+import { CollaborationService, CollaborationUtils } from "@/services/collaborationService";
 
-// Updated to use modern SocialUser interface
+// ENHANCED: Updated to use modern SocialUser interface with collaboration support
 interface SocialProfileProps {
   user: SocialUser;
-  variant?: "full" | "compact" | "minimal" | "challenge";
+  variant?: "full" | "compact" | "minimal" | "challenge" | "collaboration";
   gameCreator?: boolean;
   onFollow?: (fid: number) => void;
   onCast?: (text: string) => void;
@@ -23,6 +24,13 @@ interface SocialProfileProps {
   showReportAction?: boolean;
   onReport?: (user: SocialUser) => void;
   className?: string;
+  // NEW: Collaboration features
+  showCollaborationFeatures?: boolean;
+  onCollaborationRequest?: (user: SocialUser) => void;
+  collaborationCompatibility?: number;
+  matchedSkills?: string[];
+  experienceTier?: 'love' | 'social' | 'professional';
+  currentUser?: SocialUser;
 }
 
 // ENHANCED: Single component handling all profile variants (ENHANCEMENT FIRST)
@@ -39,6 +47,13 @@ export default function SocialProfile({
   showReportAction = false,
   onReport,
   className = "",
+  // NEW: Collaboration props
+  showCollaborationFeatures = false,
+  onCollaborationRequest,
+  collaborationCompatibility,
+  matchedSkills = [],
+  experienceTier = 'social',
+  currentUser,
 }: SocialProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +61,14 @@ export default function SocialProfile({
   // NEW: Whale classification for enhanced social targeting
   const whaleType = classifyUserByFollowers(user.followerCount);
   const whaleEmoji = getWhaleEmoji(whaleType);
+  
+  // NEW: Collaboration features
+  const userSkills = showCollaborationFeatures ? CollaborationService.analyzeSkills(user) : [];
+  const collaborationReadiness = showCollaborationFeatures ? CollaborationUtils.getCollaborationReadiness(user) : 'not_ready';
+  const calculatedCompatibility = currentUser && showCollaborationFeatures && !collaborationCompatibility
+    ? CollaborationService.calculateCompatibility(currentUser, user)
+    : collaborationCompatibility || 0;
+  const tierStyling = CollaborationUtils.getTierStyling(experienceTier);
 
   // ENHANCED: Consolidated interaction handlers using socialInteractionService
   const handleFollow = async () => {
@@ -102,6 +125,27 @@ export default function SocialProfile({
       onReport(user);
     }
   };
+  
+  // NEW: Collaboration request handler
+  const handleCollaborationRequest = () => {
+    if (onCollaborationRequest) {
+      onCollaborationRequest(user);
+    }
+  };
+  
+  // NEW: Get collaboration readiness indicator
+  const getReadinessIndicator = (readiness: string): { icon: string; color: string; text: string } => {
+    switch (readiness) {
+      case 'ready':
+        return { icon: '🟢', color: 'text-green-600', text: 'Ready to collaborate' };
+      case 'interested':
+        return { icon: '🟡', color: 'text-yellow-600', text: 'Open to opportunities' };
+      default:
+        return { icon: '⚪', color: 'text-gray-600', text: 'Not actively looking' };
+    }
+  };
+  
+  const readinessInfo = getReadinessIndicator(collaborationReadiness);
 
   const handleCastAbout = () => {
     if (!onCast) return;
@@ -142,6 +186,13 @@ export default function SocialProfile({
       case "challenge":
         return {
           container: "bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl shadow-lg p-4 border border-purple-200",
+          avatar: "w-12 h-12",
+          content: "flex-1",
+          actions: "flex gap-2"
+        };
+      case "collaboration":
+        return {
+          container: `bg-gradient-to-r ${tierStyling.primaryColor}/10 rounded-xl shadow-lg p-4 border border-${tierStyling.accentColor}/20`,
           avatar: "w-12 h-12",
           content: "flex-1",
           actions: "flex gap-2"
@@ -191,12 +242,17 @@ export default function SocialProfile({
             )}
             {gameCreator && <span className="text-xs">💝</span>}
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span>@{user.username}</span>
-            {showFollowerCount && (
-              <span>{formatCount(user.followerCount)} followers</span>
-            )}
-          </div>
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span>@{user.username}</span>
+          {showFollowerCount && (
+            <span>{formatCount(user.followerCount)} followers</span>
+          )}
+          {showCollaborationFeatures && (
+            <span className={readinessInfo.color}>
+              {readinessInfo.icon} {readinessInfo.text}
+            </span>
+          )}
+        </div>
         </div>
 
         {(onFollow || showChallengeActions || showReportAction) && (
@@ -216,6 +272,15 @@ export default function SocialProfile({
                 className="px-2 py-1 bg-pink-500 text-white text-xs rounded hover:bg-pink-600"
               >
                 🎯
+              </button>
+            )}
+            {showCollaborationFeatures && onCollaborationRequest && (
+              <button
+                onClick={handleCollaborationRequest}
+                className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                title="Send collaboration request"
+              >
+                ✨
               </button>
             )}
             {showReportAction && onReport && (
@@ -335,17 +400,95 @@ export default function SocialProfile({
         {gameCreator && (
           <span className="text-pink-600 font-medium">💝 Game Creator</span>
         )}
+        {showCollaborationFeatures && calculatedCompatibility > 0 && (
+          <span className="text-blue-600 font-medium">
+            {calculatedCompatibility}% compatible
+          </span>
+        )}
       </div>
+      
+      {/* NEW: Collaboration Features */}
+      {showCollaborationFeatures && (
+        <>
+          {/* Skills */}
+          {userSkills.length > 0 && (
+            <div className="mt-3">
+              <h4 className="text-xs font-medium text-gray-700 mb-2">Skills:</h4>
+              <div className="flex flex-wrap gap-1">
+                {userSkills.map((skill) => (
+                  <span
+                    key={skill}
+                    className={`px-2 py-1 bg-gradient-to-r ${tierStyling.primaryColor} text-white text-xs rounded-full`}
+                  >
+                    {CollaborationUtils.formatSkills([skill])[0]}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Matched Skills */}
+          {matchedSkills.length > 0 && (
+            <div className="mt-3">
+              <h4 className="text-xs font-medium text-gray-700 mb-2">Matched Skills:</h4>
+              <div className="flex flex-wrap gap-1">
+                {matchedSkills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full border border-green-200"
+                  >
+                    {CollaborationUtils.formatSkills([skill])[0]}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Collaboration Readiness */}
+          <div className="mt-3 p-2 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{readinessInfo.icon}</span>
+              <span className={`text-xs font-medium ${readinessInfo.color}`}>
+                {readinessInfo.text}
+              </span>
+            </div>
+            {user.collaborationProfile && (
+              <div className="mt-1 text-xs text-gray-600">
+                <p>Availability: {user.collaborationProfile.availability}</p>
+                {user.collaborationProfile.preferredProjectTypes.length > 0 && (
+                  <p>Interested in: {user.collaborationProfile.preferredProjectTypes.slice(0, 2).join(', ')}</p>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Collaboration Actions */}
+          {onCollaborationRequest && (
+            <div className="mt-3">
+              <motion.button
+                onClick={handleCollaborationRequest}
+                whileTap={{ scale: 0.95 }}
+                className={`w-full px-3 py-2 bg-gradient-to-r ${tierStyling.primaryColor} text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all`}
+              >
+                ✨ Send Collaboration Spark
+              </motion.button>
+            </div>
+          )}
+        </>
+      )}
 
-      {/* Farcaster Link */}
+      {/* Platform Link */}
       <div className="mt-3 pt-3 border-t border-gray-100">
         <a
-          href={`https://warpcast.com/${user.username}`}
+          href={user.network === 'farcaster' 
+            ? `https://warpcast.com/${user.username}`
+            : `https://hey.xyz/u/${user.username}`
+          }
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1"
+          className={`text-xs ${showCollaborationFeatures ? tierStyling.accentColor : 'text-purple-600'} hover:opacity-70 flex items-center gap-1`}
         >
-          <span>View on Farcaster</span>
+          <span>View on {user.network === 'farcaster' ? 'Farcaster' : 'Lens'}</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
             <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
             <path d="M19 19H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z" />

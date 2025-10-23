@@ -13,7 +13,14 @@ export type ButtonVariant =
   | "gradient-pink"
   | "gradient-purple"
   | "gradient-blue"
-  | "gradient-green";
+  | "gradient-green"
+  // NEW: Three-tier experience variants
+  | "love-tier"              // Romantic Valentine's experience
+  | "social-tier"            // Fun social gaming experience
+  | "professional-tier"      // Professional collaboration experience
+  | "collaboration-spark"    // Send collaboration request
+  | "collaboration-match"    // Accept collaboration match
+  | "collaboration-request"; // Manage collaboration requests
 
 export type ButtonSize = "sm" | "md" | "lg";
 
@@ -54,6 +61,19 @@ const buttonVariants: Record<ButtonVariant, string> = {
     "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white",
   "gradient-green":
     "bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white",
+  // NEW: Three-tier experience variants
+  "love-tier":
+    "bg-gradient-to-r from-pink-500 via-rose-500 to-red-500 hover:from-pink-600 hover:via-rose-600 hover:to-red-600 text-white shadow-lg shadow-pink-500/25",
+  "social-tier":
+    "bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 hover:from-purple-600 hover:via-violet-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/25",
+  "professional-tier":
+    "bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 hover:from-blue-600 hover:via-cyan-600 hover:to-teal-600 text-white shadow-lg shadow-blue-500/25",
+  "collaboration-spark":
+    "bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white border border-pink-300 shadow-lg shadow-pink-500/20",
+  "collaboration-match":
+    "bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white border border-green-300 shadow-lg shadow-green-500/20",
+  "collaboration-request":
+    "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border border-blue-300 shadow-lg shadow-blue-500/20",
 };
 
 const buttonSizes: Record<ButtonSize, string> = {

@@ -221,6 +221,95 @@ export const AnimationPresets = {
       repeat: Infinity,
       ease: "easeInOut"
     }
+  },
+
+  // NEW: Three-tier experience animations
+  // Love tier - romantic, warm animations
+  loveTierPulse: {
+    scale: [1, 1.05, 1],
+    boxShadow: [
+      "0 4px 8px rgba(236, 72, 153, 0.2)",
+      "0 8px 25px rgba(236, 72, 153, 0.4)",
+      "0 4px 8px rgba(236, 72, 153, 0.2)"
+    ],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  },
+
+  // Social tier - playful, energetic animations
+  socialTierBounce: {
+    y: [0, -8, 0],
+    scale: [1, 1.02, 1],
+    transition: {
+      duration: 1.5,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  },
+
+  // Professional tier - confident, stable animations
+  professionalTierGlow: {
+    boxShadow: [
+      "0 4px 8px rgba(59, 130, 246, 0.15)",
+      "0 8px 20px rgba(59, 130, 246, 0.25)",
+      "0 4px 8px rgba(59, 130, 246, 0.15)"
+    ],
+    transition: {
+      duration: 3,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  },
+
+  // Collaboration-specific animations
+  collaborationSpark: {
+    scale: [1, 1.1, 1.05, 1],
+    rotate: [0, 5, -2, 0],
+    boxShadow: [
+      "0 4px 8px rgba(236, 72, 153, 0.2)",
+      "0 8px 25px rgba(236, 72, 153, 0.4)",
+      "0 6px 15px rgba(147, 51, 234, 0.3)",
+      "0 4px 8px rgba(236, 72, 153, 0.2)"
+    ],
+    transition: { duration: 0.8, ease: "easeOut" }
+  },
+
+  collaborationMatch: {
+    scale: [1, 1.15, 1.08, 1],
+    y: [0, -5, 0],
+    boxShadow: [
+      "0 4px 8px rgba(34, 197, 94, 0.2)",
+      "0 12px 30px rgba(34, 197, 94, 0.4)",
+      "0 6px 15px rgba(34, 197, 94, 0.3)"
+    ],
+    transition: { duration: 1, ease: "easeOut" }
+  },
+
+  collaborationRequest: {
+    scale: [1, 1.03, 1],
+    x: [0, 2, -2, 0],
+    boxShadow: [
+      "0 4px 8px rgba(59, 130, 246, 0.2)",
+      "0 8px 20px rgba(59, 130, 246, 0.3)",
+      "0 4px 8px rgba(59, 130, 246, 0.2)"
+    ],
+    transition: { duration: 0.6, ease: "easeOut" }
+  },
+
+  // Cross-platform connection celebration
+  crossPlatformCelebration: {
+    scale: [1, 1.2, 1.1, 1],
+    rotate: [0, 10, -5, 0],
+    boxShadow: [
+      "0 4px 8px rgba(168, 85, 247, 0.2)",
+      "0 12px 30px rgba(168, 85, 247, 0.4)",
+      "0 8px 20px rgba(34, 197, 94, 0.3)",
+      "0 4px 8px rgba(59, 130, 246, 0.2)"
+    ],
+    transition: { duration: 1.2, ease: "easeOut" }
   }
 } as const;
 

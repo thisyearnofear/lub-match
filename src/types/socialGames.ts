@@ -33,8 +33,35 @@ export interface LensUser {
   totalReactions?: number;
 }
 
-// Discriminated union for components that handle both
-export type SocialUser = (FarcasterUser & { network: 'farcaster' }) | (LensUser & { network: 'lens' });
+// ENHANCED: Three-tier experience types
+export type ExperienceTier = 'love' | 'social' | 'professional';
+
+// ENHANCED: Collaboration profile for professional tier
+export interface CollaborationProfile {
+  skills: string[];
+  interests: string[];
+  availability: 'available' | 'busy' | 'unavailable';
+  lookingForCollaborators: boolean;
+  preferredProjectTypes: string[];
+  location?: string;
+  timezone?: string;
+  portfolioLinks?: string[];
+  experienceLevel: 'beginner' | 'intermediate' | 'expert';
+  collaborationHistory?: {
+    completedProjects: number;
+    successRate: number;
+    averageRating: number;
+  };
+}
+
+// ENHANCED: Discriminated union with collaboration support
+export type SocialUser = (FarcasterUser & { 
+  network: 'farcaster';
+  collaborationProfile?: CollaborationProfile;
+}) | (LensUser & { 
+  network: 'lens';
+  collaborationProfile?: CollaborationProfile;
+});
 
 // Base game interface
 export interface SocialGame {
@@ -47,7 +74,7 @@ export interface SocialGame {
   estimatedDuration: number; // in seconds
 }
 
-// Game result interface
+// ENHANCED: Game result interface with collaboration support
 export interface GameResult {
   gameId: string;
   playerId?: string; // Optional for anonymous play
@@ -58,6 +85,44 @@ export interface GameResult {
   completedAt: Date;
   gameData: Record<string, any>; // Game-specific data
   challengeResult?: any; // Add this for challenge results
+  // NEW: Collaboration insights from gameplay
+  collaborationInsights?: {
+    skillsDiscovered: string[];
+    compatibleUsers: SocialUser[];
+    crossPlatformConnections: number;
+    professionalOpportunities: number;
+  };
+}
+
+// NEW: Collaboration-specific result type
+export interface CollaborationResult extends GameResult {
+  collaborationType: 'skill_match' | 'project_match' | 'cross_platform';
+  participants: SocialUser[];
+  matchScore: number;
+  collaborationData: {
+    projectBrief?: string;
+    skillsMatched: string[];
+    estimatedDuration?: string;
+    proposedBudget?: number;
+    communicationPreferences?: string[];
+  };
+}
+
+// NEW: Collaboration request interface
+export interface CollaborationRequest {
+  id: string;
+  requesterId: string;
+  targetId: string;
+  projectBrief: string;
+  skillsNeeded: string[];
+  timeline?: string;
+  budget?: number;
+  status: 'pending' | 'accepted' | 'declined' | 'completed';
+  createdAt: Date;
+  respondedAt?: Date;
+  completedAt?: Date;
+  rating?: number;
+  feedback?: string;
 }
 
 // Leaderboard entry
@@ -138,10 +203,33 @@ export interface ScoreCalculator {
   calculateOverallFarcasterKnowledge(results: GameResult[]): LeaderboardEntry['farcasterKnowledgeLevel'];
 }
 
-// Storage interface for scores and progress
+// ENHANCED: Storage interface with collaboration support
 export interface GameStorage {
   saveGameResult(result: GameResult): Promise<void>;
   getPlayerResults(playerId: string): Promise<GameResult[]>;
   getLeaderboard(gameType?: string, limit?: number): Promise<LeaderboardEntry[]>;
   getPlayerStats(playerId: string): Promise<LeaderboardEntry | null>;
+  // NEW: Collaboration storage methods
+  saveCollaborationRequest(request: CollaborationRequest): Promise<void>;
+  getCollaborationRequests(userId: string): Promise<CollaborationRequest[]>;
+  updateCollaborationStatus(requestId: string, status: CollaborationRequest['status']): Promise<void>;
+  getCollaborationHistory(userId: string): Promise<CollaborationResult[]>;
+}
+
+// NEW: Experience tier configuration
+export interface ExperienceTierConfig {
+  tier: ExperienceTier;
+  features: {
+    memoryGame: boolean;
+    socialGames: boolean;
+    collaboration: boolean;
+    nftMinting: boolean;
+    crossPlatform: boolean;
+  };
+  styling: {
+    primaryColor: string;
+    accentColor: string;
+    icon: string;
+    description: string;
+  };
 }
