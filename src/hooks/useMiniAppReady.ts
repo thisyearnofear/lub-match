@@ -82,6 +82,19 @@ export function useMiniAppReady() {
     }
   };
 
+  const addMiniApp = async () => {
+    if (!isInFarcaster || !isReady) return null;
+    try {
+      if (sdk.actions.addMiniApp) {
+        const result = await sdk.actions.addMiniApp();
+        return result;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  };
+
   const openUrl = async (url: string, close = false) => {
     if (!isInFarcaster || !isReady) {
       window.open(url, '_blank');
@@ -114,13 +127,49 @@ export function useMiniAppReady() {
     }
   };
 
+  const composeCast = async (
+    text: string,
+    embeds?: string | string[]
+  ) => {
+    if (!isInFarcaster || !isReady) {
+      const encodedText = encodeURIComponent(text);
+      window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
+      return null;
+    }
+
+    try {
+      if (sdk.actions.composeCast) {
+        let tupleEmbeds: [] | [string] | [string, string] | undefined = undefined;
+        if (typeof embeds === 'string') {
+          tupleEmbeds = [embeds];
+        } else if (Array.isArray(embeds)) {
+          if (embeds.length <= 0) tupleEmbeds = [];
+          else if (embeds.length === 1) tupleEmbeds = [embeds[0]];
+          else tupleEmbeds = [embeds[0], embeds[1]];
+        }
+
+        const result = await sdk.actions.composeCast({ text, embeds: tupleEmbeds });
+        return result;
+      }
+      const encodedText = encodeURIComponent(text);
+      window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
+      return null;
+    } catch (error) {
+      const encodedText = encodeURIComponent(text);
+      window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
+      return null;
+    }
+  };
+
   return {
     context,
     isReady,
     isInFarcaster,
     isInitializing,
     addFrame,
+    addMiniApp,
     openUrl,
     closeApp,
+    composeCast,
   };
 }

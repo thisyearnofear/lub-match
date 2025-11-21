@@ -83,7 +83,7 @@ export default function GameContent({
     }
   };
   const { goToSocialGames } = useAppNavigation();
-  useMiniAppReady();
+  const { isInFarcaster, composeCast } = useMiniAppReady();
   const [showValentinesProposal, setShowValentinesProposal] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -135,26 +135,15 @@ export default function GameContent({
       console.log("Could not copy to clipboard:", _error);
     }
 
-    // Check if running in Farcaster
-    if (isClient && (window as FarcasterWindow)?.fc) {
-      // Use Farcaster SDK for native sharing if available
+    if (isClient && isInFarcaster && composeCast) {
       try {
-        (window as FarcasterWindow).fc?.share?.({
-          text: shareText,
-          url: url,
-        });
-      } catch (_error) {
-        console.log("Farcaster share not available, falling back to Warpcast");
-        window.open(
-          `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`
-        );
-      }
-    } else if (isClient) {
-      // Open Warpcast compose
-      window.open(
-        `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`
-      );
+        await composeCast(shareText, [url]);
+        return;
+      } catch (_error) {}
     }
+    window.open(
+      `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`
+    );
   };
 
   return (

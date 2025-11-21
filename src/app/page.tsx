@@ -92,7 +92,6 @@ export default function Home() {
     context: farcasterContext,
     isReady: miniAppReady,
     isInFarcaster,
-    addFrame,
     openUrl,
     closeApp,
   } = useMiniAppReady();

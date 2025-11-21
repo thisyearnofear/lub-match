@@ -187,18 +187,27 @@ export default function SimpleHeartNFTMinter({
                   </div>
                 </div>
 
-                {/* Mint Button */}
-                <button
-                  onClick={handleMint}
-                  disabled={isMinting || isPending || !currentOption?.canAfford}
-                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium py-3 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isMinting || isPending
-                    ? "Minting..."
-                    : !currentOption?.canAfford
-                    ? "Insufficient Balance"
-                    : `Mint with ${currentOption?.displayText}`}
-                </button>
+            {/* Mint Button */}
+            <button
+              onClick={handleMint}
+              disabled={isMinting || isPending || !currentOption?.canAfford}
+              className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium py-3 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isMinting || isPending
+                ? "Minting..."
+                : !currentOption?.canAfford
+                ? "Insufficient Balance"
+                : `Mint with ${currentOption?.displayText}`}
+            </button>
+            <div className="mt-3">
+              <button
+                onClick={onClose}
+                disabled={isMinting || isPending}
+                className="w-full border border-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Skip for now
+              </button>
+            </div>
               </>
             ) : (
               <MiniAppWalletConnect />

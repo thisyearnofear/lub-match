@@ -56,7 +56,7 @@ export const metadata: Metadata = {
       button: {
         title: "💝 Play Lub Match!",
         action: {
-          type: "launch_miniapp",
+          type: "launch_frame",
           name: "Lub Match",
           url: getBaseUrl(),
           splashImageUrl: `${getBaseUrl()}/game-photos/lub.png`,

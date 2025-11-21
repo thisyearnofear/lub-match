@@ -175,17 +175,20 @@ export function useFarcasterUsers(options: UseFarcasterUsersOptions = {}): UseFa
       return [];
     }
 
-    const shuffled = [...users].sort(() => 0.5 - Math.random());
-    const selectedUsers = shuffled.slice(0, 5); // Select 5 users for 10 images (pairs)
-    const images = selectedUsers.map(user => user.pfpUrl).filter(Boolean);
-    
-    // Ensure we have enough valid images
-    if (images.length < 5) {
-      console.warn('Not enough valid profile images, got:', images.length);
+    const validUsers = users.filter(u => !!u.pfpUrl && u.pfpUrl.trim() !== '');
+    const uniqueByPfp = Array.from(
+      new Map(validUsers.map(u => [u.pfpUrl, u])).values()
+    );
+
+    if (uniqueByPfp.length < 10) {
+      console.warn('Not enough unique profile images, got:', uniqueByPfp.length);
       return [];
     }
-    
-    return [...images, ...images]; // Return 10 images (5 pairs)
+
+    const shuffled = uniqueByPfp.sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 10);
+    const images = selected.map(u => u.pfpUrl);
+    return images;
   }, [users]);
 
   // Initial API key check
