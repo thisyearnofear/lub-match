@@ -275,9 +275,17 @@ function CreateGameContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate that user has provided enough content
+    // Validate that user has provided enough content with user-friendly message
     if (!hasEnoughContent) {
-      setError("Please select a lub creation mode and provide enough content.");
+      const missingAmount = lubMode === "photos"
+        ? PAIRS_LIMIT - pairs.length
+        : lubMode === "farcaster"
+          ? UPLOAD_LIMITS.GAME.MAX_FARCASTER_USERS - farcasterUsers.length
+          : 0;
+
+      setError(lubMode
+        ? `You need ${missingAmount} more ${lubMode === "photos" ? "photos" : "friends"} to continue.`
+        : "Please select a lub creation mode and provide enough content.");
       return;
     }
 
@@ -650,6 +658,12 @@ function CreateGameContent() {
                       celebration={true}
                     />
                     <div className="space-y-1 mt-2">
+                      {/* Inline validation feedback */}
+                      {pairs.length < PAIRS_LIMIT && (
+                        <p className="text-xs text-orange-600 font-medium">
+                          📝 {PAIRS_LIMIT - pairs.length} more photos needed to continue
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500">
                         💡 Tip: Use photos of you two together for the best
                         experience!
@@ -676,10 +690,18 @@ function CreateGameContent() {
                       maxUsers={UPLOAD_LIMITS.GAME.MAX_FARCASTER_USERS}
                       disabled={loading || !!cid}
                     />
-                    <p className="text-xs text-gray-500 mt-2">
-                      💕 Their profile pictures will create a beautiful collage
-                      during the proposal.
-                    </p>
+                    <div className="space-y-1 mt-2">
+                      {/* Inline validation feedback */}
+                      {farcasterUsers.length < UPLOAD_LIMITS.GAME.MAX_FARCASTER_USERS && (
+                        <p className="text-xs text-orange-600 font-medium">
+                          📝 {UPLOAD_LIMITS.GAME.MAX_FARCASTER_USERS - farcasterUsers.length} more friends needed to continue
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        💕 Their profile pictures will create a beautiful collage
+                        during the proposal.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -737,18 +759,39 @@ function CreateGameContent() {
                   </div>
                 )}
 
+                {/* Validation error handling with appropriate messaging */}
                 {error && (
-                  <NetworkError
-                    message={error}
-                    onRetry={() => setError(null)}
-                  />
+                  <>
+                    {error.includes("enough content") ? (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                        <div className="text-2xl mb-2">⚠️</div>
+                        <p className="text-sm text-yellow-800">{error}</p>
+                        <p className="text-xs text-yellow-600 mt-1">
+                          {lubMode === "photos"
+                            ? `Add ${PAIRS_LIMIT - pairs.length} more photos to continue`
+                            : lubMode === "farcaster"
+                            ? `Add ${UPLOAD_LIMITS.GAME.MAX_FARCASTER_USERS - farcasterUsers.length} more friends to continue`
+                            : "Please select a creation mode first"}
+                        </p>
+                      </div>
+                    ) : (
+                      <NetworkError
+                        message={error}
+                        onRetry={() => setError(null)}
+                      />
+                    )}
+                  </>
                 )}
 
                 <button
                   type="submit"
-                  className={`w-full py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-pink-500 to-rose-500 shadow-lg hover:from-pink-600 hover:to-rose-600 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-60 disabled:transform-none ${
-                    loading ? "cursor-wait" : ""
-                  }`}
+                  className={`w-full py-4 rounded-xl font-semibold text-white bg-gradient-to-r ${
+                    !hasEnoughContent
+                      ? 'from-gray-400 to-gray-500 cursor-not-allowed'
+                      : 'from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600'
+                  } shadow-lg transition-all duration-300 ${
+                    !hasEnoughContent ? 'cursor-not-allowed' : 'transform hover:scale-[1.02]'
+                  } ${loading ? "cursor-wait" : ""}`}
                   disabled={!lubMode || !hasEnoughContent || loading || !!cid}
                 >
                   {loading ? (
@@ -756,6 +799,12 @@ function CreateGameContent() {
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       {cid ? "Preparing your lub..." : "Creating lub..."}
                     </div>
+                  ) : !hasEnoughContent ? (
+                    `💝 ${lubMode === "photos"
+                      ? `Add ${PAIRS_LIMIT - pairs.length} more photos`
+                      : lubMode === "farcaster"
+                      ? `Add ${UPLOAD_LIMITS.GAME.MAX_FARCASTER_USERS - farcasterUsers.length} more friends`
+                      : "Select a mode to send lub"}`
                   ) : lubMode === "photos" ? (
                     `💝 Send Lub (${pairs.length}/${PAIRS_LIMIT} photos)`
                   ) : lubMode === "farcaster" ? (
