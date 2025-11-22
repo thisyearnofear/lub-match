@@ -15,6 +15,35 @@ const heartLayout = [
   [null, null, null, null, null, null, null],
 ];
 
+/**
+ * Fetches an image and converts it to a base64 data URI
+ * This ensures images render correctly on marketplaces like OpenSea
+ */
+async function fetchImageAsBase64(url: string): Promise<string> {
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      headers: { 'User-Agent': 'LubMatch-NFT-Generator/1.0' }
+    });
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+
+    return `data:${contentType};base64,${buffer.toString('base64')}`;
+  } catch (error) {
+    console.warn(`Failed to convert image to base64: ${url}`, error);
+    // Return a colorful placeholder if fetch fails
+    return `data:image/svg+xml;base64,${Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+        <rect width="100%" height="100%" fill="#be185d"/>
+        <text x="50%" y="50%" font-family="Arial" font-size="40" fill="white" text-anchor="middle" dy=".3em">?</text>
+      </svg>
+    `).toString('base64')}`;
+  }
+}
+
 interface NFTMetadataRequest {
   imageHashes: string[];
   layout: number[];
@@ -69,7 +98,7 @@ interface HeartNFTMetadata {
 export async function POST(req: NextRequest) {
   try {
     const data: NFTMetadataRequest = await req.json();
-    
+
     // Validate required fields
     if (!data.imageHashes || !data.layout || !data.message || !data.creator || !data.completer) {
       return NextResponse.json(
@@ -104,7 +133,7 @@ export async function POST(req: NextRequest) {
       minute: '2-digit',
       timeZone: 'UTC'
     });
-    
+
     // Enhanced naming and description with rich user data
     const { nftName, nftDescription, rarityAttributes } = generateEnhancedMetadata(
       data,
@@ -193,13 +222,13 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error("NFT metadata upload error:", error);
-    
+
     let errorMessage = "Failed to upload NFT metadata";
     let statusCode = 500;
-    
+
     if (error instanceof Error) {
       errorMessage = error.message;
-      
+
       // Handle specific error types (same pattern as createGame)
       if (error.message.includes('413') || error.message.includes('too large')) {
         statusCode = 413;
@@ -209,11 +238,11 @@ export async function POST(req: NextRequest) {
         errorMessage = "Upload timeout. Please try again.";
       }
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
-        success: false 
+        success: false
       },
       { status: statusCode }
     );
@@ -226,15 +255,21 @@ export async function POST(req: NextRequest) {
  */
 async function generateHeartImage(imageHashes: string[], gameHash: string, layout: number[], users?: FarcasterUser[]): Promise<string> {
   try {
-    // Generate heart composite SVG directly (avoid self-referential API call)
+    // 1. Convert all image URLs to Base64
+    // This is critical for NFT marketplaces to render the images inside the SVG
+    const base64Images = await Promise.all(
+      imageHashes.map(url => fetchImageAsBase64(url))
+    );
+
+    // 2. Generate heart composite SVG with embedded images
     const heartSvg = generateHeartSVG(
-      imageHashes,
-      'demo', // This will be passed from the calling function
+      base64Images, // Pass base64 strings instead of raw URLs
+      'demo',
       new Date().toISOString(),
       users || []
     );
 
-    // Upload SVG to IPFS
+    // 3. Upload SVG to IPFS
     const pinata = new PinataSDK({
       pinataJwt: PINATA_JWT,
       pinataGateway: "gateway.pinata.cloud"
@@ -260,11 +295,11 @@ async function generateHeartImage(imageHashes: string[], gameHash: string, layou
     return imageURI;
   } catch (error) {
     console.error("Error generating heart image:", error);
-  }
 
-  // Fallback: Create a structured SVG-based heart layout as data URI
-  const heartSvg = createHeartLayoutSVG(imageHashes, gameHash);
-  return `data:image/svg+xml;base64,${Buffer.from(heartSvg).toString('base64')}`;
+    // Fallback: Create a simple placeholder if generation fails
+    const heartSvg = createHeartLayoutSVG(imageHashes, gameHash);
+    return `data:image/svg+xml;base64,${Buffer.from(heartSvg).toString('base64')}`;
+  }
 }
 
 /**
@@ -276,7 +311,7 @@ function createHeartLayoutSVG(imageUrls: string[], gameHash: string): string {
   const gap = 4;
   const svgWidth = 7 * cellSize + 6 * gap;
   const svgHeight = 6 * cellSize + 5 * gap;
-  
+
   // Heart layout matching PhotoPairGame
   const heartLayout = [
     [null, 0, 1, null, 2, 3, null],
@@ -286,7 +321,7 @@ function createHeartLayoutSVG(imageUrls: string[], gameHash: string): string {
     [null, null, null, "deco", null, null, null],
     [null, null, null, null, null, null, null],
   ];
-  
+
   let svgContent = `
     <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -297,18 +332,18 @@ function createHeartLayoutSVG(imageUrls: string[], gameHash: string): string {
       </defs>
       <rect width="100%" height="100%" fill="url(#bg)"/>
   `;
-  
+
   heartLayout.forEach((row, rowIndex) => {
     row.forEach((cell, colIndex) => {
       const x = colIndex * (cellSize + gap);
       const y = rowIndex * (cellSize + gap);
-      
+
       if (cell === "deco") {
         // Decorative heart cells
         svgContent += `
           <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
                 rx="8" fill="#f87171" stroke="#dc2626" stroke-width="2"/>
-          <text x="${x + cellSize/2}" y="${y + cellSize/2}"
+          <text x="${x + cellSize / 2}" y="${y + cellSize / 2}"
                 text-anchor="middle" dominant-baseline="middle"
                 font-size="${cellSize * 0.4}" fill="#dc2626">💝</text>
         `;
@@ -317,27 +352,27 @@ function createHeartLayoutSVG(imageUrls: string[], gameHash: string): string {
         svgContent += `
           <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
                 rx="8" fill="#6b7280" stroke="#374151" stroke-width="2"/>
-          <text x="${x + cellSize/2}" y="${y + cellSize/2}"
+          <text x="${x + cellSize / 2}" y="${y + cellSize / 2}"
                 text-anchor="middle" dominant-baseline="middle"
                 font-size="${cellSize * 0.3}" fill="#ffffff">👤</text>
         `;
       }
     });
   });
-  
+
   // Add title
   svgContent += `
     <rect x="0" y="${svgHeight - 50}" width="${svgWidth}" height="50" fill="rgba(0,0,0,0.8)"/>
-    <text x="${svgWidth/2}" y="${svgHeight - 30}" text-anchor="middle"
+    <text x="${svgWidth / 2}" y="${svgHeight - 30}" text-anchor="middle"
           font-family="Arial" font-size="16" font-weight="bold" fill="white">
       Farcaster Trending Snapshot
     </text>
-    <text x="${svgWidth/2}" y="${svgHeight - 10}" text-anchor="middle"
+    <text x="${svgWidth / 2}" y="${svgHeight - 10}" text-anchor="middle"
           font-family="Arial" font-size="12" fill="#d1d5db">
       ${new Date().toLocaleDateString()}
     </text>
   `;
-  
+
   svgContent += '</svg>';
   return svgContent;
 }
@@ -369,41 +404,41 @@ function generateEnhancedMetadata(
   const powerBadgeHolders = uniqueUsers.filter(u => u.power_badge).length;
   const totalFollowers = uniqueUsers.reduce((sum, u) => sum + u.follower_count, 0);
   const verifiedUsers = uniqueUsers.filter(u => u.verified_addresses?.eth_addresses && u.verified_addresses.eth_addresses.length > 0).length;
-  
+
   // Debug logging to track user count discrepancies
   console.log(`📊 User Stats Debug: Total users: ${users.length}, Unique count: ${uniqueCount}, Verified: ${verifiedUsers}, Power badges: ${powerBadgeHolders}`);
-  
+
   // Calculate rarity metrics using unique count
   const avgFollowers = Math.round(totalFollowers / Math.max(uniqueCount, 1));
   const powerBadgeRatio = Math.round((powerBadgeHolders / Math.max(uniqueCount, 1)) * 100);
   const verificationRatio = Math.round((verifiedUsers / Math.max(uniqueCount, 1)) * 100);
-  
+
   // Create sophisticated naming
   const featuredUsers = usernames.slice(0, 3).join(', ');
   const remainingCount = Math.max(0, uniqueCount - 3);
   const userSuffix = remainingCount > 0 ? ` +${remainingCount} others` : '';
-  
+
   // Determine special characteristics for naming
   const specialTraits = [];
   if (powerBadgeRatio >= 50) specialTraits.push("Power Badge Collective");
   if (avgFollowers >= 10000) specialTraits.push("Influencer Circle");
   if (verificationRatio >= 75) specialTraits.push("Verified Assembly");
   if (totalFollowers >= 100000) specialTraits.push("Mega Community");
-  
+
   const specialSuffix = specialTraits.length > 0 ? ` - ${specialTraits[0]}` : '';
-  
+
   const nftName = usernames.length > 0
     ? `Heart of ${featuredUsers}${userSuffix}${specialSuffix}`
     : `Farcaster Trending Heart ${dateString}`;
-    
+
   // Rich description with context
   const contextualInfo = [];
   if (powerBadgeHolders > 0) contextualInfo.push(`${powerBadgeHolders} power badge holders`);
   if (avgFollowers >= 1000) contextualInfo.push(`avg ${formatNumber(avgFollowers)} followers`);
   if (verifiedUsers > 0) contextualInfo.push(`${verifiedUsers} verified addresses`);
-  
+
   const contextString = contextualInfo.length > 0 ? ` featuring ${contextualInfo.join(', ')}` : '';
-  
+
   const nftDescription = `A unique heart-shaped snapshot of ${uniqueCount} trending Farcaster community members captured on ${dateString} at ${timeString} UTC${contextString}. This digital artifact preserves a specific moment in Farcaster's social graph - when these ${uniqueCount} voices were actively shaping the community conversation. Each heart represents the intersection of social discovery, community engagement, and the ephemeral nature of trending moments in decentralized social networks.`;
 
   // Enhanced rarity attributes
@@ -447,16 +482,16 @@ function getCommunityInfluenceLevel(avgFollowers: number, powerBadgeRatio: numbe
  */
 function calculateRarityScore(totalFollowers: number, powerBadgeHolders: number, verifiedUsers: number): number {
   let score = 0;
-  
+
   // Follower score (logarithmic)
   score += Math.log10(Math.max(totalFollowers, 1)) * 10;
-  
+
   // Power badge bonus
   score += powerBadgeHolders * 25;
-  
+
   // Verification bonus
   score += verifiedUsers * 15;
-  
+
   // Cap and round
   return Math.min(Math.round(score), 1000);
 }
@@ -466,105 +501,149 @@ function calculateRarityScore(totalFollowers: number, powerBadgeHolders: number,
  * Matches the exact layout from PhotoPairGame component
  */
 function generateHeartSVG(
-  imageUrls: string[],
+  imageUrls: string[], // These are now Base64 strings
   gameType: "custom" | "demo",
   completedAt: string,
   users: FarcasterUser[]
 ): string {
   const cellSize = 120;
-  const gap = 8;
-  const svgWidth = 7 * cellSize + 6 * gap;
-  const svgHeight = 6 * cellSize + 5 * gap + 120; // Extra space for enhanced title
+  const gap = 12; // Increased gap for cleaner look
+  const svgWidth = 7 * cellSize + 6 * gap + 80; // Added padding
+  const svgHeight = 6 * cellSize + 5 * gap + 200; // More space for header/footer
+  const contentStartX = 40;
+  const contentStartY = 40;
 
   // Enhanced title generation
   const { title, subtitle } = generateEnhancedTitle(gameType, completedAt, users);
 
   let svgContent = `
-    <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
       <defs>
+        <!-- Premium Gradient Background -->
         <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#1e1b4b;stop-opacity:1" />
+          <stop offset="0%" style="stop-color:#2e1065;stop-opacity:1" />
+          <stop offset="50%" style="stop-color:#701a75;stop-opacity:1" />
           <stop offset="100%" style="stop-color:#be185d;stop-opacity:1" />
         </linearGradient>
+        
+        <!-- Glassmorphism Card Effect -->
+        <filter id="glass" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
+        </filter>
+
+        <!-- Soft Drop Shadow -->
         <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+          <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.4"/>
+        </filter>
+
+        <!-- Inner Glow for Cells -->
+        <filter id="inner-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+          <feOffset dx="1" dy="1"/>
+          <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1"/>
+          <feFlood flood-color="white" flood-opacity="0.2"/>
+          <feComposite in2="SourceAlpha" operator="in"/>
+          <feMerge>
+            <feMergeNode/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
         </filter>
       </defs>
+
+      <!-- Background -->
       <rect width="100%" height="100%" fill="url(#bg)"/>
+      
+      <!-- Decorative background pattern (subtle circles) -->
+      <circle cx="10%" cy="10%" r="150" fill="white" fill-opacity="0.03"/>
+      <circle cx="90%" cy="80%" r="200" fill="white" fill-opacity="0.03"/>
   `;
 
   // Add heart layout
   heartLayout.forEach((row, rowIndex) => {
     row.forEach((cell, colIndex) => {
-      const x = colIndex * (cellSize + gap);
-      const y = rowIndex * (cellSize + gap);
+      const x = contentStartX + colIndex * (cellSize + gap);
+      const y = contentStartY + rowIndex * (cellSize + gap);
 
       if (cell === "deco") {
-        // Decorative heart cells
+        // Decorative heart cells (Red/Pink Glass)
         svgContent += `
-          <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
-                rx="12" fill="#f87171" stroke="#dc2626" stroke-width="3" filter="url(#shadow)"/>
-          <text x="${x + cellSize/2}" y="${y + cellSize/2 + 8}"
-                text-anchor="middle" dominant-baseline="middle"
-                font-size="${cellSize * 0.4}" fill="#dc2626">💝</text>
+          <g filter="url(#shadow)">
+            <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
+                  rx="24" fill="rgba(244, 63, 94, 0.8)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+            <text x="${x + cellSize / 2}" y="${y + cellSize / 2 + 5}"
+                  text-anchor="middle" dominant-baseline="middle"
+                  font-size="${cellSize * 0.5}" fill="white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.2)">💝</text>
+          </g>
         `;
       } else if (typeof cell === 'number' && cell < imageUrls.length) {
-        // Profile image with external reference
+        // Profile image with premium border
         const imageUrl = imageUrls[cell];
         svgContent += `
-          <defs>
-            <clipPath id="clip${cell}">
-              <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="12"/>
-            </clipPath>
-          </defs>
-          <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
-                rx="12" fill="#6b7280" stroke="#374151" stroke-width="3" filter="url(#shadow)"/>
-          <image x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
-                 href="${imageUrl}" clip-path="url(#clip${cell})"
-                 preserveAspectRatio="xMidYMid slice"/>
+          <g filter="url(#shadow)">
+            <defs>
+              <clipPath id="clip${cell}">
+                <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="24"/>
+              </clipPath>
+            </defs>
+            <!-- Cell Background -->
+            <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
+                  rx="24" fill="#1f2937"/>
+            
+            <!-- Profile Image -->
+            <image x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
+                   href="${imageUrl}" clip-path="url(#clip${cell})"
+                   preserveAspectRatio="xMidYMid slice"/>
+            
+            <!-- Glass Overlay/Border -->
+            <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}"
+                  rx="24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="4"
+                  filter="url(#inner-glow)"/>
+          </g>
         `;
       }
     });
   });
 
-  // Add enhanced title section
-  const titleY = svgHeight - 120;
+  // Add enhanced title section (Glassmorphism Card)
+  const titleY = svgHeight - 160;
+  const cardPadding = 20;
+
   svgContent += `
-    <rect x="0" y="${titleY}" width="${svgWidth}" height="120" fill="rgba(0,0,0,0.85)" rx="0"/>
-    <text x="${svgWidth/2}" y="${titleY + 25}" text-anchor="middle"
-          font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">
+    <!-- Info Card Background -->
+    <rect x="${cardPadding}" y="${titleY}" width="${svgWidth - (cardPadding * 2)}" height="140" 
+          rx="20" fill="rgba(0, 0, 0, 0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+    <!-- Title -->
+    <text x="${svgWidth / 2}" y="${titleY + 45}" text-anchor="middle"
+          font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-size="28" font-weight="bold" fill="white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5)">
       ${title}
     </text>
-    <text x="${svgWidth/2}" y="${titleY + 50}" text-anchor="middle"
-          font-family="Arial, sans-serif" font-size="14" fill="#d1d5db">
-      ${subtitle}
+    
+    <!-- Subtitle -->
+    <text x="${svgWidth / 2}" y="${titleY + 80}" text-anchor="middle"
+          font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-size="16" fill="#e5e7eb" letter-spacing="1">
+      ${subtitle.toUpperCase()}
     </text>
   `;
 
   // Add user stats if available
   if (users.length > 0) {
-    const userCount = Math.min(users.length, 8);
     const totalFollowers = users.reduce((sum, u) => sum + u.follower_count, 0);
     const powerBadgeCount = users.filter(u => u.power_badge).length;
-    const statsText = `${formatNumber(totalFollowers)} total reach • ${powerBadgeCount} power badges`;
+
+    // Format stats with icons
+    const statsText = `👥 ${formatNumber(totalFollowers)} Reach  •  ⚡ ${powerBadgeCount} Power Badges`;
 
     svgContent += `
-      <text x="${svgWidth/2}" y="${titleY + 75}" text-anchor="middle"
-            font-family="Arial, sans-serif" font-size="12" fill="#9ca3af">
+      <text x="${svgWidth / 2}" y="${titleY + 115}" text-anchor="middle"
+            font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+            font-size="14" font-weight="500" fill="#f472b6">
         ${statsText}
       </text>
     `;
-
-    // Add featured usernames
-    const featuredUsers = users.slice(0, 4).map(u => `@${u.username}`).join(' • ');
-    if (featuredUsers) {
-      svgContent += `
-        <text x="${svgWidth/2}" y="${titleY + 95}" text-anchor="middle"
-              font-family="Arial, sans-serif" font-size="11" fill="#6b7280">
-          ${featuredUsers}${userCount > 4 ? ` +${userCount - 4} more` : ''}
-        </text>
-      `;
-    }
   }
 
   svgContent += '</svg>';

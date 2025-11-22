@@ -28,6 +28,9 @@ import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { isImageFile } from "@/utils/imageCompression";
 import { formatBytes, UPLOAD_LIMITS } from "@/config/uploadLimits";
 import { useImageCompression } from "@/hooks/useImageCompression";
+import { EnhancedDropzone } from "@/components/shared/EnhancedDropzone";
+import Button from "@/components/shared/Button";
+import { colors, spacing } from "@/theme/designTokens";
 
 // Debug info component
 function DebugInfo() {
@@ -210,9 +213,9 @@ function DropzoneField({
 interface FarcasterUser {
   fid: number;
   username: string;
-  display_name: string;
-  pfp_url: string;
-  follower_count: number;
+  displayName: string;
+  pfpUrl: string;
+  followerCount: number;
 }
 
 function CreateGameContent() {
@@ -636,12 +639,15 @@ function CreateGameContent() {
                         ? "✅"
                         : `(${pairs.length}/${PAIRS_LIMIT})`}
                     </h3>
-                    <DropzoneField
+                    <EnhancedDropzone
                       files={pairs}
                       setFiles={setPairs}
                       maxFiles={PAIRS_LIMIT}
                       accept={{ "image/*": [] }}
                       disabled={loading || !!cid}
+                      label="💕 Upload Your Love Story"
+                      hint="Tap or drag your favorite photos"
+                      celebration={true}
                     />
                     <div className="space-y-1 mt-2">
                       <p className="text-xs text-gray-500">

@@ -234,6 +234,270 @@ pnpm start
 - Minimal smart contract interaction
 - Gas-optimized transactions
 
+## Design System
+
+### Comprehensive Overview
+A unified, romantic design system that consolidates inconsistent patterns into reusable, delightful components. Follows **ENHANCEMENT FIRST** principle by maximizing reusability and minimizing code duplication. All design decisions centralized in semantic design tokens with micro-interactions for delightful user experiences.
+
+### Core Infrastructure
+
+#### Design Tokens (`src/theme/designTokens.ts`)
+Single source of truth for all design decisions with semantic naming:
+
+**Colors:**
+- `colors.primary[50-600]` - Romantic pink/rose (brand: #ec4899 main)
+- `colors.secondary[50-600]` - Playful purple/blue (accent)
+- `colors.success` - Green (#10b981) for positive feedback
+- `colors.error` - Red (#ef4444) for errors
+- `colors.warning` - Amber (#f59e0b) for warnings
+- `colors.neutral[0-900]` - Grayscale (text, borders, backgrounds)
+
+**Spacing:** 4px unit grid via `spacing[1-16]` (4px, 8px, 12px, 16px, etc.)
+
+**Typography:**
+- `typography.fontFamily.display` - Playfair Display (romantic serif)
+- `typography.fontFamily.body` - System fonts (accessible)
+- `typography.fontFamily.mono` - Monaco/Menlo (code)
+- `typography.fontSize.xs` through `typography.fontSize.4xl`
+- `typography.fontWeight.normal|semibold|bold`
+
+**Shadows:** `shadows.sm|base|md|lg|glow|glow-lg`
+
+**Borders:** `borderRadius.xs|sm|md|lg|xl|full`
+
+**Transitions:**
+- Durations: `transitions.duration.fastest|base|slow|slowest`
+- Easings: `transitions.easing.linear|easeInOut|bounce|elastic`
+- Utility: `transitions.property(duration, easing)`
+
+**Z-Index Scale:** `zIndex.hide|base|dropdown|sticky|fixed|modal|notification|floating`
+
+**Component Variants:**
+- `componentVariants.button` → {primary, secondary, ghost, gradient, danger}
+- `componentVariants.card` → {base, hovered, selected}
+- `componentVariants.input` → {base, focus, error}
+- `componentVariants.notification` → {success, error, info, warning}
+
+**Animations:** Reusable Framer Motion variants for consistent motion
+
+### Micro-Interactions (`src/hooks/useMicroInteractions.ts`)
+Reusable celebration & feedback patterns with haptic + sound + visual feedback:
+
+```typescript
+const { trigger, triggerHaptic, playSound } = useMicroInteraction();
+
+trigger({
+  type: 'success|error|info|celebration|heartbeat|bounce|glow',
+  haptic: true,  // Mobile vibration (light|medium|heavy)
+  sound: true,   // Web Audio API tones
+  duration: 600,
+  callback: () => {},
+});
+```
+
+**Animation Sequences** (Framer Motion variants via `interactionSequences`):
+- `successMatch` - Scale + glow for card matches
+- `errorShake` - Shake for mismatches
+- `cardReveal` - Spring bounce reveal
+- `uploadSuccess` - Celebration on file add
+- `friendAdded` - Spring animation for friend selection
+- `glowPulse` - Continuous glow (CTAs)
+- `spin` - Loading spinner
+- `float` - Gentle floating motion
+- `burst` - Celebratory burst
+- `fadeIn` - Simple opacity fade
+- `fadeInUp` - Fade + slide up
+- `scaleIn` - Zoom from small
+- `pulse` - Infinite subtle pulse
+- `bounce` - Infinite bouncing
+- `heartbeat` - Love-themed pulse
+- `shimmer` - Loading shimmer
+- `slideInRight` / `slideInLeft` - Directional slides
+
+### Unified UI Components
+
+**Button** (`src/components/shared/Button.tsx`)
+- Consolidates: ActionButton + PrimaryButton + custom button styles (5+ patterns → 1)
+- Variants: `primary|secondary|ghost|gradient|danger`
+- Sizes: `sm|base|lg` (WCAG 44px minimum)
+- Props: `loading`, `icon`, `microInteraction`, `fullWidth`
+- Built-in accessibility (focus states, semantic HTML)
+```typescript
+<Button variant="primary" size="lg" microInteraction={true}>
+  Create Lub 💝
+</Button>
+```
+
+**Notification** (`src/components/shared/Notification.tsx`)
+- Consolidates: Toast + Alert + ErrorMessage patterns (3+ patterns → 1)
+- Types: `success|error|info|warning`
+- Features: Auto-dismiss, progress bar, actions, romantic messaging
+- Global management via `NotificationProvider` + `useNotification()`
+- Romantic messages with emoji (💝 Perfect match, 💔 Oops, etc)
+```typescript
+const { showNotification } = useNotification();
+showNotification({
+  type: 'success',
+  message: 'Perfect match! 💝',
+  romantic: true,
+  duration: 3000,
+});
+```
+
+**EnhancedDropzone** (`src/components/shared/EnhancedDropzone.tsx`)
+- Consolidates: Old DropzoneField component with enhanced features
+- Features: Drag-drop animations, celebration micro-interactions, compression feedback
+- Props: `files`, `setFiles`, `maxFiles`, `label`, `hint`, `celebration`
+```typescript
+<EnhancedDropzone
+  files={photos}
+  setFiles={setPhotos}
+  maxFiles={8}
+  label="💕 Upload Your Love Story"
+  celebration={true}
+/>
+```
+
+### Enhanced Components
+
+**FarcasterUsernameInput** (`src/components/FarcasterUsernameInput.tsx`)
+- **Fixed**: Property name mismatch (follower_count → followerCount)
+- **Enhanced**: Design token integration + micro-interactions
+- Features: Search celebrations, improved styling, follower badges
+- Visual polish with smooth animations for friend selection
+
+**Create Page** (`src/app/create/page.tsx`)
+- **Updated**: Uses `EnhancedDropzone` instead of `DropzoneField`
+- **Messaging**: Romantic labels and hints throughout
+- **Enhanced**: Consistent design token application
+
+### Implementation Guidelines
+
+**1. Use Design Tokens (Never Hardcode Values)**
+```typescript
+// ✅ Good
+import { colors, spacing, borderRadius } from '@/theme/designTokens';
+style={{ padding: spacing[4], color: colors.primary[400], borderRadius: borderRadius.lg }}
+
+// ❌ Bad
+style={{ padding: '16px', color: '#ec4899', borderRadius: '16px' }}
+```
+
+**2. Use Unified Components for Consistency**
+```typescript
+// ✅ Good - Button component
+<Button variant="primary" onClick={handleSubmit}>Action</Button>
+
+// ✅ Good - Notification system
+const { showNotification } = useNotification();
+showNotification({ type: 'success', message: 'Done!', romantic: true });
+
+// ❌ Bad - Custom implementations
+<button style={{ background: '#ec4899' }}>Action</button>
+```
+
+**3. Trigger Micro-Interactions for Delight**
+```typescript
+const { trigger } = useMicroInteraction();
+trigger({ type: 'success', haptic: true, sound: true });
+```
+
+**4. Apply Animation Sequences Consistently**
+```typescript
+import { interactionSequences } from '@/hooks/useMicroInteractions';
+<motion.div variants={interactionSequences.uploadSuccess}>Content</motion.div>
+```
+
+### File Structure
+```
+src/
+├── theme/
+│   └── designTokens.ts              # Single source of truth for design tokens
+├── hooks/
+│   └── useMicroInteractions.ts      # Celebrations & feedback patterns
+└── components/shared/
+    ├── Button.tsx                   # Unified button (replaces 5+ patterns)
+    ├── Notification.tsx             # Unified notification (replaces 3+ patterns)
+    └── EnhancedDropzone.tsx         # Enhanced file upload with animations
+```
+
+### Architecture Principles
+
+**Single Source of Truth (DRY Principle)**
+- All colors centralized in `colors` object
+- All spacing uses `spacing` utility
+- All animations use `animations` or `interactionSequences`
+- All transitions use `transitions` utility
+
+**ENHANCEMENT FIRST**
+- No new UI patterns created—consolidated existing ones
+- 5+ button components → 1 unified Button component
+- 3+ notification patterns → 1 unified Notification component
+- 1 old dropzone → 1 enhanced dropzone with animations
+
+**Reusability Over Uniqueness**
+- `interactionSequences` are Framer Motion variants reused across components
+- `hapticPatterns` are standardized vibration feedback
+- `componentVariants` pre-configured for buttons, cards, inputs, notifications
+
+**Accessibility Built-in**
+- WCAG 44px minimum touch targets
+- Focus ring styling with `a11y.focusRing`
+- Proper semantic HTML in all components
+- Keyboard navigation support maintained
+
+### Performance Impact
+
+**Reduced JavaScript**
+- Removed duplicate button/notification code
+- Single dropzone implementation instead of duplicates
+- Shared animation utilities reduce bundle size
+
+**Optimized Animations**
+- Hardware-accelerated CSS transforms
+- Framer Motion spring animations with optimized parameters
+- Web Audio API replaces audio files for sound effects
+
+**No Runtime Overhead**
+- Design tokens are compile-time constants
+- Animation sequences are pre-defined variants
+- No computed values or dynamic calculations
+
+### Integration Checklist & Next Steps
+
+**Immediate Actions (Phase 1)**
+1. Test create page file uploads with EnhancedDropzone
+2. Verify FarcasterUsernameInput fixes work in production
+3. Check build passes with new components
+4. Mobile testing on real devices
+
+**Wider Adoption (Phase 2)**
+1. Replace all custom buttons with Button component
+2. Replace all toast/alert patterns with Notification
+3. Add NotificationProvider to layout.tsx
+4. Update all toast imports
+5. Convert error messages to romantic style
+
+**Polish & Consistency (Phase 3)**
+1. Update all spacing to use `spacing` tokens
+2. Ensure all colors use design tokens
+3. Apply micro-interactions to key user actions
+4. Romantic messaging across all feedback
+
+### Detailed Documentation
+For more detailed information about each component, see the following files in the docs directory:
+- `docs/design-system/DESIGN_SYSTEM_IMPLEMENTATION.md` - Complete implementation details
+- `docs/design-system/DESIGN_TOKENS_QUICK_REF.md` - Developer quick reference
+- `docs/design-system/INTEGRATION_CHECKLIST.md` - Rollout strategy and success criteria
+
+### Design Ethos
+✅ **Romantic** - Romantic messaging, delightful animations, emoji usage throughout
+✅ **Playful** - Celebration micro-interactions, bouncy animations, fun transitions
+✅ **Accessible** - WCAG 44px+ touch targets, focus states, keyboard navigation
+✅ **Consistent** - Single source of truth for all design decisions
+✅ **Performant** - Hardware-accelerated animations, compiled constants
+✅ **Modular** - Reusable components and animation sequences
+
 ## Deployment
 
 ### Vercel (Recommended)

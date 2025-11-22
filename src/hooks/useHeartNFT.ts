@@ -29,9 +29,11 @@ const HEART_NFT_ABI = parseAbi([
   "function getHeartRarity(uint256 tokenId) view returns (string)",
   "function totalSupply() view returns (uint256)",
   "function collectionStats() view returns (uint256 totalCustomHearts, uint256 totalDemoHearts, uint256 totalVerifiedHearts, uint256 totalHighInfluencerHearts, uint256 totalCommunityHearts)",
-  "event HeartMinted(uint256 indexed tokenId, address indexed creator, address indexed completer, string gameType, uint256 pricePaid, bool usedLubDiscount, uint256 totalFollowers, uint256 verifiedCount)",
+  "event HeartMinted(uint256 indexed tokenId, address indexed creator, address indexed completer, string gameType, uint256 pricePaid, bool usedLubDiscount, uint256 totalFollowers, uint256 powerBadgeCount)",
   "event CollectionMilestone(string milestone, uint256 tokenId, uint256 totalSupply)"
 ] as const);
+
+const LEGACY_HEART_MINTED_EVENT = "event HeartMinted(uint256 indexed tokenId, address indexed creator, address indexed completer, string gameType, uint256 pricePaid, bool usedLubDiscount)";
 
 export interface HeartData {
   imageHashes: string[];
@@ -61,7 +63,7 @@ export function useHeartNFT() {
   const { ensureApproval } = useLubApproval();
 
   const config = useConfig();
-  
+
   const enabled = !!HEART_NFT_ADDRESS;
 
   const { data: nftBalance = BigInt(0) } = useReadContract({
@@ -100,14 +102,14 @@ export function useHeartNFT() {
               functionName: "getHeartData",
               args: [tokenId]
             }) as HeartData;
-            
+
             return { tokenId, heartData };
           })
         );
 
         // Filter successful results
         const validCollection = collection
-          .filter((result): result is PromiseFulfilledResult<{ tokenId: bigint; heartData: HeartData }> => 
+          .filter((result): result is PromiseFulfilledResult<{ tokenId: bigint; heartData: HeartData }> =>
             result.status === 'fulfilled')
           .map(result => result.value);
 
@@ -120,7 +122,7 @@ export function useHeartNFT() {
       // Fallback: use tokenOfOwnerByIndex with batched requests
       const balance = Number(nftBalance);
       console.log(`🔄 Using tokenOfOwnerByIndex fallback for ${balance} tokens`);
-      
+
       // Batch token ID fetching first
       const tokenIdPromises = Array.from({ length: balance }, (_, i) =>
         readContract(client, {
@@ -130,8 +132,8 @@ export function useHeartNFT() {
           args: [address, BigInt(i)]
         }).catch(error => {
           if (error?.name === 'ContractFunctionRevertedError' ||
-              error?.message?.includes('tokenOfOwnerByIndex') ||
-              error?.message?.includes('reverted')) {
+            error?.message?.includes('tokenOfOwnerByIndex') ||
+            error?.message?.includes('reverted')) {
             console.warn(`⚠️  tokenOfOwnerByIndex reverted at index ${i}, trying event logs fallback...`);
             throw new Error('FALLBACK_TO_EVENTS');
           }
@@ -141,18 +143,18 @@ export function useHeartNFT() {
       );
 
       const tokenIdResults = await Promise.allSettled(tokenIdPromises);
-      
+
       // Check if we need to fallback to events
-      if (tokenIdResults.some(result => 
-          result.status === 'rejected' && 
-          result.reason?.message === 'FALLBACK_TO_EVENTS')) {
+      if (tokenIdResults.some(result =>
+        result.status === 'rejected' &&
+        result.reason?.message === 'FALLBACK_TO_EVENTS')) {
         console.warn("🔄 Falling back to event logs due to contract function reverts...");
         return await getUserNFTCollectionViaEvents();
       }
-      
+
       // Get valid token IDs
       const validTokenIds = tokenIdResults
-        .filter((result): result is PromiseFulfilledResult<bigint> => 
+        .filter((result): result is PromiseFulfilledResult<bigint> =>
           result.status === 'fulfilled' && result.value != null)
         .map(result => result.value as bigint);
 
@@ -164,13 +166,13 @@ export function useHeartNFT() {
           functionName: "getHeartData",
           args: [tokenId]
         }) as HeartData;
-        
+
         return { tokenId, heartData };
       });
 
       const heartDataResults = await Promise.allSettled(heartDataPromises);
       const validCollection = heartDataResults
-        .filter((result): result is PromiseFulfilledResult<{ tokenId: bigint; heartData: HeartData }> => 
+        .filter((result): result is PromiseFulfilledResult<{ tokenId: bigint; heartData: HeartData }> =>
           result.status === 'fulfilled')
         .map(result => result.value);
 
@@ -195,20 +197,35 @@ export function useHeartNFT() {
       const client = getClient(config);
       if (!client) throw new Error("No client available");
 
-      const logs = await getLogs(client, {
+      const legacyLogs = await getLogs(client, {
         address: HEART_NFT_ADDRESS,
-        event: parseAbi([
-          'event HeartMinted(uint256 indexed tokenId, address indexed creator, address indexed completer, string gameType, uint256 pricePaid, bool usedLubDiscount)'
-        ])[0],
+        event: parseAbi([LEGACY_HEART_MINTED_EVENT])[0],
         args: { completer: address },
         fromBlock: 'earliest',
         toBlock: 'latest'
       });
 
+      const newLogs = await getLogs(client, {
+        address: HEART_NFT_ADDRESS,
+        event: HEART_NFT_ABI.find(item => item.type === 'event' && item.name === 'HeartMinted') as any,
+        args: { completer: address },
+        fromBlock: 'earliest',
+        toBlock: 'latest'
+      });
+
+      const allLogs = [...legacyLogs, ...newLogs];
+
       const collection: { tokenId: bigint; heartData: HeartData }[] = [];
-      for (const log of logs) {
+      const processedTokenIds = new Set<bigint>();
+
+      for (const log of allLogs) {
         try {
-          const tokenId = log.args.tokenId as bigint;
+          // Cast to any to handle mixed event types (legacy vs new)
+          const tokenId = (log as any).args.tokenId as bigint;
+
+          // Avoid duplicates
+          if (processedTokenIds.has(tokenId)) continue;
+          processedTokenIds.add(tokenId);
           const currentOwner = await readContract(client, {
             address: HEART_NFT_ADDRESS,
             abi: parseAbi(["function ownerOf(uint256 tokenId) view returns (address)"]),
@@ -282,7 +299,7 @@ export function useHeartNFT() {
     ethCost?: bigint
   ) => {
     if (!HEART_NFT_ADDRESS) throw new Error("Heart NFT address not configured");
-    
+
     console.log('🚀 Starting regular/discount minting process...', {
       contractAddress: HEART_NFT_ADDRESS,
       gameHash,
@@ -290,7 +307,7 @@ export function useHeartNFT() {
       lubCost: lubCost?.toString(),
       ethCost: ethCost?.toString()
     });
-    
+
     // Ensure LUB approval if using discount and LUB cost is provided
     if (useLubDiscount && lubCost && lubCost > BigInt(0)) {
       console.log('🔐 Approving LUB spend for discount:', lubCost.toString());
@@ -299,11 +316,11 @@ export function useHeartNFT() {
       });
       console.log('✅ LUB approval completed for discount');
     }
-    
+
     // Use provided ETH cost or fallback to standard price
     const mintPrice = ethCost || parseEther("0.001");
     console.log('💰 Minting NFT with ETH:', mintPrice.toString(), 'LUB:', lubCost?.toString() || '0');
-    
+
     try {
       const result = await writeContractAsync({
         address: HEART_NFT_ADDRESS,
@@ -313,7 +330,7 @@ export function useHeartNFT() {
         value: mintPrice,
         chainId: arbitrum.id
       });
-      
+
       console.log('✅ Regular/discount mint successful:', result);
       return result;
     } catch (error) {
@@ -334,7 +351,7 @@ export function useHeartNFT() {
     lubCost?: bigint
   ) => {
     if (!HEART_NFT_ADDRESS) throw new Error("Heart NFT address not configured");
-    
+
     console.log('🚀 Starting full LUB minting process...', {
       contractAddress: HEART_NFT_ADDRESS,
       gameHash,
@@ -346,7 +363,7 @@ export function useHeartNFT() {
         gameType: heartData.gameType
       }
     });
-    
+
     // Ensure LUB approval for full LUB minting
     if (lubCost && lubCost > BigInt(0)) {
       console.log('🔐 Approving full LUB spend:', lubCost.toString());
@@ -357,12 +374,12 @@ export function useHeartNFT() {
     } else {
       console.warn('⚠️ No LUB cost provided, proceeding without approval');
     }
-    
+
     console.log('📝 Calling contract function with args:', {
       heartData: JSON.stringify(heartData, (_, v) => typeof v === 'bigint' ? v.toString() : v),
       gameHash
     });
-    
+
     try {
       const result = await writeContractAsync({
         address: HEART_NFT_ADDRESS,
@@ -371,7 +388,7 @@ export function useHeartNFT() {
         args: [heartData, gameHash] as any,
         chainId: arbitrum.id
       });
-      
+
       console.log('✅ Contract call successful:', result);
       return result;
     } catch (error) {
@@ -452,7 +469,7 @@ export function useHeartNFT() {
 
     // Normalize image hashes to 8 unique entries before processing
     const uniqueHashes = Array.from(new Set(heartData.imageHashes)).slice(0, 8);
-    
+
     const usernames: string[] = [];
     const userFollowers: bigint[] = [];
     const userVerified: boolean[] = [];
@@ -521,7 +538,18 @@ export function useHeartNFT() {
         eventName: "HeartMinted",
       });
 
-      const event = logs.find((l: any) => l.eventName === "HeartMinted");
+      let event: any = logs.find((l: any) => l.eventName === "HeartMinted");
+
+      // Fallback to legacy event if not found
+      if (!event) {
+        const legacyLogs = parseEventLogs({
+          abi: parseAbi([LEGACY_HEART_MINTED_EVENT]),
+          logs: receipt.logs,
+          eventName: "HeartMinted",
+        });
+        event = legacyLogs.find((l: any) => l.eventName === "HeartMinted");
+      }
+
       const tokenId = event?.args?.tokenId as bigint | undefined;
       return { tokenId: tokenId ?? null, receipt } as const;
     } catch (err) {
@@ -540,7 +568,7 @@ export function useHeartNFT() {
         abi: HEART_NFT_ABI,
         functionName: "collectionStats"
       }) as readonly [bigint, bigint, bigint, bigint, bigint];
-      
+
       return {
         totalCustomHearts: stats[0],
         totalDemoHearts: stats[1],
